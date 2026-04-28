@@ -404,12 +404,12 @@
 
 <!-- Scripts -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/sbClient.js"></script>
 <script>
 // ═══════════════════════════════════════════════
 //  CONFIG — החלף עם הפרטים שלך מ-Supabase
 // ═══════════════════════════════════════════════
-const SUPABASE_URL  = 'https://YOUR_PROJECT_ID.supabase.co';
+const SUPABASE_URL  = 'https://YOUR_PROJECT_ID.sbClient.co';
 const SUPABASE_ANON = 'sb_publishable_3PHqJMkla49HFGWns3eE_A_ML-7-gir';
 
 // ═══════════════════════════════════════════════
@@ -462,7 +462,7 @@ const RESERVOIRS = [
 // ═══════════════════════════════════════════════
 //  GLOBALS
 // ═══════════════════════════════════════════════
-let map, supabase, layers = {}, layerState = {};
+let sbClient, supabase, layers = {}, layerState = {};
 let incidents = [], incidentMarkers = {};
 let lastClickLat = null, lastClickLng = null;
 let activeFilter = '';
@@ -626,7 +626,7 @@ function toggleLayer(name) {
 // ═══════════════════════════════════════════════
 function initSupabase() {
   try {
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+    sbClient window.sbClient.createClient(SUPABASE_URL, SUPABASE_ANON);
     loadIncidents();
     subscribeRealtime();
   } catch(e) {
@@ -822,8 +822,8 @@ async function submitIncident() {
   const record = { title, village, priority, description: desc, lat, lng, status: 'open' };
 
   try {
-    if (supabase && SUPABASE_URL !== 'https://YOUR_PROJECT_ID.supabase.co') {
-      const { error } = await supabase.from('incidents').insert([record]);
+    if (supabase && SUPABASE_URL !== 'https://YOUR_PROJECT_ID.sbClient.co') {
+      const { error } = await sbClient.from('incidents').insert([record]);
       if (error) throw error;
     } else {
       // Demo mode — add locally
@@ -843,8 +843,8 @@ async function submitIncident() {
 
 async function setStatus(id, status) {
   try {
-    if (supabase && SUPABASE_URL !== 'https://YOUR_PROJECT_ID.supabase.co') {
-      await supabase.from('incidents').update({ status }).eq('id', id);
+    if (supabase && SUPABASE_URL !== 'https://YOUR_PROJECT_ID.sbClient.co') {
+      await sbClient.from('incidents').update({ status }).eq('id', id);
     } else {
       const inc = incidents.find(i => i.id === id);
       if (inc) { inc.status = status; }
