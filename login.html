@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>מי הגליל | כניסה</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0d3b5e 0%,#1a5f8a 50%,#0d3b5e 100%);font-family:'Segoe UI',Tahoma,Arial,sans-serif;direction:rtl}
+    .bg-pattern{position:fixed;inset:0;opacity:0.04;background-image:repeating-linear-gradient(0deg,transparent,transparent 40px,#fff 40px,#fff 41px),repeating-linear-gradient(90deg,transparent,transparent 40px,#fff 40px,#fff 41px);pointer-events:none}
+    .card{background:#fff;border-radius:16px;padding:40px;width:380px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);position:relative;z-index:1}
+    .logo-wrap{text-align:center;margin-bottom:32px}
+    .logo-icon{font-size:36px;margin-bottom:8px}
+    .logo-text{font-size:22px;font-weight:700;color:#0d3b5e}
+    .logo-text span{color:#1a7fc1}
+    .logo-sub{font-size:12px;color:#64748b;margin-top:3px}
+    .form-group{margin-bottom:18px}
+    label{display:block;font-size:12px;font-weight:600;color:#64748b;margin-bottom:6px}
+    input{width:100%;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;color:#1e293b;font-family:inherit;transition:border-color 0.15s;direction:ltr;text-align:right}
+    input:focus{outline:none;border-color:#1a7fc1;box-shadow:0 0 0 3px rgba(26,127,193,0.1)}
+    input[type="email"]{direction:ltr;text-align:left}
+    .btn{width:100%;padding:12px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-weight:700;font-family:inherit;transition:all 0.15s;margin-top:8px}
+    .btn-primary{background:#0d3b5e;color:#fff}
+    .btn-primary:hover{background:#1a7fc1}
+    .btn-primary:disabled{background:#94a3b8;cursor:not-allowed}
+    .error-msg{background:#fee2e2;color:#991b1b;border-radius:8px;padding:10px 14px;font-size:13px;margin-top:16px;display:none}
+    .error-msg.show{display:block}
+    .spinner-inline{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-left:8px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .footer-text{text-align:center;font-size:11px;color:#94a3b8;margin-top:24px}
+  </style>
+</head>
+<body>
+<div class="bg-pattern"></div>
+<div class="card">
+  <div class="logo-wrap">
+    <div class="logo-icon">💧</div>
+    <div class="logo-text">מי <span>הגליל</span></div>
+    <div class="logo-sub">מערכת GIS — כניסה לאתר</div>
+  </div>
+
+  <div class="form-group">
+    <label>כתובת אימייל</label>
+    <input type="email" id="email" placeholder="your@email.com" autocomplete="username"/>
+  </div>
+  <div class="form-group">
+    <label>סיסמה</label>
+    <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()"/>
+  </div>
+
+  <button class="btn btn-primary" id="login-btn" onclick="login()">כניסה למערכת</button>
+  <div class="error-msg" id="err"></div>
+  <div class="footer-text">גישה למורשים בלבד | מי הגליל © 2025</div>
+</div>
+
+<script>
+var SUPABASE_URL  = 'https://YOUR_PROJECT_ID.supabase.co';
+var SUPABASE_ANON = 'YOUR_PUBLISHABLE_KEY';
+
+var gSb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// If already logged in, redirect
+gSb.auth.getSession().then(function(res) {
+  if (res.data && res.data.session) redirectUser(res.data.session.user.id);
+});
+
+async function login() {
+  var email    = document.getElementById('email').value.trim();
+  var password = document.getElementById('password').value;
+  var btn      = document.getElementById('login-btn');
+  var err      = document.getElementById('err');
+
+  err.classList.remove('show');
+  if (!email || !password) { showErr('אנא מלא אימייל וסיסמה'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = 'מתחבר...<span class="spinner-inline"></span>';
+
+  var res = await gSb.auth.signInWithPassword({ email: email, password: password });
+
+  if (res.error) {
+    btn.disabled = false;
+    btn.innerHTML = 'כניסה למערכת';
+    showErr('אימייל או סיסמה שגויים');
+    return;
+  }
+
+  redirectUser(res.data.user.id);
+}
+
+async function redirectUser(userId) {
+  var res = await gSb.from('profiles').select('role').eq('id', userId).single();
+  if (res.data && res.data.role === 'admin') {
+    window.location.href = 'admin.html';
+  } else {
+    window.location.href = 'index.html';
+  }
+}
+
+function showErr(msg) {
+  var el = document.getElementById('err');
+  el.textContent = msg;
+  el.classList.add('show');
+}
+</script>
+</body>
+</html>
