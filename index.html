@@ -7,250 +7,113 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
       --blue-dark:  #0d3b5e;
       --blue-mid:   #1a7fc1;
       --blue-light: #5ab8e8;
-      --teal:       #0d9488;
-      --amber:      #d97706;
-      --red:        #dc2626;
-      --green:      #16a34a;
       --surface:    #f8fafc;
       --border:     #e2e8f0;
       --text:       #1e293b;
       --muted:      #64748b;
+      --red:        #dc2626;
     }
-
     html, body { height: 100%; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: var(--surface); color: var(--text); }
-
-    /* ── LAYOUT ── */
     #app { display: flex; flex-direction: column; height: 100vh; }
-
-    /* ── TOPBAR ── */
-    #topbar {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 18px; height: 52px; background: var(--blue-dark);
-      color: #fff; flex-shrink: 0; gap: 16px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    }
-    .logo { font-size: 15px; font-weight: 600; letter-spacing: 0.2px; white-space: nowrap; }
+    #topbar { display: flex; align-items: center; justify-content: space-between; padding: 0 18px; height: 52px; background: var(--blue-dark); color: #fff; flex-shrink: 0; gap: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+    .logo { font-size: 15px; font-weight: 600; white-space: nowrap; }
     .logo span { color: var(--blue-light); }
     .stats { display: flex; gap: 8px; }
-    .stat {
-      background: rgba(255,255,255,0.1); border-radius: 6px;
-      padding: 3px 12px; text-align: center; cursor: default;
-    }
+    .stat { background: rgba(255,255,255,0.1); border-radius: 6px; padding: 3px 12px; text-align: center; }
     .stat .n { font-size: 15px; font-weight: 700; color: #fff; }
     .stat .l { font-size: 10px; color: rgba(255,255,255,0.65); }
     .stat.alert .n { color: #fca5a5; }
-    #realtime-dot {
-      width: 9px; height: 9px; background: #22c55e; border-radius: 50%;
-      animation: pulse 2s infinite; flex-shrink: 0;
-    }
+    #realtime-dot { width: 9px; height: 9px; background: #22c55e; border-radius: 50%; animation: pulse 2s infinite; flex-shrink: 0; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
     #realtime-label { font-size: 11px; color: rgba(255,255,255,0.7); }
-
-    /* ── MAIN ── */
     #main { display: flex; flex: 1; overflow: hidden; }
-
-    /* ── MAP ── */
     #map { flex: 1; z-index: 1; }
-
-    /* ── SIDEBAR ── */
-    #sidebar {
-      width: 260px; flex-shrink: 0; background: #fff;
-      border-right: 1px solid var(--border);
-      display: flex; flex-direction: column; overflow: hidden;
-    }
+    #sidebar { width: 260px; flex-shrink: 0; background: #fff; border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
     .panel { padding: 12px 14px; border-bottom: 1px solid var(--border); }
-    .panel-title {
-      font-size: 10px; font-weight: 600; color: var(--muted);
-      text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 10px;
-    }
-
-    /* Layer toggles */
-    .layer-row {
-      display: flex; align-items: center; gap: 9px;
-      padding: 5px 0; cursor: pointer; user-select: none;
-    }
+    .panel-title { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 10px; }
+    .layer-row { display: flex; align-items: center; gap: 9px; padding: 5px 0; cursor: pointer; user-select: none; }
     .layer-row:hover { opacity: 0.75; }
     .layer-swatch { width: 14px; height: 14px; border-radius: 3px; flex-shrink: 0; }
     .layer-label { font-size: 13px; color: var(--text); flex: 1; }
     .layer-count { font-size: 11px; color: var(--muted); }
-    .toggle {
-      width: 32px; height: 18px; background: #cbd5e1; border-radius: 9px;
-      position: relative; transition: background 0.2s; cursor: pointer; flex-shrink: 0;
-    }
+    .toggle { width: 32px; height: 18px; background: #cbd5e1; border-radius: 9px; position: relative; transition: background 0.2s; cursor: pointer; flex-shrink: 0; }
     .toggle.on { background: var(--blue-mid); }
-    .toggle::after {
-      content: ''; position: absolute;
-      width: 14px; height: 14px; background: #fff; border-radius: 50%;
-      top: 2px; right: 2px; transition: transform 0.2s;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-    }
+    .toggle::after { content: ''; position: absolute; width: 14px; height: 14px; background: #fff; border-radius: 50%; top: 2px; right: 2px; transition: transform 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
     .toggle.on::after { transform: translateX(-14px); }
-
-    /* Village filter */
-    #village-filter {
-      width: 100%; padding: 7px 10px; border: 1px solid var(--border);
-      border-radius: 7px; font-size: 13px; color: var(--text);
-      background: var(--surface); direction: rtl; appearance: none;
-    }
+    #village-filter { width: 100%; padding: 7px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 13px; color: var(--text); background: var(--surface); direction: rtl; appearance: none; }
     #village-filter:focus { outline: none; border-color: var(--blue-mid); }
-
-    /* Incidents list */
     #incidents-panel { flex: 1; overflow-y: auto; padding: 12px 14px; }
-    .inc-item {
-      background: #fff; border: 1px solid var(--border); border-radius: 8px;
-      padding: 9px 11px; margin-bottom: 8px; cursor: pointer;
-      transition: box-shadow 0.15s, border-color 0.15s;
-    }
+    .inc-item { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; margin-bottom: 8px; cursor: pointer; transition: box-shadow 0.15s, border-color 0.15s; }
     .inc-item:hover { border-color: var(--blue-mid); box-shadow: 0 2px 8px rgba(26,127,193,0.12); }
-    .inc-item.new-flash { animation: flash 1.2s ease; }
-    @keyframes flash { 0%{background:#dbeafe} 100%{background:#fff} }
     .inc-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 3px; gap: 6px; }
     .inc-title { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.3; }
-    .badge {
-      font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px;
-      white-space: nowrap; flex-shrink: 0;
-    }
+    .badge { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; }
     .badge-high   { background: #fee2e2; color: #991b1b; }
     .badge-medium { background: #fef3c7; color: #92400e; }
     .badge-low    { background: #dcfce7; color: #166534; }
-    .badge-done   { background: #e0e7ff; color: #3730a3; }
     .inc-meta { font-size: 11px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; }
     .inc-village { color: var(--blue-mid); font-weight: 500; }
-
-    /* Add incident button */
-    #add-btn {
-      margin: 12px 14px; padding: 9px; border-radius: 8px; cursor: pointer;
-      background: var(--blue-dark); color: #fff; font-size: 13px; font-weight: 600;
-      border: none; width: calc(100% - 28px); transition: background 0.15s;
-    }
+    #add-btn { margin: 12px 14px; padding: 9px; border-radius: 8px; cursor: pointer; background: var(--blue-dark); color: #fff; font-size: 13px; font-weight: 600; border: none; width: calc(100% - 28px); transition: background 0.15s; }
     #add-btn:hover { background: var(--blue-mid); }
-
-    /* ── MODAL ── */
-    #modal-bg {
-      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45);
-      z-index: 1000; align-items: center; justify-content: center;
-    }
+    #modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; align-items: center; justify-content: center; }
     #modal-bg.open { display: flex; }
-    #modal {
-      background: #fff; border-radius: 12px; padding: 24px;
-      width: 420px; max-width: 95vw; direction: rtl;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-    }
+    #modal { background: #fff; border-radius: 12px; padding: 24px; width: 420px; max-width: 95vw; direction: rtl; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
     .modal-title { font-size: 16px; font-weight: 700; color: var(--blue-dark); margin-bottom: 18px; }
     .form-row { margin-bottom: 14px; }
     .form-label { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 5px; display: block; }
-    .form-input, .form-select, .form-textarea {
-      width: 100%; padding: 8px 11px; border: 1px solid var(--border); border-radius: 7px;
-      font-size: 13px; color: var(--text); font-family: inherit; direction: rtl;
-      background: var(--surface); transition: border-color 0.15s;
-    }
-    .form-input:focus, .form-select:focus, .form-textarea:focus {
-      outline: none; border-color: var(--blue-mid);
-    }
+    .form-input, .form-select, .form-textarea { width: 100%; padding: 8px 11px; border: 1px solid var(--border); border-radius: 7px; font-size: 13px; color: var(--text); font-family: inherit; direction: rtl; background: var(--surface); }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--blue-mid); }
     .form-textarea { resize: vertical; min-height: 70px; }
     .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
-    .btn-primary {
-      flex: 1; padding: 9px; border-radius: 7px; border: none; cursor: pointer;
-      background: var(--blue-dark); color: #fff; font-size: 13px; font-weight: 600;
-      transition: background 0.15s;
-    }
+    .btn-primary { flex: 1; padding: 9px; border-radius: 7px; border: none; cursor: pointer; background: var(--blue-dark); color: #fff; font-size: 13px; font-weight: 600; }
     .btn-primary:hover { background: var(--blue-mid); }
-    .btn-secondary {
-      padding: 9px 18px; border-radius: 7px; cursor: pointer;
-      background: transparent; color: var(--muted); font-size: 13px;
-      border: 1px solid var(--border); transition: border-color 0.15s;
-    }
-    .btn-secondary:hover { border-color: var(--muted); }
-
-    /* Leaflet popup RTL */
-    .leaflet-popup-content-wrapper {
-      border-radius: 10px; font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-      direction: rtl; text-align: right; box-shadow: 0 4px 16px rgba(0,0,0,0.15);
-    }
+    .btn-secondary { padding: 9px 18px; border-radius: 7px; cursor: pointer; background: transparent; color: var(--muted); font-size: 13px; border: 1px solid var(--border); }
+    .leaflet-popup-content-wrapper { border-radius: 10px; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; text-align: right; }
     .leaflet-popup-content { margin: 12px 16px; font-size: 13px; line-height: 1.6; }
     .popup-title { font-weight: 700; font-size: 14px; color: var(--blue-dark); margin-bottom: 6px; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
     .popup-row { display: flex; justify-content: space-between; gap: 14px; padding: 2px 0; }
     .popup-key { color: var(--muted); font-size: 12px; }
     .popup-val { font-weight: 600; font-size: 12px; color: var(--text); }
     .popup-actions { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); display: flex; gap: 6px; }
-    .popup-btn {
-      flex: 1; padding: 5px; border-radius: 5px; font-size: 11px; font-weight: 600;
-      cursor: pointer; border: 1px solid var(--border); background: var(--surface);
-      color: var(--text); transition: background 0.12s;
-    }
+    .popup-btn { flex: 1; padding: 5px; border-radius: 5px; font-size: 11px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text); }
     .popup-btn:hover { background: #e2e8f0; }
     .popup-btn.danger { border-color: #fca5a5; color: var(--red); }
     .popup-btn.danger:hover { background: #fee2e2; }
-
-    /* Toast notification */
-    #toast {
-      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px);
-      background: var(--blue-dark); color: #fff; padding: 10px 20px; border-radius: 8px;
-      font-size: 13px; font-weight: 500; z-index: 2000; transition: transform 0.3s;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.3); white-space: nowrap;
-    }
+    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(80px); background: var(--blue-dark); color: #fff; padding: 10px 20px; border-radius: 8px; font-size: 13px; font-weight: 500; z-index: 2000; transition: transform 0.3s; white-space: nowrap; }
     #toast.show { transform: translateX(-50%) translateY(0); }
-
-    /* Status bar */
-    #statusbar {
-      height: 26px; background: var(--blue-dark); display: flex; align-items: center;
-      padding: 0 14px; gap: 12px; flex-shrink: 0;
-    }
+    #statusbar { height: 26px; background: var(--blue-dark); display: flex; align-items: center; padding: 0 14px; gap: 12px; flex-shrink: 0; }
     #statusbar span { font-size: 11px; color: rgba(255,255,255,0.6); }
     #coords { color: var(--blue-light); font-family: monospace; font-size: 11px; }
-    #zoom-level { color: var(--blue-light); font-family: monospace; font-size: 11px; }
-
-    /* Map labels */
-    .village-label {
-      background: transparent; border: none; font-size: 12px; font-weight: 700;
-      color: #1e293b; text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff;
-      white-space: nowrap; pointer-events: none;
-    }
-
-    /* Loading overlay */
-    #loading {
-      position: fixed; inset: 0; background: var(--blue-dark);
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      z-index: 9999; transition: opacity 0.4s;
-    }
+    .village-label { background: transparent; border: none; font-size: 12px; font-weight: 700; color: #1e293b; text-shadow: 1px 1px 0 #fff,-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff; white-space: nowrap; pointer-events: none; }
+    #loading { position: fixed; inset: 0; background: var(--blue-dark); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; transition: opacity 0.4s; }
     #loading .logo-big { font-size: 28px; font-weight: 700; color: #fff; margin-bottom: 8px; }
     #loading .logo-big span { color: var(--blue-light); }
     #loading .sub { font-size: 13px; color: rgba(255,255,255,0.6); margin-bottom: 28px; }
-    .spinner {
-      width: 36px; height: 36px; border: 3px solid rgba(255,255,255,0.2);
-      border-top-color: var(--blue-light); border-radius: 50%; animation: spin 0.8s linear infinite;
-    }
+    .spinner { width: 36px; height: 36px; border: 3px solid rgba(255,255,255,0.2); border-top-color: var(--blue-light); border-radius: 50%; animation: spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* Scrollbar */
     ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
   </style>
 </head>
 <body>
 
-<!-- Loading screen -->
 <div id="loading">
   <div class="logo-big">מי <span>הגליל</span></div>
   <div class="sub">מערכת GIS | טוען נתונים...</div>
   <div class="spinner"></div>
 </div>
 
-<!-- App -->
 <div id="app">
-  <!-- Topbar -->
   <div id="topbar">
     <div class="logo">💧 מי <span>הגליל</span> | מערכת GIS</div>
     <div class="stats">
-      <div class="stat"><div class="n" id="stat-villages">7</div><div class="l">ישובים</div></div>
-      <div class="stat"><div class="n" id="stat-pipes">124 ק"מ</div><div class="l">צנרת</div></div>
+      <div class="stat"><div class="n">7</div><div class="l">ישובים</div></div>
+      <div class="stat"><div class="n">124 ק"מ</div><div class="l">צנרת</div></div>
       <div class="stat alert"><div class="n" id="stat-incidents">—</div><div class="l">תקלות פעילות</div></div>
     </div>
     <div style="display:flex;align-items:center;gap:6px">
@@ -259,14 +122,9 @@
     </div>
   </div>
 
-  <!-- Main -->
   <div id="main">
-    <!-- Map -->
     <div id="map"></div>
-
-    <!-- Sidebar -->
     <div id="sidebar">
-      <!-- Layers -->
       <div class="panel">
         <div class="panel-title">שכבות מפה</div>
         <div class="layer-row" onclick="toggleLayer('water')">
@@ -306,7 +164,6 @@
         </div>
       </div>
 
-      <!-- Village filter -->
       <div class="panel">
         <div class="panel-title">סינון לפי ישוב</div>
         <select id="village-filter" onchange="filterByVillage(this.value)">
@@ -321,7 +178,6 @@
         </select>
       </div>
 
-      <!-- Incidents list -->
       <div style="padding:10px 14px 4px;border-bottom:1px solid var(--border)">
         <div class="panel-title" style="margin-bottom:0">תקלות</div>
       </div>
@@ -329,12 +185,10 @@
         <div style="color:var(--muted);font-size:13px;text-align:center;padding:24px 0">טוען תקלות...</div>
       </div>
 
-      <!-- Add button -->
       <button id="add-btn" onclick="openModal()">+ פתח תקלה חדשה</button>
     </div>
   </div>
 
-  <!-- Status bar -->
   <div id="statusbar">
     <span id="coords">לחץ על המפה</span>
     <span>|</span>
@@ -346,7 +200,6 @@
   </div>
 </div>
 
-<!-- Add Incident Modal -->
 <div id="modal-bg" onclick="closeModalBg(event)">
   <div id="modal">
     <div class="modal-title">פתיחת תקלה חדשה</div>
@@ -391,7 +244,7 @@
         <input class="form-input" id="f-lng" type="number" step="0.0001" placeholder="35.1028"/>
       </div>
     </div>
-    <div style="font-size:11px;color:var(--muted);margin-top:-6px">💡 לחץ על המפה לפני פתיחת הטופס כדי למלא קואורדינטות אוטומטית</div>
+    <div style="font-size:11px;color:var(--muted);margin-top:-6px">💡 לחץ על המפה לפני פתיחת הטופס למיקום אוטומטי</div>
     <div class="modal-btns">
       <button class="btn-primary" onclick="submitIncident()">שמור תקלה</button>
       <button class="btn-secondary" onclick="closeModal()">ביטול</button>
@@ -399,52 +252,46 @@
   </div>
 </div>
 
-<!-- Toast -->
 <div id="toast"></div>
 
-<!-- Scripts -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/sbClient.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
-// ═══════════════════════════════════════════════
-//  CONFIG — החלף עם הפרטים שלך מ-Supabase
-// ═══════════════════════════════════════════════
-const SUPABASE_URL  = 'https://YOUR_PROJECT_ID.sbClient.co';
-const SUPABASE_ANON = 'sb_publishable_3PHqJMkla49HFGWns3eE_A_ML-7-gir';
+// ══════════════════════════════════════════════════
+//  CONFIG — הכנס כאן את הפרטים שלך מ-Supabase
+// ══════════════════════════════════════════════════
+var SUPABASE_URL  = 'https://YOUR_PROJECT_ID.supabase.co';
+var SUPABASE_ANON = 'YOUR_PUBLISHABLE_KEY';
 
-// ═══════════════════════════════════════════════
-//  DATA — ישובים ותשתיות
-// ═══════════════════════════════════════════════
-const VILLAGES = [
-  { name: 'מגד אל-כרום', ar: 'Majd al-Krum',  lat: 32.9292, lng: 35.1622, r: 0.018 },
-  { name: 'בענה',         ar: "Bi'ina",         lat: 32.9561, lng: 35.1597, r: 0.014 },
-  { name: 'דיר אל-אסד',  ar: 'Deir al-Asad',   lat: 32.9467, lng: 35.1742, r: 0.014 },
-  { name: 'נחף',          ar: 'Nahf',            lat: 32.9797, lng: 35.1944, r: 0.013 },
-  { name: 'סחנין',        ar: 'Sakhnin',         lat: 32.8653, lng: 35.2069, r: 0.022 },
-  { name: 'דיר חנא',     ar: 'Deir Hanna',      lat: 32.9228, lng: 35.2083, r: 0.015 },
-  { name: 'ערבה',         ar: 'Arrabeh',         lat: 32.8514, lng: 35.3339, r: 0.020 },
+// ══════════════════════════════════════════════════
+//  DATA
+// ══════════════════════════════════════════════════
+var VILLAGES = [
+  { name:'מגד אל-כרום', ar:'Majd al-Krum', lat:32.9292, lng:35.1622, r:0.018 },
+  { name:'בענה',         ar:"Bi'ina",       lat:32.9561, lng:35.1597, r:0.014 },
+  { name:'דיר אל-אסד',  ar:'Deir al-Asad', lat:32.9467, lng:35.1742, r:0.014 },
+  { name:'נחף',          ar:'Nahf',          lat:32.9797, lng:35.1944, r:0.013 },
+  { name:'סחנין',        ar:'Sakhnin',       lat:32.8653, lng:35.2069, r:0.022 },
+  { name:'דיר חנא',     ar:'Deir Hanna',    lat:32.9228, lng:35.2083, r:0.015 },
+  { name:'ערבה',         ar:'Arrabeh',       lat:32.8514, lng:35.3339, r:0.020 },
 ];
 
-const WATER_PIPES = [
-  // קו ראשי צפון — מגד → בענה → דיר אל-אסד → נחף
+var WATER_PIPES = [
   [[32.9292,35.1622],[32.9380,35.1610],[32.9467,35.1600],[32.9561,35.1597]],
   [[32.9467,35.1597],[32.9520,35.1680],[32.9560,35.1742],[32.9797,35.1944]],
-  // קו מרכזי — מגד → דיר חנא → סחנין
   [[32.9292,35.1622],[32.9260,35.1850],[32.9228,35.2083]],
   [[32.9228,35.2083],[32.9000,35.2076],[32.8653,35.2069]],
-  // קו דרום — סחנין → ערבה
   [[32.8653,35.2069],[32.8580,35.2600],[32.8514,35.3339]],
-  // קו מזרחי — דיר חנא → ערבה
   [[32.9228,35.2083],[32.9000,35.2700],[32.8514,35.3339]],
 ];
 
-const SEWAGE_PIPES = [
+var SEWAGE_PIPES = [
   [[32.9292,35.1622],[32.9380,35.1640],[32.9467,35.1742]],
   [[32.9228,35.2083],[32.9100,35.2100],[32.8653,35.2069]],
   [[32.8653,35.2069],[32.8590,35.2700],[32.8514,35.3339]],
 ];
 
-const PUMP_STATIONS = [
+var PUMP_STATIONS = [
   { name:'תחנת שאיבה מגד',       lat:32.9292, lng:35.1622, output:'620 מ"ק/ש', status:'פעיל' },
   { name:'תחנת שאיבה צומת צפון', lat:32.9500, lng:35.1680, output:'380 מ"ק/ש', status:'פעיל' },
   { name:'תחנת שאיבה סחנין',     lat:32.8653, lng:35.2069, output:'450 מ"ק/ש', status:'פעיל' },
@@ -452,442 +299,294 @@ const PUMP_STATIONS = [
   { name:'תחנת שאיבה ערבה',      lat:32.8514, lng:35.3339, output:'310 מ"ק/ש', status:'פעיל' },
 ];
 
-const RESERVOIRS = [
+var RESERVOIRS = [
   { name:'מאגר מגד אל-כרום', lat:32.9340, lng:35.1580, vol:'4,000 מ"ק', fill:'82%' },
   { name:'מאגר נחף',          lat:32.9840, lng:35.1980, vol:'2,500 מ"ק', fill:'91%' },
   { name:'מאגר סחנין',        lat:32.8700, lng:35.2100, vol:'6,000 מ"ק', fill:'74%' },
   { name:'מאגר ערבה',         lat:32.8550, lng:35.3300, vol:'3,200 מ"ק', fill:'88%' },
 ];
 
-// ═══════════════════════════════════════════════
-//  GLOBALS
-// ═══════════════════════════════════════════════
-let sbClient, supabase, layers = {}, layerState = {};
-let incidents = [], incidentMarkers = {};
-let lastClickLat = null, lastClickLng = null;
-let activeFilter = '';
+// ══════════════════════════════════════════════════
+//  GLOBALS — כל המשתנים מתחילים ב-g כדי למנוע התנגשות
+// ══════════════════════════════════════════════════
+var gMap, gSb, gLayers = {}, gLayerState = {};
+var gIncidents = [], gMarkers = {};
+var gLastLat = null, gLastLng = null, gFilter = '';
 
-// ═══════════════════════════════════════════════
+var PRIORITY_COLORS = { high:'#dc2626', medium:'#d97706', low:'#16a34a' };
+var PRIORITY_HE     = { high:'גבוהה',   medium:'בינונית', low:'נמוכה'  };
+var STATUS_HE       = { open:'פתוחה',   in_progress:'בטיפול', closed:'סגורה' };
+
+// ══════════════════════════════════════════════════
 //  INIT
-// ═══════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', () => {
-  initMap();
-  initSupabase();
-  setTimeout(hideLoading, 800);
+// ══════════════════════════════════════════════════
+window.addEventListener('load', function() {
+  try { initMap(); } catch(e) { console.error('Map error:', e); }
+  try { initSB();  } catch(e) { console.error('SB error:', e); loadDemo(); }
+  setTimeout(hideLoading, 1000);
 });
 
 function hideLoading() {
-  const el = document.getElementById('loading');
+  var el = document.getElementById('loading');
+  if (!el) return;
   el.style.opacity = '0';
-  setTimeout(() => el.remove(), 400);
+  setTimeout(function() { if (el.parentNode) el.parentNode.removeChild(el); }, 400);
 }
 
-// ═══════════════════════════════════════════════
-//  MAP
-// ═══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
+//  MAP INIT
+// ══════════════════════════════════════════════════
 function initMap() {
-  map = L.map('map', { zoomControl: true, attributionControl: false })
-    .setView([32.91, 35.22], 11);
+  gMap = L.map('map', { zoomControl:true, attributionControl:false }).setView([32.91, 35.22], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19 }).addTo(gMap);
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 })
-    .addTo(map);
+  gMap.on('mousemove', function(e) {
+    document.getElementById('coords').textContent = e.latlng.lat.toFixed(5) + '° N,  ' + e.latlng.lng.toFixed(5) + '° E';
+  });
+  gMap.on('zoomend', function() {
+    document.getElementById('zoom-level').textContent = gMap.getZoom();
+  });
+  gMap.on('click', function(e) { gLastLat = e.latlng.lat; gLastLng = e.latlng.lng; });
 
-  map.on('mousemove', e => {
-    document.getElementById('coords').textContent =
-      e.latlng.lat.toFixed(5) + '° N,  ' + e.latlng.lng.toFixed(5) + '° E';
-  });
-  map.on('zoom', () => {
-    document.getElementById('zoom-level').textContent = map.getZoom();
-  });
-  map.on('click', e => {
-    lastClickLat = e.latlng.lat;
-    lastClickLng = e.latlng.lng;
-  });
-
-  buildStaticLayers();
+  buildLayers();
 }
 
-function buildStaticLayers() {
-  // --- Villages (circles) ---
-  const vg = L.layerGroup();
-  VILLAGES.forEach(v => {
-    L.circle([v.lat, v.lng], {
-      radius: v.r * 111000,
-      color: '#1a7fc1', weight: 2, opacity: 0.7,
-      fillColor: '#1a7fc1', fillOpacity: 0.07
-    }).bindPopup(`
-      <div class="popup-title">${v.name}</div>
-      <div class="popup-row"><span class="popup-key">שם ערבי</span><span class="popup-val">${v.ar}</span></div>
-      <div class="popup-row"><span class="popup-key">קואורדינטות</span><span class="popup-val">${v.lat.toFixed(4)}, ${v.lng.toFixed(4)}</span></div>
-    `).addTo(vg);
-
-    L.marker([v.lat, v.lng], {
-      icon: L.divIcon({
-        className: 'village-label',
-        html: `<div>${v.name}</div>`,
-        iconSize: null, iconAnchor: [0, 0]
-      })
-    }).addTo(vg);
+function buildLayers() {
+  // Villages
+  var vg = L.layerGroup();
+  VILLAGES.forEach(function(v) {
+    L.circle([v.lat,v.lng], { radius:v.r*111000, color:'#1a7fc1', weight:2, opacity:0.7, fillColor:'#1a7fc1', fillOpacity:0.07 })
+      .bindPopup('<div class="popup-title">'+v.name+'</div><div class="popup-row"><span class="popup-key">שם ערבי</span><span class="popup-val">'+v.ar+'</span></div>').addTo(vg);
+    L.marker([v.lat,v.lng], { icon:L.divIcon({ className:'village-label', html:'<div>'+v.name+'</div>', iconSize:null, iconAnchor:[0,0] }) }).addTo(vg);
   });
-  layers.villages = vg; layerState.villages = true; vg.addTo(map);
+  gLayers.villages = vg; gLayerState.villages = true; vg.addTo(gMap);
 
-  // --- Water pipes ---
-  const wg = L.layerGroup();
-  WATER_PIPES.forEach((coords, i) => {
-    L.polyline(coords, { color: '#1a7fc1', weight: 3.5, opacity: 0.85 })
-      .bindPopup(`
-        <div class="popup-title">קו מים ראשי</div>
-        <div class="popup-row"><span class="popup-key">קטע</span><span class="popup-val">#${i+1}</span></div>
-        <div class="popup-row"><span class="popup-key">קוטר</span><span class="popup-val">DN ${[200,200,250,200,150,200][i] || 150}</span></div>
-        <div class="popup-row"><span class="popup-key">חומר</span><span class="popup-val">PVC-U</span></div>
-        <div class="popup-row"><span class="popup-key">שנת הנחה</span><span class="popup-val">${[2008,2010,2006,2009,2014,2011][i] || 2010}</span></div>
-        <div class="popup-row"><span class="popup-key">לחץ תכנון</span><span class="popup-val">6 בר</span></div>
-      `).addTo(wg);
+  // Water
+  var wg = L.layerGroup();
+  var wD=[200,200,250,200,150,200], wY=[2008,2010,2006,2009,2014,2011];
+  WATER_PIPES.forEach(function(c,i) {
+    L.polyline(c, { color:'#1a7fc1', weight:3.5, opacity:0.85 })
+      .bindPopup('<div class="popup-title">קו מים ראשי</div><div class="popup-row"><span class="popup-key">קוטר</span><span class="popup-val">DN '+(wD[i]||150)+'</span></div><div class="popup-row"><span class="popup-key">חומר</span><span class="popup-val">PVC-U</span></div><div class="popup-row"><span class="popup-key">שנת הנחה</span><span class="popup-val">'+(wY[i]||2010)+'</span></div>').addTo(wg);
   });
-  layers.water = wg; layerState.water = true; wg.addTo(map);
+  gLayers.water = wg; gLayerState.water = true; wg.addTo(gMap);
   document.getElementById('cnt-water').textContent = WATER_PIPES.length + ' קטעים';
 
-  // --- Sewage pipes ---
-  const sg = L.layerGroup();
-  SEWAGE_PIPES.forEach((coords, i) => {
-    L.polyline(coords, { color: '#a16207', weight: 2.5, opacity: 0.8, dashArray: '7,5' })
-      .bindPopup(`
-        <div class="popup-title">קו ביוב</div>
-        <div class="popup-row"><span class="popup-key">קוטר</span><span class="popup-val">DN 300</span></div>
-        <div class="popup-row"><span class="popup-key">שנת הנחה</span><span class="popup-val">${[2011,2013,2015][i]}</span></div>
-        <div class="popup-row"><span class="popup-key">סטטוס</span><span class="popup-val">תקין</span></div>
-      `).addTo(sg);
+  // Sewage
+  var sg = L.layerGroup();
+  var sY=[2011,2013,2015];
+  SEWAGE_PIPES.forEach(function(c,i) {
+    L.polyline(c, { color:'#a16207', weight:2.5, opacity:0.8, dashArray:'7,5' })
+      .bindPopup('<div class="popup-title">קו ביוב</div><div class="popup-row"><span class="popup-key">שנת הנחה</span><span class="popup-val">'+sY[i]+'</span></div><div class="popup-row"><span class="popup-key">סטטוס</span><span class="popup-val">תקין</span></div>').addTo(sg);
   });
-  layers.sewage = sg; layerState.sewage = true; sg.addTo(map);
+  gLayers.sewage = sg; gLayerState.sewage = true; sg.addTo(gMap);
   document.getElementById('cnt-sewage').textContent = SEWAGE_PIPES.length + ' קטעים';
 
-  // --- Pump stations ---
-  const pg = L.layerGroup();
-  PUMP_STATIONS.forEach(p => {
-    const color = p.status === 'פעיל' ? '#0891b2' : '#f59e0b';
-    const ic = L.divIcon({
-      className: '',
-      html: `<div style="width:18px;height:18px;background:${color};border:2.5px solid #fff;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,0.35)"></div>`,
-      iconSize: [18,18], iconAnchor: [9,9]
-    });
-    L.marker([p.lat, p.lng], { icon: ic })
-      .bindPopup(`
-        <div class="popup-title">${p.name}</div>
-        <div class="popup-row"><span class="popup-key">תפוקה</span><span class="popup-val">${p.output}</span></div>
-        <div class="popup-row"><span class="popup-key">סטטוס</span><span class="popup-val" style="color:${p.status==='פעיל'?'#16a34a':'#d97706'}">${p.status}</span></div>
-        <div class="popup-row"><span class="popup-key">קואורדינטות</span><span class="popup-val">${p.lat.toFixed(4)}, ${p.lng.toFixed(4)}</span></div>
-      `).addTo(pg);
+  // Pumps
+  var pg = L.layerGroup();
+  PUMP_STATIONS.forEach(function(p) {
+    var col = p.status==='פעיל' ? '#0891b2' : '#f59e0b';
+    L.marker([p.lat,p.lng], { icon:L.divIcon({ className:'', html:'<div style="width:18px;height:18px;background:'+col+';border:2.5px solid #fff;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,0.35)"></div>', iconSize:[18,18], iconAnchor:[9,9] }) })
+      .bindPopup('<div class="popup-title">'+p.name+'</div><div class="popup-row"><span class="popup-key">תפוקה</span><span class="popup-val">'+p.output+'</span></div><div class="popup-row"><span class="popup-key">סטטוס</span><span class="popup-val" style="color:'+(p.status==='פעיל'?'#16a34a':'#d97706')+'">'+p.status+'</span></div>').addTo(pg);
   });
-  layers.pumps = pg; layerState.pumps = true; pg.addTo(map);
+  gLayers.pumps = pg; gLayerState.pumps = true; pg.addTo(gMap);
   document.getElementById('cnt-pumps').textContent = PUMP_STATIONS.length;
 
-  // --- Reservoirs ---
-  const rg = L.layerGroup();
-  RESERVOIRS.forEach(r => {
-    const ic = L.divIcon({
-      className: '',
-      html: `<div style="width:20px;height:20px;background:#0d9488;border:2.5px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.35)"></div>`,
-      iconSize: [20,20], iconAnchor: [10,10]
-    });
-    L.marker([r.lat, r.lng], { icon: ic })
-      .bindPopup(`
-        <div class="popup-title">${r.name}</div>
-        <div class="popup-row"><span class="popup-key">נפח</span><span class="popup-val">${r.vol}</span></div>
-        <div class="popup-row"><span class="popup-key">אחוז מילוי</span><span class="popup-val">${r.fill}</span></div>
-        <div class="popup-row"><span class="popup-key">סטטוס</span><span class="popup-val" style="color:#16a34a">תקין</span></div>
-      `).addTo(rg);
+  // Reservoirs
+  var rg = L.layerGroup();
+  RESERVOIRS.forEach(function(r) {
+    L.marker([r.lat,r.lng], { icon:L.divIcon({ className:'', html:'<div style="width:20px;height:20px;background:#0d9488;border:2.5px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.35)"></div>', iconSize:[20,20], iconAnchor:[10,10] }) })
+      .bindPopup('<div class="popup-title">'+r.name+'</div><div class="popup-row"><span class="popup-key">נפח</span><span class="popup-val">'+r.vol+'</span></div><div class="popup-row"><span class="popup-key">מילוי</span><span class="popup-val">'+r.fill+'</span></div>').addTo(rg);
   });
-  layers.reservoirs = rg; layerState.reservoirs = true; rg.addTo(map);
+  gLayers.reservoirs = rg; gLayerState.reservoirs = true; rg.addTo(gMap);
   document.getElementById('cnt-reservoirs').textContent = RESERVOIRS.length;
 
-  // Incidents layer (empty, filled by Supabase)
-  layers.incidents = L.layerGroup(); layerState.incidents = true;
-  layers.incidents.addTo(map);
+  // Incidents (filled by Supabase/demo)
+  gLayers.incidents = L.layerGroup(); gLayerState.incidents = true; gLayers.incidents.addTo(gMap);
 }
 
-// ═══════════════════════════════════════════════
-//  LAYER TOGGLE
-// ═══════════════════════════════════════════════
 function toggleLayer(name) {
-  const tog = document.getElementById('tog-' + name);
-  if (layerState[name]) {
-    map.removeLayer(layers[name]);
-    tog.classList.remove('on');
-    layerState[name] = false;
-  } else {
-    if (layers[name]) map.addLayer(layers[name]);
-    tog.classList.add('on');
-    layerState[name] = true;
-  }
+  var tog = document.getElementById('tog-'+name);
+  if (gLayerState[name]) { gMap.removeLayer(gLayers[name]); tog.classList.remove('on'); gLayerState[name]=false; }
+  else { if (gLayers[name]) gMap.addLayer(gLayers[name]); tog.classList.add('on'); gLayerState[name]=true; }
 }
 
-// ═══════════════════════════════════════════════
-//  SUPABASE — INIT + REALTIME
-// ═══════════════════════════════════════════════
-function initSupabase() {
-  try {
-    sbClient window.sbClient.createClient(SUPABASE_URL, SUPABASE_ANON);
-    loadIncidents();
-    subscribeRealtime();
-  } catch(e) {
-    loadDemoIncidents();
-  }
+// ══════════════════════════════════════════════════
+//  SUPABASE
+// ══════════════════════════════════════════════════
+function initSB() {
+  if (!window.supabase) { loadDemo(); return; }
+  if (SUPABASE_URL.indexOf('YOUR_PROJECT_ID') !== -1) { loadDemo(); return; }
+  gSb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  loadIncidents();
+  subscribeRT();
 }
 
-async function loadIncidents() {
-  try {
-    const { data, error } = await supabase
-      .from('incidents')
-      .select('*')
-      .in('status', ['open', 'in_progress'])
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    incidents = data || [];
-    renderIncidents();
-    renderIncidentMarkers();
-    updateStats();
-  } catch(e) {
-    loadDemoIncidents();
-  }
+function loadIncidents() {
+  gSb.from('incidents').select('*').in('status',['open','in_progress']).order('created_at',{ascending:false})
+    .then(function(res) {
+      if (res.error) { loadDemo(); return; }
+      gIncidents = res.data || [];
+      renderIncidents(); renderMarkers(); updateStats(); setRTStatus(true);
+    }).catch(function() { loadDemo(); });
 }
 
-function subscribeRealtime() {
-  supabase
-    .channel('incidents-changes')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'incidents' }, payload => {
-      const ev = payload.eventType;
-      if (ev === 'INSERT') {
-        incidents.unshift(payload.new);
-        addIncidentMarker(payload.new, true);
-        showToast('תקלה חדשה נפתחה: ' + payload.new.title);
-      } else if (ev === 'UPDATE') {
-        const idx = incidents.findIndex(i => i.id === payload.new.id);
-        if (idx >= 0) incidents[idx] = payload.new;
-        else incidents.unshift(payload.new);
-        if (incidentMarkers[payload.new.id]) layers.incidents.removeLayer(incidentMarkers[payload.new.id]);
-        addIncidentMarker(payload.new, false);
-      } else if (ev === 'DELETE') {
-        incidents = incidents.filter(i => i.id !== payload.old.id);
-        if (incidentMarkers[payload.old.id]) layers.incidents.removeLayer(incidentMarkers[payload.old.id]);
-        delete incidentMarkers[payload.old.id];
+function subscribeRT() {
+  gSb.channel('incidents-rt')
+    .on('postgres_changes', { event:'*', schema:'public', table:'incidents' }, function(payload) {
+      var ev = payload.eventType;
+      if (ev==='INSERT') {
+        gIncidents.unshift(payload.new); addMarker(payload.new, true); showToast('תקלה חדשה: '+payload.new.title);
+      } else if (ev==='UPDATE') {
+        var idx = gIncidents.findIndex(function(i){return i.id===payload.new.id;});
+        if (idx>=0) gIncidents[idx]=payload.new; else gIncidents.unshift(payload.new);
+        if (gMarkers[payload.new.id]) gLayers.incidents.removeLayer(gMarkers[payload.new.id]);
+        addMarker(payload.new, false);
+      } else if (ev==='DELETE') {
+        gIncidents = gIncidents.filter(function(i){return i.id!==payload.old.id;});
+        if (gMarkers[payload.old.id]) gLayers.incidents.removeLayer(gMarkers[payload.old.id]);
+        delete gMarkers[payload.old.id];
       }
-      renderIncidents();
-      updateStats();
-    })
-    .subscribe(status => {
-      if (status !== 'SUBSCRIBED') setRealtimeStatus(false);
-    });
+      renderIncidents(); updateStats();
+    }).subscribe();
 }
 
-// Demo data when Supabase not configured
-function loadDemoIncidents() {
-  incidents = [
-    { id:1, title:'נזילה בצנרת ראשית', village:'מגד אל-כרום', lat:32.9250, lng:35.1580, priority:'high',   status:'open',        description:'נזילה גדולה ברחוב הראשי', created_at: new Date(Date.now()-7200000).toISOString() },
-    { id:2, title:'לחץ נמוך',           village:'סחנין',        lat:32.8620, lng:35.2040, priority:'medium', status:'in_progress', description:'תושבים מדווחים על לחץ נמוך', created_at: new Date(Date.now()-14400000).toISOString() },
-    { id:3, title:'תקלת מד מים',        village:'ערבה',          lat:32.8490, lng:35.3300, priority:'low',    status:'open',        description:'מד מים לא מציג קריאה', created_at: new Date(Date.now()-86400000).toISOString() },
+function loadDemo() {
+  gIncidents = [
+    { id:1, title:'נזילה בצנרת ראשית', village:'מגד אל-כרום', lat:32.9250, lng:35.1580, priority:'high',   status:'open',        description:'נזילה גדולה ברחוב הראשי',       created_at:new Date(Date.now()-7200000).toISOString() },
+    { id:2, title:'לחץ מים נמוך',      village:'סחנין',        lat:32.8620, lng:35.2040, priority:'medium', status:'in_progress', description:'תושבים מדווחים על לחץ נמוך',   created_at:new Date(Date.now()-14400000).toISOString() },
+    { id:3, title:'תקלת מד מים',       village:'ערבה',          lat:32.8490, lng:35.3300, priority:'low',    status:'open',        description:'מד מים לא מציג קריאה תקינה', created_at:new Date(Date.now()-86400000).toISOString() },
   ];
-  renderIncidents();
-  renderIncidentMarkers();
-  updateStats();
-  setRealtimeStatus(false);
+  renderIncidents(); renderMarkers(); updateStats(); setRTStatus(false);
 }
 
-function setRealtimeStatus(connected) {
-  document.getElementById('realtime-dot').style.background = connected ? '#22c55e' : '#f59e0b';
-  document.getElementById('realtime-label').textContent = connected ? 'מחובר בזמן אמת' : 'מצב הדגמה';
+function setRTStatus(on) {
+  document.getElementById('realtime-dot').style.background = on ? '#22c55e' : '#f59e0b';
+  document.getElementById('realtime-label').textContent = on ? 'מחובר בזמן אמת' : 'מצב הדגמה';
 }
 
-// ═══════════════════════════════════════════════
-//  INCIDENT MARKERS
-// ═══════════════════════════════════════════════
-const PRIORITY_COLORS = { high: '#dc2626', medium: '#d97706', low: '#16a34a' };
-const PRIORITY_HE = { high: 'גבוהה', medium: 'בינונית', low: 'נמוכה' };
-const STATUS_HE = { open: 'פתוחה', in_progress: 'בטיפול', closed: 'סגורה' };
-
-function renderIncidentMarkers() {
-  layers.incidents.clearLayers();
-  incidentMarkers = {};
-  incidents.forEach(inc => addIncidentMarker(inc, false));
+// ══════════════════════════════════════════════════
+//  MARKERS
+// ══════════════════════════════════════════════════
+function renderMarkers() {
+  gLayers.incidents.clearLayers(); gMarkers = {};
+  gIncidents.forEach(function(inc) { addMarker(inc, false); });
 }
 
-function addIncidentMarker(inc, isNew) {
-  if (inc.status === 'closed') return;
-  const color = PRIORITY_COLORS[inc.priority] || '#888';
-  const ic = L.divIcon({
-    className: '',
-    html: `<div style="width:22px;height:22px;background:${color};border:2.5px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center">
-      <span style="color:#fff;font-size:12px;font-weight:800;line-height:1">!</span>
-    </div>`,
-    iconSize: [22,22], iconAnchor: [11,11]
-  });
-
-  const timeAgo = formatTimeAgo(inc.created_at);
-  const marker = L.marker([inc.lat, inc.lng], { icon: ic })
-    .bindPopup(`
-      <div class="popup-title">${inc.title}</div>
-      <div class="popup-row"><span class="popup-key">ישוב</span><span class="popup-val">${inc.village}</span></div>
-      <div class="popup-row"><span class="popup-key">עדיפות</span><span class="popup-val" style="color:${color}">${PRIORITY_HE[inc.priority]}</span></div>
-      <div class="popup-row"><span class="popup-key">סטטוס</span><span class="popup-val">${STATUS_HE[inc.status]}</span></div>
-      <div class="popup-row"><span class="popup-key">נפתח</span><span class="popup-val">${timeAgo}</span></div>
-      ${inc.description ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;padding-top:5px;border-top:1px solid #eee">${inc.description}</div>` : ''}
-      <div class="popup-actions">
-        <button class="popup-btn" onclick="setStatus(${inc.id},'in_progress')">📋 קח לטיפול</button>
-        <button class="popup-btn danger" onclick="setStatus(${inc.id},'closed')">✔ סגור</button>
-      </div>
-    `);
-
-  marker.addTo(layers.incidents);
-  incidentMarkers[inc.id] = marker;
-
-  if (isNew) {
-    map.flyTo([inc.lat, inc.lng], 15, { duration: 1.5 });
-    setTimeout(() => marker.openPopup(), 1600);
-  }
+function addMarker(inc, isNew) {
+  if (inc.status==='closed') return;
+  var color = PRIORITY_COLORS[inc.priority] || '#888';
+  var ic = L.divIcon({ className:'', html:'<div style="width:22px;height:22px;background:'+color+';border:2.5px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center"><span style="color:#fff;font-size:12px;font-weight:800">!</span></div>', iconSize:[22,22], iconAnchor:[11,11] });
+  var m = L.marker([inc.lat,inc.lng], {icon:ic}).bindPopup(
+    '<div class="popup-title">'+inc.title+'</div>'+
+    '<div class="popup-row"><span class="popup-key">ישוב</span><span class="popup-val">'+inc.village+'</span></div>'+
+    '<div class="popup-row"><span class="popup-key">עדיפות</span><span class="popup-val" style="color:'+color+'">'+(PRIORITY_HE[inc.priority]||inc.priority)+'</span></div>'+
+    '<div class="popup-row"><span class="popup-key">סטטוס</span><span class="popup-val">'+(STATUS_HE[inc.status]||inc.status)+'</span></div>'+
+    '<div class="popup-row"><span class="popup-key">נפתח</span><span class="popup-val">'+timeAgo(inc.created_at)+'</span></div>'+
+    (inc.description?'<div style="font-size:12px;color:#64748b;margin-top:6px;padding-top:5px;border-top:1px solid #e2e8f0">'+inc.description+'</div>':'')+
+    '<div class="popup-actions"><button class="popup-btn" onclick="setStatus('+inc.id+',\'in_progress\')">📋 קח לטיפול</button><button class="popup-btn danger" onclick="setStatus('+inc.id+',\'closed\')">✔ סגור</button></div>'
+  );
+  m.addTo(gLayers.incidents);
+  gMarkers[inc.id] = m;
+  if (isNew) { gMap.flyTo([inc.lat,inc.lng],15,{duration:1.5}); setTimeout(function(){m.openPopup();},1600); }
 }
 
-// ═══════════════════════════════════════════════
-//  INCIDENT LIST RENDER
-// ═══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
+//  INCIDENT LIST
+// ══════════════════════════════════════════════════
 function renderIncidents() {
-  const panel = document.getElementById('incidents-panel');
-  const filtered = activeFilter ? incidents.filter(i => i.village === activeFilter) : incidents;
-
-  if (filtered.length === 0) {
-    panel.innerHTML = `<div style="color:var(--muted);font-size:13px;text-align:center;padding:24px 0">אין תקלות פעילות${activeFilter?' ב'+activeFilter:''}</div>`;
-    return;
-  }
-
-  panel.innerHTML = filtered.map(inc => `
-    <div class="inc-item" onclick="zoomToIncident(${inc.lat},${inc.lng},${inc.id})">
-      <div class="inc-top">
-        <span class="inc-title">${inc.title}</span>
-        <span class="badge badge-${inc.priority}">${PRIORITY_HE[inc.priority]}</span>
-      </div>
-      <div class="inc-meta">
-        <span class="inc-village">${inc.village}</span>
-        <span>${STATUS_HE[inc.status] || inc.status}</span>
-        <span>${formatTimeAgo(inc.created_at)}</span>
-      </div>
-    </div>
-  `).join('');
-
-  document.getElementById('cnt-incidents').textContent = filtered.filter(i=>i.status!=='closed').length;
+  var panel = document.getElementById('incidents-panel');
+  var list = gFilter ? gIncidents.filter(function(i){return i.village===gFilter;}) : gIncidents;
+  if (!list.length) { panel.innerHTML='<div style="color:#64748b;font-size:13px;text-align:center;padding:24px 0">אין תקלות פעילות'+(gFilter?' ב'+gFilter:'')+'</div>'; return; }
+  panel.innerHTML = list.map(function(inc) {
+    return '<div class="inc-item" onclick="zoomTo('+inc.lat+','+inc.lng+','+inc.id+')">'+
+      '<div class="inc-top"><span class="inc-title">'+inc.title+'</span><span class="badge badge-'+inc.priority+'">'+(PRIORITY_HE[inc.priority]||inc.priority)+'</span></div>'+
+      '<div class="inc-meta"><span class="inc-village">'+inc.village+'</span><span>'+(STATUS_HE[inc.status]||inc.status)+'</span><span>'+timeAgo(inc.created_at)+'</span></div></div>';
+  }).join('');
+  document.getElementById('cnt-incidents').textContent = list.filter(function(i){return i.status!=='closed';}).length;
 }
 
-function zoomToIncident(lat, lng, id) {
-  map.setView([lat, lng], 16);
-  if (incidentMarkers[id]) setTimeout(() => incidentMarkers[id].openPopup(), 300);
+function zoomTo(lat,lng,id) {
+  gMap.setView([lat,lng],16);
+  if (gMarkers[id]) setTimeout(function(){gMarkers[id].openPopup();},300);
 }
 
-// ═══════════════════════════════════════════════
-//  VILLAGE FILTER
-// ═══════════════════════════════════════════════
 function filterByVillage(val) {
-  activeFilter = val;
-  renderIncidents();
-  if (val) {
-    const v = VILLAGES.find(v => v.name === val);
-    if (v) map.flyTo([v.lat, v.lng], 14, { duration: 1 });
-  } else {
-    map.flyTo([32.91, 35.22], 11, { duration: 1 });
-  }
+  gFilter = val; renderIncidents();
+  if (val) { var v=VILLAGES.find(function(v){return v.name===val;}); if(v) gMap.flyTo([v.lat,v.lng],14,{duration:1}); }
+  else gMap.flyTo([32.91,35.22],11,{duration:1});
 }
 
-// ═══════════════════════════════════════════════
-//  ADD INCIDENT
-// ═══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
+//  ADD / UPDATE INCIDENT
+// ══════════════════════════════════════════════════
 function openModal() {
-  if (lastClickLat) {
-    document.getElementById('f-lat').value = lastClickLat.toFixed(5);
-    document.getElementById('f-lng').value = lastClickLng.toFixed(5);
-  }
+  if (gLastLat) { document.getElementById('f-lat').value=gLastLat.toFixed(5); document.getElementById('f-lng').value=gLastLng.toFixed(5); }
   document.getElementById('modal-bg').classList.add('open');
 }
 function closeModal() { document.getElementById('modal-bg').classList.remove('open'); }
-function closeModalBg(e) { if (e.target.id === 'modal-bg') closeModal(); }
+function closeModalBg(e) { if (e.target.id==='modal-bg') closeModal(); }
 
-async function submitIncident() {
-  const title   = document.getElementById('f-title').value.trim();
-  const village = document.getElementById('f-village').value;
-  const priority= document.getElementById('f-priority').value;
-  const desc    = document.getElementById('f-desc').value.trim();
-  const lat     = parseFloat(document.getElementById('f-lat').value);
-  const lng     = parseFloat(document.getElementById('f-lng').value);
-
-  if (!title || !village || isNaN(lat) || isNaN(lng)) {
-    showToast('אנא מלא את כל השדות החובה'); return;
+function submitIncident() {
+  var title    = document.getElementById('f-title').value.trim();
+  var village  = document.getElementById('f-village').value;
+  var priority = document.getElementById('f-priority').value;
+  var desc     = document.getElementById('f-desc').value.trim();
+  var lat      = parseFloat(document.getElementById('f-lat').value);
+  var lng      = parseFloat(document.getElementById('f-lng').value);
+  if (!title||!village||isNaN(lat)||isNaN(lng)) { showToast('אנא מלא את כל השדות החובה'); return; }
+  var rec = { title:title, village:village, priority:priority, description:desc, lat:lat, lng:lng, status:'open' };
+  if (gSb) {
+    gSb.from('incidents').insert([rec]).then(function(res) {
+      if (res.error) showToast('שגיאה: '+res.error.message);
+    });
+  } else {
+    var demo = Object.assign({}, rec, { id:Date.now(), created_at:new Date().toISOString() });
+    gIncidents.unshift(demo); addMarker(demo,true); renderIncidents(); updateStats(); showToast('תקלה נוספה (מצב הדגמה)');
   }
-
-  const record = { title, village, priority, description: desc, lat, lng, status: 'open' };
-
-  try {
-    if (supabase && SUPABASE_URL !== 'https://YOUR_PROJECT_ID.sbClient.co') {
-      const { error } = await sbClient.from('incidents').insert([record]);
-      if (error) throw error;
-    } else {
-      // Demo mode — add locally
-      const demo = { ...record, id: Date.now(), created_at: new Date().toISOString() };
-      incidents.unshift(demo);
-      addIncidentMarker(demo, true);
-      renderIncidents();
-      updateStats();
-      showToast('תקלה נוספה (מצב הדגמה)');
-    }
-    closeModal();
-    clearForm();
-  } catch(e) {
-    showToast('שגיאה בשמירה: ' + e.message);
-  }
+  closeModal(); clearForm();
 }
 
-async function setStatus(id, status) {
-  try {
-    if (supabase && SUPABASE_URL !== 'https://YOUR_PROJECT_ID.sbClient.co') {
-      await sbClient.from('incidents').update({ status }).eq('id', id);
-    } else {
-      const inc = incidents.find(i => i.id === id);
-      if (inc) { inc.status = status; }
-      if (status === 'closed') {
-        incidents = incidents.filter(i => i.id !== id);
-        if (incidentMarkers[id]) layers.incidents.removeLayer(incidentMarkers[id]);
-        delete incidentMarkers[id];
-      }
-      renderIncidents();
-      updateStats();
-      map.closePopup();
+function setStatus(id, status) {
+  if (gSb) {
+    gSb.from('incidents').update({status:status}).eq('id',id);
+  } else {
+    var inc = gIncidents.find(function(i){return i.id===id;});
+    if (inc) inc.status = status;
+    if (status==='closed') {
+      gIncidents = gIncidents.filter(function(i){return i.id!==id;});
+      if (gMarkers[id]) gLayers.incidents.removeLayer(gMarkers[id]);
+      delete gMarkers[id];
     }
-  } catch(e) { console.error(e); }
+    renderIncidents(); updateStats(); gMap.closePopup();
+  }
 }
 
 function clearForm() {
-  ['f-title','f-village','f-desc','f-lat','f-lng'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('f-priority').value = 'medium';
+  ['f-title','f-village','f-desc','f-lat','f-lng'].forEach(function(id){ document.getElementById(id).value=''; });
+  document.getElementById('f-priority').value='medium';
 }
 
-// ═══════════════════════════════════════════════
-//  STATS + HELPERS
-// ═══════════════════════════════════════════════
+// ══════════════════════════════════════════════════
+//  HELPERS
+// ══════════════════════════════════════════════════
 function updateStats() {
-  const open = incidents.filter(i => i.status !== 'closed').length;
-  document.getElementById('stat-incidents').textContent = open;
+  document.getElementById('stat-incidents').textContent = gIncidents.filter(function(i){return i.status!=='closed';}).length;
 }
 
-function formatTimeAgo(iso) {
+function timeAgo(iso) {
   if (!iso) return '';
-  const diff = Math.floor((Date.now() - new Date(iso)) / 60000);
-  if (diff < 1)  return 'הרגע';
-  if (diff < 60) return `לפני ${diff} דק׳`;
-  const h = Math.floor(diff / 60);
-  if (h < 24)    return `לפני ${h} שעות`;
-  return `לפני ${Math.floor(h/24)} ימים`;
+  var d = Math.floor((Date.now()-new Date(iso))/60000);
+  if (d<1) return 'הרגע';
+  if (d<60) return 'לפני '+d+' דק׳';
+  var h=Math.floor(d/60);
+  if (h<24) return 'לפני '+h+' שעות';
+  return 'לפני '+Math.floor(h/24)+' ימים';
 }
 
 function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 3000);
+  var t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(function(){ t.classList.remove('show'); }, 3000);
 }
 </script>
 </body>
