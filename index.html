@@ -9,16 +9,19 @@
   <script src="auth.js"></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    :root{--blue-dark:#0d3b5e;--blue-mid:#1a7fc1;--blue-light:#5ab8e8;--surface:#f8fafc;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--red:#dc2626;--green:#16a34a;--amber:#d97706;--purple:#7c3aed}
+    :root{--blue-dark:#0d3b5e;--blue-mid:#1a7fc1;--blue-light:#5ab8e8;--surface:#f8fafc;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--red:#dc2626;--green:#16a34a;--amber:#d97706;--purple:#7c3aed;--brown:#a16207}
     html,body{height:100%;font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--surface);color:var(--text)}
     #app{display:flex;flex-direction:column;height:100vh;visibility:hidden}
     #app.ready{visibility:visible}
     #topbar{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:52px;background:var(--blue-dark);color:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.3);gap:12px}
     .logo{font-size:15px;font-weight:600;white-space:nowrap}.logo span{color:var(--blue-light)}
-    .stats{display:flex;gap:8px}
+    .stats{display:flex;gap:8px;flex-wrap:nowrap}
     .stat{background:rgba(255,255,255,0.1);border-radius:6px;padding:3px 12px;text-align:center}
     .stat .n{font-size:15px;font-weight:700;color:#fff}.stat .l{font-size:10px;color:rgba(255,255,255,0.65)}
     .stat.alert .n{color:#fca5a5}.stat.mine .n{color:#86efac}
+    .stat.coords{min-width:230px;direction:ltr}
+    .stat.coords .n{font-family:'Courier New',monospace;font-size:13px;letter-spacing:0.5px;color:#5ab8e8;font-weight:600}
+    .stat.coords .l{direction:rtl}
     #realtime-dot{width:9px;height:9px;background:#f59e0b;border-radius:50%;animation:pulse 2s infinite;flex-shrink:0}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
     .user-area{display:flex;align-items:center;gap:8px;position:relative}
@@ -44,17 +47,31 @@
     .panel{padding:12px 14px;border-bottom:1px solid var(--border)}
     .panel-title{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
     .panel-title .count-pill{background:var(--blue-mid);color:#fff;border-radius:10px;padding:1px 8px;font-size:10px;font-weight:700;letter-spacing:0}
-    .layer-row{display:flex;align-items:center;gap:9px;padding:6px 0;cursor:pointer;user-select:none}
-    .layer-row:hover{opacity:0.75}
-    .layer-swatch{width:14px;height:14px;border-radius:3px;flex-shrink:0}
-    .layer-label{font-size:13px;color:var(--text);flex:1}
-    .layer-count{font-size:10px;color:var(--muted)}
+    .village-group{margin-bottom:8px;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+    .village-header{display:flex;align-items:center;gap:8px;padding:8px 11px;cursor:pointer;background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);user-select:none}
+    .village-header:hover{background:linear-gradient(135deg,#dbeafe 0%,#bfdbfe 100%)}
+    .village-icon{font-size:14px}
+    .village-name{flex:1;font-size:13px;font-weight:700;color:#1e3a8a}
+    .village-arrow{font-size:10px;color:#1e40af;transition:transform 0.2s}
+    .village-group.open .village-arrow{transform:rotate(180deg)}
+    .village-master-toggle{flex-shrink:0}
+    .village-content{display:none;padding:8px 11px 10px;background:#fff}
+    .village-group.open .village-content{display:block}
+    .sub-layer{display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;font-size:12px}
+    .sub-layer:hover{opacity:0.8}
+    .sub-swatch{width:14px;height:14px;border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px}
+    .sub-label{flex:1;color:var(--text)}
+    .sub-count{font-size:10px;color:var(--muted)}
+    .mini-toggle{width:26px;height:14px;background:#cbd5e1;border-radius:7px;position:relative;cursor:pointer;flex-shrink:0;transition:background 0.2s}
+    .mini-toggle.on{background:var(--blue-mid)}
+    .mini-toggle::after{content:'';position:absolute;width:10px;height:10px;background:#fff;border-radius:50%;top:2px;right:2px;transition:transform 0.2s}
+    .mini-toggle.on::after{transform:translateX(-12px)}
+    .zoom-link{display:inline-block;font-size:11px;color:var(--blue-mid);cursor:pointer;flex-shrink:0;padding:2px 4px}
+    .zoom-link:hover{background:#eff6ff;border-radius:4px}
     .toggle{width:32px;height:18px;background:#cbd5e1;border-radius:9px;position:relative;transition:background 0.2s;cursor:pointer;flex-shrink:0}
     .toggle.on{background:var(--blue-mid)}
     .toggle::after{content:'';position:absolute;width:14px;height:14px;background:#fff;border-radius:50%;top:2px;right:2px;transition:transform 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2)}
     .toggle.on::after{transform:translateX(-14px)}
-    .zoom-link{display:inline-block;font-size:10px;color:var(--blue-mid);cursor:pointer;margin-right:6px}
-    .zoom-link:hover{text-decoration:underline}
     #village-filter{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;color:var(--text);background:var(--surface);direction:rtl;appearance:none}
     .my-incidents-panel{background:linear-gradient(135deg,#dbeafe 0%,#bfdbfe 100%);border-bottom:1px solid var(--border)}
     .my-incidents-panel .panel-title{color:#1e40af}
@@ -105,6 +122,7 @@
     .popup-btn.danger{border-color:#fca5a5;color:var(--red)}.popup-btn.danger:hover{background:#fee2e2}
     .popup-btn.success{background:var(--green);color:#fff;border-color:var(--green)}
     .popup-mine-tag{background:#1e40af;color:#fff;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;display:inline-block;margin-bottom:5px}
+    .map-label{background:transparent;border:none;font-size:9px;font-weight:700;color:#0d3b5e;text-shadow:1px 1px 0 rgba(255,255,255,0.95),-1px -1px 0 rgba(255,255,255,0.95),1px -1px 0 rgba(255,255,255,0.95),-1px 1px 0 rgba(255,255,255,0.95);white-space:nowrap;pointer-events:none;font-family:Arial,sans-serif}
     #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--blue-dark);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:2000;transition:transform 0.3s;white-space:nowrap}
     #toast.show{transform:translateX(-50%) translateY(0)}
     ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
@@ -117,6 +135,10 @@
     <div class="stats">
       <div class="stat alert"><div class="n" id="stat-incidents">—</div><div class="l">תקלות פתוחות</div></div>
       <div class="stat mine"><div class="n" id="stat-mine">—</div><div class="l">בטיפולי</div></div>
+      <div class="stat coords">
+        <div class="n" id="tc-coords">— הזז עכבר על המפה —</div>
+        <div class="l">📍 קואורדינטות עכבר</div>
+      </div>
     </div>
     <div style="display:flex;align-items:center;gap:10px">
       <div id="realtime-dot"></div>
@@ -148,22 +170,16 @@
   <div id="main">
     <div id="map"></div>
     <div id="sidebar">
-
-      <!-- MY INCIDENTS -->
       <div class="panel my-incidents-panel" id="my-panel" style="display:none">
         <div class="panel-title">🛠️ תקלות בטיפול שלי <span class="count-pill" id="my-count">0</span></div>
         <div id="my-list"></div>
       </div>
-
-      <!-- DWG / INFRASTRUCTURE LAYERS -->
       <div class="panel">
         <div class="panel-title">🗺️ שכבות תשתית</div>
         <div id="dwg-layers-list">
           <div class="empty-msg" style="font-size:11px;padding:8px 0">טוען שכבות...</div>
         </div>
       </div>
-
-      <!-- VILLAGE FILTER -->
       <div class="panel">
         <div class="panel-title">סינון תקלות לפי ישוב</div>
         <select id="village-filter" onchange="filterByVillage(this.value)">
@@ -172,7 +188,6 @@
           <option>נחף</option><option>סחנין</option><option>דיר חנא</option><option>ערבה</option>
         </select>
       </div>
-
       <div style="padding:10px 14px 4px;border-bottom:1px solid var(--border)">
         <div class="panel-title" style="margin-bottom:0">🚨 תקלות פתוחות <span class="count-pill" id="open-count">0</span></div>
       </div>
@@ -184,7 +199,6 @@
       <button id="add-btn" onclick="openIncModal()">+ פתח תקלה חדשה</button>
     </div>
   </div>
-
   <div id="statusbar">
     <span id="coords">לחץ על המפה</span><span>|</span>
     <span>זום: <span id="zoom-level">11</span></span><span>|</span>
@@ -192,7 +206,6 @@
   </div>
 </div>
 
-<!-- Add Incident Modal -->
 <div class="modal-bg" id="inc-modal-bg" onclick="if(event.target.id==='inc-modal-bg')closeIncModal()">
   <div class="modal-box">
     <div class="modal-title">פתיחת תקלה חדשה</div>
@@ -211,14 +224,13 @@
   </div>
 </div>
 
-<!-- Close Incident Modal -->
 <div class="modal-bg" id="close-modal-bg" onclick="if(event.target.id==='close-modal-bg')closeCloseModal()">
   <div class="modal-box">
     <div class="modal-title">✔ סגירת תקלה</div>
     <div class="modal-sub" id="close-incident-info">—</div>
     <div class="form-row">
       <label class="form-label">מה בוצע לתיקון? *</label>
-      <textarea class="form-textarea" id="close-notes" placeholder="לדוגמה: הוחלף ברז ראשי..."></textarea>
+      <textarea class="form-textarea" id="close-notes" placeholder="הוחלף ברז ראשי..."></textarea>
     </div>
     <div class="modal-btns">
       <button class="btn-success" onclick="confirmClose()">✔ סגור תקלה</button>
@@ -227,7 +239,6 @@
   </div>
 </div>
 
-<!-- Settings Modal -->
 <div class="modal-bg" id="settings-bg" onclick="if(event.target.id==='settings-bg')closeSettings()">
   <div class="modal-box">
     <div class="modal-title">⚙️ הגדרות חשבון</div>
@@ -238,7 +249,6 @@
   </div>
 </div>
 
-<!-- Password Modal -->
 <div class="modal-bg" id="pass-bg" onclick="if(event.target.id==='pass-bg')closePassModal()">
   <div class="modal-box">
     <div class="modal-title">🔑 שינוי סיסמה</div>
@@ -252,38 +262,34 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
-// ════════════════════════════════════════════════════════════
-//  CONFIG — שכבות DWG / GeoJSON
-//  כדי להוסיף שכבה חדשה: רק תוסיף שורה כאן!
-// ════════════════════════════════════════════════════════════
-var DWG_LAYERS = [
-  {
-    id: 'biina',
-    name: 'בענה — תשתית',
-    file: 'biina.geojson',
-    icon: '🏘️',
-    color: '#1a7fc1',
-    pointColor: '#dc2626',
-    bounds: [[32.9362, 35.2579], [32.9371, 35.2589]] // approximate
-  },
-  // הוסף כאן עוד שכבות כשתמיר עוד כפרים:
-  // { id:'majd', name:'מגד אל-כרום — תשתית', file:'majd.geojson', icon:'🏘️', color:'#0d9488', pointColor:'#dc2626', bounds:[...] },
-  // { id:'sakhnin', name:'סחנין — תשתית', file:'sakhnin.geojson', icon:'🏘️', color:'#7c3aed', pointColor:'#dc2626', bounds:[...] },
+var DWG_VILLAGES = [
+  { id:'biina', name:'בענה', file:'biina.geojson', icon:'🏘️' },
 ];
 
+var SUB_LAYERS = {
+  sewage_pipe:      { label:'קווי ביוב', icon:'─', color:'#a16207', type:'line', weight:3, dashArray:'7,4', defaultOn:true },
+  manhole:          { label:'שוחות ביוב', icon:'⭕', color:'#0d9488', type:'point', radius:5, defaultOn:true },
+  sleeve:           { label:'שרוולים', icon:'⊟', color:'#7c3aed', type:'line', weight:2, defaultOn:true },
+  control_point:    { label:'נקודות בקרה', icon:'◉', color:'#dc2626', type:'point', radius:6, defaultOn:true },
+  pipe_label:       { label:'תוויות צנרת', icon:'🏷️', color:'#475569', type:'label', defaultOn:false },
+  elevation_label:  { label:'גבהים (TL/IL)', icon:'📏', color:'#1e40af', type:'label', defaultOn:false },
+  attribute_label:  { label:'תוויות שוחות', icon:'#', color:'#0f766e', type:'label', defaultOn:false },
+  distance_label:   { label:'מרחקים', icon:'↔', color:'#9333ea', type:'label', defaultOn:false },
+  dimension_line:   { label:'קווי מידה', icon:'┄', color:'#9ca3af', type:'line', weight:1, dashArray:'2,3', defaultOn:false },
+  manhole_drawing:  { label:'שרטוטי שוחות', icon:'◇', color:'#64748b', type:'line', weight:1, defaultOn:false },
+  other:            { label:'אחר', icon:'·', color:'#94a3b8', type:'mixed', defaultOn:false },
+};
+
 var gMap, gIncidentsLayer, gIncidents=[], gMarkers={};
-var gDwgLayers = {}; // store loaded DWG layer groups
-var gDwgState = {};  // store on/off state
+var gVillageLayers = {}, gVillageState = {}, gVillageBounds = {};
 var gLastLat=null, gLastLng=null, gFilter='';
-var gUser=null, gProfile=null;
-var gClosingId=null;
+var gUser=null, gProfile=null, gClosingId=null;
 
 var PRIORITY_COLORS={high:'#dc2626',medium:'#d97706',low:'#16a34a'};
 var PRIORITY_HE={high:'גבוהה',medium:'בינונית',low:'נמוכה'};
 var STATUS_HE={open:'פתוחה',in_progress:'בטיפול',closed:'סגורה'};
 var ROLE_HE={admin:'מנהל מערכת',user:'משתמש'};
 
-// ── INIT ──
 window.addEventListener('load', async function() {
   var res = await gSb.auth.getSession();
   if (!res.data || !res.data.session) { window.location.replace('login.html'); return; }
@@ -293,8 +299,7 @@ window.addEventListener('load', async function() {
   setUserUI(gProfile);
   initMap();
   initSB();
-  renderDwgLayersList();
-  loadAllDwgLayers();
+  await loadAllVillages();
   document.getElementById('app').classList.add('ready');
 });
 
@@ -318,239 +323,200 @@ document.addEventListener('click', function(e) {
   if (btn && !btn.contains(e.target)) document.getElementById('user-dd').classList.remove('open');
 });
 
-// ── SETTINGS ──
-function openSettings() {
-  document.getElementById('user-dd').classList.remove('open');
-  document.getElementById('s-name').value = gProfile ? gProfile.full_name||'' : '';
-  document.getElementById('s-phone').value = gProfile ? gProfile.phone||'' : '';
-  document.getElementById('s-email').value = gUser ? gUser.email : '';
-  document.getElementById('settings-bg').classList.add('open');
-}
+function openSettings() { document.getElementById('user-dd').classList.remove('open'); document.getElementById('s-name').value=gProfile?gProfile.full_name||'':''; document.getElementById('s-phone').value=gProfile?gProfile.phone||'':''; document.getElementById('s-email').value=gUser?gUser.email:''; document.getElementById('settings-bg').classList.add('open'); }
 function closeSettings() { document.getElementById('settings-bg').classList.remove('open'); }
-async function saveSettings() {
-  var name = document.getElementById('s-name').value.trim();
-  var phone = document.getElementById('s-phone').value.trim();
-  var res = await gSb.from('profiles').update({full_name:name,phone:phone}).eq('id',gUser.id);
-  if (res.error) { showToast('שגיאה: '+res.error.message); return; }
-  if (gProfile) { gProfile.full_name=name; gProfile.phone=phone; }
-  setUserUI(gProfile); closeSettings(); showToast('✅ הפרטים עודכנו');
-}
-
-// ── PASSWORD ──
-function openChangePass() {
-  document.getElementById('user-dd').classList.remove('open');
-  document.getElementById('p-new').value=''; document.getElementById('p-confirm').value='';
-  document.getElementById('p-fill').style.width='0';
-  document.getElementById('pass-bg').classList.add('open');
-}
+async function saveSettings() { var name=document.getElementById('s-name').value.trim(),phone=document.getElementById('s-phone').value.trim(); var res=await gSb.from('profiles').update({full_name:name,phone:phone}).eq('id',gUser.id); if(res.error){showToast('שגיאה');return;} if(gProfile){gProfile.full_name=name;gProfile.phone=phone;} setUserUI(gProfile); closeSettings(); showToast('✅ עודכן'); }
+function openChangePass() { document.getElementById('user-dd').classList.remove('open'); document.getElementById('p-new').value=''; document.getElementById('p-confirm').value=''; document.getElementById('p-fill').style.width='0'; document.getElementById('pass-bg').classList.add('open'); }
 function closePassModal() { document.getElementById('pass-bg').classList.remove('open'); }
-function checkStr(val) {
-  var fill=document.getElementById('p-fill'),score=0;
-  if(val.length>=8)score++;if(val.length>=12)score++;
-  if(/[A-Z]/.test(val))score++;if(/[0-9]/.test(val))score++;if(/[^A-Za-z0-9]/.test(val))score++;
-  var map=[{w:'20%',bg:'#dc2626'},{w:'40%',bg:'#f97316'},{w:'60%',bg:'#eab308'},{w:'80%',bg:'#22c55e'},{w:'100%',bg:'#16a34a'}];
-  var s=map[Math.min(score-1,4)]||map[0]; fill.style.width=s.w; fill.style.background=s.bg;
-}
-async function changePass() {
-  var p=document.getElementById('p-new').value,c=document.getElementById('p-confirm').value;
-  if(p.length<8){showToast('הסיסמה חייבת להיות לפחות 8 תווים');return;}
-  if(p!==c){showToast('הסיסמאות אינן תואמות');return;}
-  var res=await gSb.auth.updateUser({password:p});
-  if(res.error){showToast('שגיאה: '+res.error.message);return;}
-  closePassModal(); showToast('✅ הסיסמה עודכנה');
-}
+function checkStr(val){var fill=document.getElementById('p-fill'),score=0;if(val.length>=8)score++;if(val.length>=12)score++;if(/[A-Z]/.test(val))score++;if(/[0-9]/.test(val))score++;if(/[^A-Za-z0-9]/.test(val))score++;var map=[{w:'20%',bg:'#dc2626'},{w:'40%',bg:'#f97316'},{w:'60%',bg:'#eab308'},{w:'80%',bg:'#22c55e'},{w:'100%',bg:'#16a34a'}];var s=map[Math.min(score-1,4)]||map[0];fill.style.width=s.w;fill.style.background=s.bg;}
+async function changePass(){var p=document.getElementById('p-new').value,c=document.getElementById('p-confirm').value;if(p.length<8){showToast('לפחות 8 תווים');return;}if(p!==c){showToast('הסיסמאות לא תואמות');return;}var res=await gSb.auth.updateUser({password:p});if(res.error){showToast('שגיאה');return;}closePassModal();showToast('✅ עודכן');}
 
-// ── MAP ──
 function initMap() {
   gMap = L.map('map',{zoomControl:true,attributionControl:false}).setView([32.91,35.22],11);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(gMap);
-  gMap.on('mousemove',function(e){document.getElementById('coords').textContent=e.latlng.lat.toFixed(5)+'° N  '+e.latlng.lng.toFixed(5)+'° E';});
+  gMap.on('mousemove', function(e) {
+    var txt = e.latlng.lat.toFixed(5) + '° N,  ' + e.latlng.lng.toFixed(5) + '° E';
+    document.getElementById('coords').textContent = txt;
+    document.getElementById('tc-coords').textContent = txt;
+  });
+  gMap.on('mouseout', function() {
+    document.getElementById('tc-coords').textContent = '— הזז עכבר על המפה —';
+  });
   gMap.on('zoomend',function(){document.getElementById('zoom-level').textContent=gMap.getZoom();});
   gMap.on('click',function(e){gLastLat=e.latlng.lat;gLastLng=e.latlng.lng;});
   gIncidentsLayer = L.layerGroup().addTo(gMap);
 }
 
-// ════════════════════════════════════════════════════════════
-//  DWG / GEOJSON LAYERS LOADING
-// ════════════════════════════════════════════════════════════
-function renderDwgLayersList() {
+async function loadAllVillages() {
+  for (var i = 0; i < DWG_VILLAGES.length; i++) await loadVillage(DWG_VILLAGES[i]);
+  renderVillagesList();
+}
+
+async function loadVillage(village) {
+  try {
+    var res = await fetch(village.file);
+    if (!res.ok) throw new Error('Failed: ' + village.file);
+    var data = await res.json();
+    var categories = {};
+    var bounds = L.latLngBounds([]);
+    data.features.forEach(function(f) {
+      var cat = f.properties._category || 'other';
+      if (!categories[cat]) categories[cat] = [];
+      categories[cat].push(f);
+      var g = f.geometry;
+      if (g.type === 'Point') bounds.extend([g.coordinates[1], g.coordinates[0]]);
+      else if (g.type === 'LineString') g.coordinates.forEach(function(c){bounds.extend([c[1],c[0]]);});
+      else if (g.type === 'MultiLineString') g.coordinates.forEach(function(line){line.forEach(function(c){bounds.extend([c[1],c[0]]);});});
+    });
+    gVillageBounds[village.id] = bounds;
+    gVillageLayers[village.id] = {};
+    gVillageState[village.id] = { masterOn: true, cats: {}, counts: {} };
+
+    Object.keys(categories).forEach(function(catId) {
+      var def = SUB_LAYERS[catId] || SUB_LAYERS.other;
+      var group = L.layerGroup();
+      categories[catId].forEach(function(feat) {
+        var p = feat.properties || {};
+        var g = feat.geometry;
+        if (def.type === 'label' && g.type === 'Point' && p.Text) {
+          var icon = L.divIcon({ className: 'map-label', html: '<span style="color:'+def.color+'">'+p.Text+'</span>', iconSize: null, iconAnchor:[0,0] });
+          L.marker([g.coordinates[1], g.coordinates[0]], { icon: icon }).addTo(group);
+        }
+        else if (g.type === 'Point') {
+          var marker = L.circleMarker([g.coordinates[1], g.coordinates[0]], { radius: def.radius || 4, color: '#fff', weight: 1.5, fillColor: def.color, fillOpacity: 0.9 });
+          marker.bindPopup(buildPopup(p, def, village));
+          marker.addTo(group);
+        }
+        else if (g.type === 'LineString') {
+          var coords = g.coordinates.map(function(c){return [c[1],c[0]];});
+          var line = L.polyline(coords, { color: def.color, weight: def.weight || 2, opacity: 0.85, dashArray: def.dashArray });
+          line.bindPopup(buildPopup(p, def, village));
+          line.addTo(group);
+        }
+        else if (g.type === 'MultiLineString') {
+          g.coordinates.forEach(function(line) {
+            var coords = line.map(function(c){return [c[1],c[0]];});
+            var pl = L.polyline(coords, { color: def.color, weight: def.weight || 2, opacity: 0.85, dashArray: def.dashArray });
+            pl.bindPopup(buildPopup(p, def, village));
+            pl.addTo(group);
+          });
+        }
+      });
+      gVillageLayers[village.id][catId] = group;
+      gVillageState[village.id].cats[catId] = !!def.defaultOn;
+      gVillageState[village.id].counts[catId] = categories[catId].length;
+      if (def.defaultOn) group.addTo(gMap);
+    });
+    console.log('Loaded ' + village.name + ': ' + data.features.length + ' features');
+  } catch(e) { console.error('Failed to load ' + village.id, e); }
+}
+
+function buildPopup(props, catDef, village) {
+  var html = '<div style="font-size:12px;line-height:1.5">';
+  if (props.Text) html += '<div style="font-weight:700;font-size:14px;color:'+catDef.color+';margin-bottom:4px">'+props.Text+'</div>';
+  html += '<div class="popup-row"><span class="popup-key">סוג</span><span class="popup-val">'+catDef.label+'</span></div>';
+  if (props.Layer) html += '<div class="popup-row"><span class="popup-key">שכבה</span><span class="popup-val">'+props.Layer+'</span></div>';
+  if (props.EntityHand) html += '<div class="popup-row"><span class="popup-key">מזהה</span><span class="popup-val">'+props.EntityHand+'</span></div>';
+  html += '<div style="margin-top:6px;padding-top:5px;border-top:1px solid #e2e8f0;font-size:10px;color:#64748b">'+village.icon+' '+village.name+'</div>';
+  html += '</div>';
+  return html;
+}
+
+function renderVillagesList() {
   var el = document.getElementById('dwg-layers-list');
-  if (!DWG_LAYERS.length) { el.innerHTML = '<div class="empty-msg" style="font-size:11px">אין שכבות עדיין</div>'; return; }
-  el.innerHTML = DWG_LAYERS.map(function(l) {
-    return '<div class="layer-row" onclick="toggleDwgLayer(\''+l.id+'\')">'+
-      '<div class="layer-swatch" style="background:'+l.color+'"></div>'+
-      '<span class="layer-label">'+l.icon+' '+l.name+'</span>'+
-      '<span class="layer-count" id="dwg-count-'+l.id+'">⏳</span>'+
-      '<span class="zoom-link" onclick="event.stopPropagation();zoomToLayer(\''+l.id+'\')">🎯</span>'+
-      '<div class="toggle on" id="dwg-tog-'+l.id+'"></div>'+
-      '</div>';
+  if (!DWG_VILLAGES.length) { el.innerHTML = '<div class="empty-msg" style="font-size:11px">אין שכבות עדיין</div>'; return; }
+  el.innerHTML = DWG_VILLAGES.map(function(v) {
+    var state = gVillageState[v.id];
+    if (!state) return '';
+    var subsHtml = Object.keys(state.cats).map(function(catId) {
+      var def = SUB_LAYERS[catId] || SUB_LAYERS.other;
+      var on = state.cats[catId];
+      var count = state.counts[catId] || 0;
+      var swatchStyle;
+      if (def.type === 'point') swatchStyle = 'background:'+def.color+';border-radius:50%';
+      else if (def.type === 'label') swatchStyle = 'background:#fff;border:1px solid '+def.color+';color:'+def.color;
+      else swatchStyle = def.dashArray ? 'background:repeating-linear-gradient(90deg,'+def.color+' 0 4px,transparent 4px 7px)' : 'background:'+def.color;
+      return '<div class="sub-layer" onclick="toggleSubLayer(\''+v.id+'\',\''+catId+'\')">'+
+        '<div class="sub-swatch" style="'+swatchStyle+'">'+(def.type==='label'?def.icon:'')+'</div>'+
+        '<span class="sub-label">'+def.label+'</span>'+
+        '<span class="sub-count">'+count+'</span>'+
+        '<div class="mini-toggle '+(on?'on':'')+'" id="sub-tog-'+v.id+'-'+catId+'"></div>'+
+        '</div>';
+    }).join('');
+    return '<div class="village-group open" id="vg-'+v.id+'">'+
+      '<div class="village-header">'+
+        '<span class="village-icon">'+v.icon+'</span>'+
+        '<span class="village-name">'+v.name+'</span>'+
+        '<span class="zoom-link" onclick="event.stopPropagation();zoomToVillage(\''+v.id+'\')">🎯</span>'+
+        '<div class="toggle on village-master-toggle" id="master-tog-'+v.id+'" onclick="event.stopPropagation();toggleVillage(\''+v.id+'\')"></div>'+
+        '<span class="village-arrow" onclick="event.stopPropagation();toggleVillageOpen(\''+v.id+'\')">▾</span>'+
+      '</div>'+
+      '<div class="village-content">' + subsHtml + '</div>'+
+    '</div>';
   }).join('');
 }
 
-async function loadAllDwgLayers() {
-  for (var i = 0; i < DWG_LAYERS.length; i++) {
-    await loadDwgLayer(DWG_LAYERS[i]);
-  }
-}
+function toggleVillageOpen(villageId) { document.getElementById('vg-'+villageId).classList.toggle('open'); }
 
-async function loadDwgLayer(layerDef) {
-  try {
-    var res = await fetch(layerDef.file);
-    if (!res.ok) throw new Error('Failed to fetch ' + layerDef.file);
-    var data = await res.json();
-
-    var group = L.layerGroup();
-    var pointCount = 0, lineCount = 0;
-
-    L.geoJSON(data, {
-      pointToLayer: function(feat, latlng) {
-        pointCount++;
-        return L.circleMarker(latlng, {
-          radius: 4, color:'#fff', weight:1.5,
-          fillColor: layerDef.pointColor, fillOpacity: 0.85
-        });
-      },
-      style: function(feat) {
-        lineCount++;
-        return { color: layerDef.color, weight: 2.5, opacity: 0.85 };
-      },
-      onEachFeature: function(feat, layer) {
-        var p = feat.properties || {};
-        var html = '<div style="font-size:12px;line-height:1.5">';
-        if (p.Text) html += '<div style="font-weight:700;font-size:14px;color:#0d3b5e;margin-bottom:4px">' + p.Text + '</div>';
-        html += '<div><b>שכבה:</b> ' + (p.Layer || '—') + '</div>';
-        if (p.SubClasses) html += '<div><b>סוג:</b> ' + p.SubClasses.split(':').pop() + '</div>';
-        if (p.EntityHand) html += '<div><b>מזהה:</b> ' + p.EntityHand + '</div>';
-        html += '<div style="margin-top:6px;padding-top:5px;border-top:1px solid #e2e8f0;font-size:10px;color:#64748b">' + layerDef.name + '</div>';
-        html += '</div>';
-        layer.bindPopup(html);
-      }
-    }).eachLayer(function(l) { group.addLayer(l); });
-
-    gDwgLayers[layerDef.id] = group;
-    gDwgState[layerDef.id] = true;
-    group.addTo(gMap);
-
-    document.getElementById('dwg-count-'+layerDef.id).textContent = data.features.length;
-    console.log('Loaded ' + layerDef.name + ': ' + data.features.length + ' features');
-  } catch(e) {
-    console.error('Failed to load layer ' + layerDef.id, e);
-    var cnt = document.getElementById('dwg-count-'+layerDef.id);
-    if (cnt) { cnt.textContent = '✖'; cnt.style.color = '#dc2626'; }
-  }
-}
-
-function toggleDwgLayer(id) {
-  var tog = document.getElementById('dwg-tog-'+id);
-  if (!gDwgLayers[id]) return;
-  if (gDwgState[id]) {
-    gMap.removeLayer(gDwgLayers[id]);
-    tog.classList.remove('on');
-    gDwgState[id] = false;
-  } else {
-    gMap.addLayer(gDwgLayers[id]);
-    tog.classList.add('on');
-    gDwgState[id] = true;
-  }
-}
-
-function zoomToLayer(id) {
-  var layer = gDwgLayers[id];
-  if (!layer) return;
-  var bounds = L.latLngBounds([]);
-  layer.eachLayer(function(l) {
-    if (l.getBounds) bounds.extend(l.getBounds());
-    else if (l.getLatLng) bounds.extend(l.getLatLng());
-  });
-  if (bounds.isValid()) gMap.flyToBounds(bounds, {padding:[40,40], duration:1.2});
-}
-
-// ── SUPABASE INCIDENTS ──
-function initSB() { loadIncidents(); subscribeRT(); }
-
-function loadIncidents() {
-  gSb.from('incidents').select('*').in('status',['open','in_progress']).order('created_at',{ascending:false}).then(function(res) {
-    if (res.error) { console.error(res.error); return; }
-    gIncidents = res.data || [];
-    renderAll();
-    document.getElementById('realtime-dot').style.background = '#22c55e';
+function toggleVillage(villageId) {
+  var state = gVillageState[villageId];
+  state.masterOn = !state.masterOn;
+  document.getElementById('master-tog-'+villageId).classList.toggle('on', state.masterOn);
+  Object.keys(state.cats).forEach(function(catId) {
+    var layer = gVillageLayers[villageId][catId];
+    if (state.masterOn && state.cats[catId]) gMap.addLayer(layer);
+    else if (!state.masterOn) gMap.removeLayer(layer);
   });
 }
 
-function subscribeRT() {
-  gSb.channel('inc-rt').on('postgres_changes',{event:'*',schema:'public',table:'incidents'}, function(p) {
-    if (p.eventType==='INSERT') { gIncidents.unshift(p.new); showToast('תקלה חדשה: '+p.new.title); }
-    else if (p.eventType==='UPDATE') {
-      var i = gIncidents.findIndex(function(x){return x.id===p.new.id;});
-      if (i>=0) gIncidents[i] = p.new; else gIncidents.unshift(p.new);
-      if (p.new.status==='closed') gIncidents = gIncidents.filter(function(x){return x.id!==p.new.id;});
-    }
-    else if (p.eventType==='DELETE') gIncidents = gIncidents.filter(function(x){return x.id!==p.old.id;});
-    renderAll();
-  }).subscribe();
+function toggleSubLayer(villageId, catId) {
+  var state = gVillageState[villageId];
+  var layer = gVillageLayers[villageId][catId];
+  state.cats[catId] = !state.cats[catId];
+  document.getElementById('sub-tog-'+villageId+'-'+catId).classList.toggle('on', state.cats[catId]);
+  if (state.cats[catId] && state.masterOn) gMap.addLayer(layer);
+  else gMap.removeLayer(layer);
 }
 
-function isVisibleToMe(inc) {
-  if (inc.status === 'open') return true;
-  if (inc.status === 'in_progress') return inc.assigned_to === gUser.id || gProfile.role === 'admin';
-  return false;
+function zoomToVillage(villageId) {
+  var bounds = gVillageBounds[villageId];
+  if (bounds && bounds.isValid()) gMap.flyToBounds(bounds, {padding:[50,50], duration:1.2});
 }
-function isMine(inc) { return inc.assigned_to === gUser.id && inc.status === 'in_progress'; }
 
-function renderAll() { renderMarkers(); renderMyIncidents(); renderOpenIncidents(); updateStats(); }
+function initSB(){loadIncidents();subscribeRT();}
+function loadIncidents(){gSb.from('incidents').select('*').in('status',['open','in_progress']).order('created_at',{ascending:false}).then(function(res){if(res.error){console.error(res.error);return;}gIncidents=res.data||[];renderAll();document.getElementById('realtime-dot').style.background='#22c55e';});}
+function subscribeRT(){gSb.channel('inc-rt').on('postgres_changes',{event:'*',schema:'public',table:'incidents'},function(p){if(p.eventType==='INSERT'){gIncidents.unshift(p.new);showToast('תקלה חדשה: '+p.new.title);}else if(p.eventType==='UPDATE'){var i=gIncidents.findIndex(function(x){return x.id===p.new.id;});if(i>=0)gIncidents[i]=p.new;else gIncidents.unshift(p.new);if(p.new.status==='closed')gIncidents=gIncidents.filter(function(x){return x.id!==p.new.id;});}else if(p.eventType==='DELETE')gIncidents=gIncidents.filter(function(x){return x.id!==p.old.id;});renderAll();}).subscribe();}
+
+function isVisibleToMe(inc){if(inc.status==='open')return true;if(inc.status==='in_progress')return inc.assigned_to===gUser.id||gProfile.role==='admin';return false;}
+function isMine(inc){return inc.assigned_to===gUser.id&&inc.status==='in_progress';}
+function renderAll(){renderMarkers();renderMyIncidents();renderOpenIncidents();updateStats();}
 
 function renderMarkers() {
   gIncidentsLayer.clearLayers();
   gMarkers = {};
-  gIncidents.forEach(function(inc) {
-    if (!isVisibleToMe(inc)) return;
-    addMarker(inc, false);
-  });
+  gIncidents.forEach(function(inc) { if (isVisibleToMe(inc)) addMarker(inc, false); });
 }
 
 function addMarker(inc, flyTo) {
   var color = PRIORITY_COLORS[inc.priority] || '#888';
   var mine = isMine(inc);
   var ringStyle = mine ? 'border:3px solid #1e40af;' : 'border:2.5px solid #fff;';
-  var ic = L.divIcon({
-    className:'',
-    html:'<div style="width:24px;height:24px;background:'+color+';'+ringStyle+'border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center"><span style="color:#fff;font-size:12px;font-weight:800">!</span></div>',
-    iconSize:[24,24], iconAnchor:[12,12]
-  });
-  var mineTag = mine ? '<div class="popup-mine-tag">🛠️ בטיפולך</div>' : '';
+  var ic = L.divIcon({className:'',html:'<div style="width:24px;height:24px;background:'+color+';'+ringStyle+'border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center"><span style="color:#fff;font-size:12px;font-weight:800">!</span></div>',iconSize:[24,24],iconAnchor:[12,12]});
+  var mineTag = mine?'<div class="popup-mine-tag">🛠️ בטיפולך</div>':'';
   var actions = '';
-  if (inc.status === 'open') {
-    actions = '<div class="popup-actions"><button class="popup-btn" onclick="takeIncident('+inc.id+')">📋 קח לטיפול</button><button class="popup-btn danger" onclick="openCloseModal('+inc.id+')">✔ סגור</button></div>';
-  } else if (inc.status === 'in_progress' && mine) {
-    actions = '<div class="popup-actions"><button class="popup-btn success" onclick="openCloseModal('+inc.id+')">✔ סיים וסגור</button></div>';
-  }
-  var m = L.marker([inc.lat,inc.lng],{icon:ic}).bindPopup(
-    mineTag+
-    '<div class="popup-title">'+inc.title+'</div>'+
-    '<div class="popup-row"><span class="popup-key">ישוב</span><span class="popup-val">'+inc.village+'</span></div>'+
-    '<div class="popup-row"><span class="popup-key">עדיפות</span><span class="popup-val" style="color:'+color+'">'+(PRIORITY_HE[inc.priority]||inc.priority)+'</span></div>'+
-    '<div class="popup-row"><span class="popup-key">סטטוס</span><span class="popup-val">'+(STATUS_HE[inc.status]||inc.status)+'</span></div>'+
-    '<div class="popup-row"><span class="popup-key">נפתח</span><span class="popup-val">'+timeAgo(inc.created_at)+'</span></div>'+
-    (inc.description?'<div style="font-size:12px;color:#64748b;margin-top:6px;padding-top:5px;border-top:1px solid #e2e8f0">'+inc.description+'</div>':'')+
-    actions
-  );
-  m.addTo(gIncidentsLayer);
-  gMarkers[inc.id] = m;
+  if (inc.status==='open') actions = '<div class="popup-actions"><button class="popup-btn" onclick="takeIncident('+inc.id+')">📋 קח לטיפול</button><button class="popup-btn danger" onclick="openCloseModal('+inc.id+')">✔ סגור</button></div>';
+  else if (inc.status==='in_progress' && mine) actions = '<div class="popup-actions"><button class="popup-btn success" onclick="openCloseModal('+inc.id+')">✔ סיים וסגור</button></div>';
+  var m = L.marker([inc.lat,inc.lng],{icon:ic}).bindPopup(mineTag+'<div class="popup-title">'+inc.title+'</div><div class="popup-row"><span class="popup-key">ישוב</span><span class="popup-val">'+inc.village+'</span></div><div class="popup-row"><span class="popup-key">עדיפות</span><span class="popup-val" style="color:'+color+'">'+(PRIORITY_HE[inc.priority]||inc.priority)+'</span></div><div class="popup-row"><span class="popup-key">סטטוס</span><span class="popup-val">'+(STATUS_HE[inc.status]||inc.status)+'</span></div><div class="popup-row"><span class="popup-key">נפתח</span><span class="popup-val">'+timeAgo(inc.created_at)+'</span></div>'+(inc.description?'<div style="font-size:12px;color:#64748b;margin-top:6px;padding-top:5px;border-top:1px solid #e2e8f0">'+inc.description+'</div>':'')+actions);
+  m.addTo(gIncidentsLayer); gMarkers[inc.id]=m;
   if (flyTo) { gMap.flyTo([inc.lat,inc.lng],15,{duration:1.5}); setTimeout(function(){m.openPopup();},1600); }
 }
 
 function renderMyIncidents() {
-  var mine = gIncidents.filter(isMine);
-  var panel = document.getElementById('my-panel');
+  var mine = gIncidents.filter(isMine), panel = document.getElementById('my-panel');
   document.getElementById('my-count').textContent = mine.length;
-  if (!mine.length) { panel.style.display = 'none'; return; }
-  panel.style.display = 'block';
-  document.getElementById('my-list').innerHTML = mine.map(function(inc) {
-    return '<div class="inc-item mine" onclick="zoomTo('+inc.lat+','+inc.lng+','+inc.id+')">'+
-      '<div class="inc-top"><span class="inc-title">'+inc.title+'</span><span class="badge badge-'+inc.priority+'">'+(PRIORITY_HE[inc.priority]||inc.priority)+'</span></div>'+
-      '<div class="inc-meta"><span class="inc-village">'+inc.village+'</span><span>'+timeSince(inc.taken_at||inc.created_at)+'</span></div>'+
-      '</div>';
-  }).join('');
+  if (!mine.length) { panel.style.display='none'; return; }
+  panel.style.display='block';
+  document.getElementById('my-list').innerHTML = mine.map(function(inc){return '<div class="inc-item mine" onclick="zoomTo('+inc.lat+','+inc.lng+','+inc.id+')"><div class="inc-top"><span class="inc-title">'+inc.title+'</span><span class="badge badge-'+inc.priority+'">'+(PRIORITY_HE[inc.priority]||inc.priority)+'</span></div><div class="inc-meta"><span class="inc-village">'+inc.village+'</span><span>'+timeSince(inc.taken_at||inc.created_at)+'</span></div></div>';}).join('');
 }
 
 function renderOpenIncidents() {
@@ -559,12 +525,7 @@ function renderOpenIncidents() {
   var panel = document.getElementById('incidents-panel');
   document.getElementById('open-count').textContent = open.length;
   if (!open.length) { panel.innerHTML='<div class="empty-msg">אין תקלות פתוחות'+(gFilter?' ב'+gFilter:'')+'</div>'; return; }
-  panel.innerHTML = open.map(function(inc) {
-    return '<div class="inc-item" onclick="zoomTo('+inc.lat+','+inc.lng+','+inc.id+')">'+
-      '<div class="inc-top"><span class="inc-title">'+inc.title+'</span><span class="badge badge-'+inc.priority+'">'+(PRIORITY_HE[inc.priority]||inc.priority)+'</span></div>'+
-      '<div class="inc-meta"><span class="inc-village">'+inc.village+'</span><span>'+timeAgo(inc.created_at)+'</span></div>'+
-      '</div>';
-  }).join('');
+  panel.innerHTML = open.map(function(inc){return '<div class="inc-item" onclick="zoomTo('+inc.lat+','+inc.lng+','+inc.id+')"><div class="inc-top"><span class="inc-title">'+inc.title+'</span><span class="badge badge-'+inc.priority+'">'+(PRIORITY_HE[inc.priority]||inc.priority)+'</span></div><div class="inc-meta"><span class="inc-village">'+inc.village+'</span><span>'+timeAgo(inc.created_at)+'</span></div></div>';}).join('');
 }
 
 function updateStats() {
@@ -573,92 +534,33 @@ function updateStats() {
 }
 
 function zoomTo(lat,lng,id){gMap.setView([lat,lng],16);if(gMarkers[id])setTimeout(function(){gMarkers[id].openPopup();},300);}
-function filterByVillage(val){ gFilter=val; renderOpenIncidents(); }
+function filterByVillage(val){gFilter=val;renderOpenIncidents();}
 
-// ── ACTIONS ──
-async function takeIncident(id) {
-  var now = new Date().toISOString();
-  var res = await gSb.from('incidents').update({status:'in_progress',assigned_to:gUser.id,taken_at:now}).eq('id',id);
-  if (res.error) { showToast('שגיאה: '+res.error.message); return; }
-  var inc = gIncidents.find(function(i){return i.id===id;});
-  await logAction(id,'taken',null,inc);
-  showToast('📋 התקלה הועברה לטיפולך');
-  gMap.closePopup();
-  if (inc) { inc.status='in_progress'; inc.assigned_to=gUser.id; inc.taken_at=now; }
-  renderAll();
-}
+async function takeIncident(id){var now=new Date().toISOString();var res=await gSb.from('incidents').update({status:'in_progress',assigned_to:gUser.id,taken_at:now}).eq('id',id);if(res.error){showToast('שגיאה');return;}var inc=gIncidents.find(function(i){return i.id===id;});await logAction(id,'taken',null,inc);showToast('📋 הועברה לטיפולך');gMap.closePopup();if(inc){inc.status='in_progress';inc.assigned_to=gUser.id;inc.taken_at=now;}renderAll();}
 
-function openCloseModal(id) {
-  gClosingId = id;
-  var inc = gIncidents.find(function(i){return i.id===id;});
-  if (!inc) return;
-  document.getElementById('close-incident-info').textContent = inc.title+' — '+inc.village;
-  document.getElementById('close-notes').value = '';
-  document.getElementById('close-modal-bg').classList.add('open');
-  gMap.closePopup();
-}
-function closeCloseModal() { document.getElementById('close-modal-bg').classList.remove('open'); }
+function openCloseModal(id){gClosingId=id;var inc=gIncidents.find(function(i){return i.id===id;});if(!inc)return;document.getElementById('close-incident-info').textContent=inc.title+' — '+inc.village;document.getElementById('close-notes').value='';document.getElementById('close-modal-bg').classList.add('open');gMap.closePopup();}
+function closeCloseModal(){document.getElementById('close-modal-bg').classList.remove('open');}
 
-async function confirmClose() {
-  var notes = document.getElementById('close-notes').value.trim();
-  if (!notes) { showToast('אנא תאר מה בוצע'); return; }
-  var id = gClosingId;
-  var inc = gIncidents.find(function(i){return i.id===id;});
-  if (!inc) return;
-  var now = new Date().toISOString();
-  var duration = inc.taken_at ? Math.floor((new Date(now)-new Date(inc.taken_at))/1000) : null;
-  var res = await gSb.from('incidents').update({status:'closed',closed_at:now,resolution_notes:notes,assigned_to:inc.assigned_to||gUser.id}).eq('id',id);
-  if (res.error) { showToast('שגיאה: '+res.error.message); return; }
-  await logAction(id,'closed',notes,inc,duration);
-  gIncidents = gIncidents.filter(function(x){return x.id!==id;});
-  if (gMarkers[id]) gIncidentsLayer.removeLayer(gMarkers[id]);
-  delete gMarkers[id];
-  renderAll(); closeCloseModal(); showToast('✔ התקלה נסגרה');
-}
+async function confirmClose(){var notes=document.getElementById('close-notes').value.trim();if(!notes){showToast('אנא תאר מה בוצע');return;}var id=gClosingId;var inc=gIncidents.find(function(i){return i.id===id;});if(!inc)return;var now=new Date().toISOString();var duration=inc.taken_at?Math.floor((new Date(now)-new Date(inc.taken_at))/1000):null;var res=await gSb.from('incidents').update({status:'closed',closed_at:now,resolution_notes:notes,assigned_to:inc.assigned_to||gUser.id}).eq('id',id);if(res.error){showToast('שגיאה');return;}await logAction(id,'closed',notes,inc,duration);gIncidents=gIncidents.filter(function(x){return x.id!==id;});if(gMarkers[id])gIncidentsLayer.removeLayer(gMarkers[id]);delete gMarkers[id];renderAll();closeCloseModal();showToast('✔ נסגרה');}
 
-async function logAction(incidentId,action,notes,inc,durationSec) {
-  await gSb.from('incident_logs').insert([{
-    incident_id:incidentId, user_id:gUser.id, user_name:gProfile.full_name||gUser.email,
-    action:action, incident_title:inc?inc.title:null, incident_village:inc?inc.village:null,
-    incident_priority:inc?inc.priority:null, notes:notes, duration_seconds:durationSec||null
-  }]);
-}
+async function logAction(incidentId,action,notes,inc,durationSec){await gSb.from('incident_logs').insert([{incident_id:incidentId,user_id:gUser.id,user_name:gProfile.full_name||gUser.email,action:action,incident_title:inc?inc.title:null,incident_village:inc?inc.village:null,incident_priority:inc?inc.priority:null,notes:notes,duration_seconds:durationSec||null}]);}
 
-// ── ADD INCIDENT ──
-function openIncModal() {
-  if (gLastLat) { document.getElementById('f-lat').value=gLastLat.toFixed(5); document.getElementById('f-lng').value=gLastLng.toFixed(5); }
-  document.getElementById('inc-modal-bg').classList.add('open');
-}
-function closeIncModal() { document.getElementById('inc-modal-bg').classList.remove('open'); }
+function openIncModal(){if(gLastLat){document.getElementById('f-lat').value=gLastLat.toFixed(5);document.getElementById('f-lng').value=gLastLng.toFixed(5);}document.getElementById('inc-modal-bg').classList.add('open');}
+function closeIncModal(){document.getElementById('inc-modal-bg').classList.remove('open');}
 
-async function submitIncident() {
-  var title=document.getElementById('f-title').value.trim();
-  var village=document.getElementById('f-village').value;
-  var priority=document.getElementById('f-priority').value;
-  var desc=document.getElementById('f-desc').value.trim();
-  var lat=parseFloat(document.getElementById('f-lat').value);
-  var lng=parseFloat(document.getElementById('f-lng').value);
-  if (!title||!village||isNaN(lat)||isNaN(lng)) { showToast('אנא מלא את כל השדות'); return; }
-  var rec = {title:title,village:village,priority:priority,description:desc,lat:lat,lng:lng,status:'open',created_by:gUser.id};
-  var res = await gSb.from('incidents').insert([rec]).select().single();
-  if (res.error) { showToast('שגיאה: '+res.error.message); return; }
-  await logAction(res.data.id,'created',null,res.data);
-  closeIncModal();
-  ['f-title','f-village','f-desc','f-lat','f-lng'].forEach(function(id){document.getElementById(id).value='';});
-  document.getElementById('f-priority').value='medium';
-  showToast('✅ תקלה נפתחה');
-}
+async function submitIncident(){var title=document.getElementById('f-title').value.trim(),village=document.getElementById('f-village').value,priority=document.getElementById('f-priority').value,desc=document.getElementById('f-desc').value.trim(),lat=parseFloat(document.getElementById('f-lat').value),lng=parseFloat(document.getElementById('f-lng').value);if(!title||!village||isNaN(lat)||isNaN(lng)){showToast('אנא מלא את כל השדות');return;}var rec={title:title,village:village,priority:priority,description:desc,lat:lat,lng:lng,status:'open',created_by:gUser.id};var res=await gSb.from('incidents').insert([rec]).select().single();if(res.error){showToast('שגיאה: '+res.error.message);return;}await logAction(res.data.id,'created',null,res.data);closeIncModal();['f-title','f-village','f-desc','f-lat','f-lng'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('f-priority').value='medium';showToast('✅ נפתחה');}
 
-// ── HELPERS ──
 function timeAgo(iso){if(!iso)return'';var d=Math.floor((Date.now()-new Date(iso))/60000);if(d<1)return'הרגע';if(d<60)return'לפני '+d+' דק׳';var h=Math.floor(d/60);if(h<24)return'לפני '+h+' שעות';return'לפני '+Math.floor(h/24)+' ימים';}
 function timeSince(iso){if(!iso)return'';var d=Math.floor((Date.now()-new Date(iso))/60000);if(d<1)return'בטיפול: זה עתה';if(d<60)return'בטיפול: '+d+' דק׳';var h=Math.floor(d/60);if(h<24)return'בטיפול: '+h+' שעות';return'בטיפול: '+Math.floor(h/24)+' ימים';}
 function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},3000);}
 
-window.takeIncident = takeIncident;
-window.openCloseModal = openCloseModal;
-window.zoomTo = zoomTo;
-window.toggleDwgLayer = toggleDwgLayer;
-window.zoomToLayer = zoomToLayer;
+window.takeIncident=takeIncident;
+window.openCloseModal=openCloseModal;
+window.zoomTo=zoomTo;
+window.toggleVillage=toggleVillage;
+window.toggleSubLayer=toggleSubLayer;
+window.toggleVillageOpen=toggleVillageOpen;
+window.zoomToVillage=zoomToVillage;
 </script>
 </body>
 </html>
