@@ -403,8 +403,24 @@ function submitIncident(){
   document.getElementById('f-priority').value='medium';
 }
 
-function setStatus(id,status){gSb.from('incidents').update({status:status}).eq('id',id);}
-
+async function setStatus(id, status) {
+  var res = await gSb.from('incidents').update({status: status}).eq('id', id);
+  if (res.error) { showToast('שגיאה: ' + res.error.message); return; }
+  
+  var inc = gIncidents.find(function(i) { return i.id === id; });
+  if (inc) inc.status = status;
+  if (status === 'closed') {
+    gIncidents = gIncidents.filter(function(i) { return i.id !== id; });
+    if (gMarkers[id]) gLayers.incidents.removeLayer(gMarkers[id]);
+    delete gMarkers[id];
+  }
+  renderIncidents();
+  updateStats();
+  gMap.closePopup();
+  showToast(status === 'closed' ? '✔ התקלה נסגרה' : '📋 הועברה לטיפול');
+}
+window.setStatus = setStatus;
+window.zoomTo = zoomTo;
 function timeAgo(iso){if(!iso)return'';var d=Math.floor((Date.now()-new Date(iso))/60000);if(d<1)return'הרגע';if(d<60)return'לפני '+d+' דק׳';var h=Math.floor(d/60);if(h<24)return'לפני '+h+' שעות';return'לפני '+Math.floor(h/24)+' ימים';}
 function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},3000);}
 </script>
