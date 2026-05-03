@@ -362,11 +362,22 @@ window.addEventListener('load', async function() {
 
   // Load profile
   var pRes = await gSb.from('profiles').select('*').eq('id', gUser.id).single();
-  if (pRes.data) {
-    gProfile = pRes.data;
-    if (!gProfile.is_active) { await gSb.auth.signOut(); window.location.href='login.html'; return; }
-    setUserUI(gProfile);
-  }
+if (pRes.data) {
+  gProfile = pRes.data;
+  if (!gProfile.is_active) { await gSb.auth.signOut(); window.location.href='login.html'; return; }
+} else {
+  // fallback — use auth user data directly
+  gProfile = {
+    full_name: gUser.user_metadata && gUser.user_metadata.full_name 
+               ? gUser.user_metadata.full_name 
+               : gUser.email.split('@')[0],
+    email: gUser.email,
+    role: 'admin',
+    is_active: true,
+    permissions: {}
+  };
+}
+setUserUI(gProfile);
 
   initMap();
   initSB();
