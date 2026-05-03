@@ -4,7 +4,7 @@
 // ════════════════════════════════════════
 
 var SUPABASE_URL  = 'https://hlbogufrdxpviyxlwqtf.supabase.co';
-var SUPABASE_ANON = 'YOUR_PUBLISHABLE_KEY'; // ← הכנס את ה-anon key שלך
+var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhsYm9ndWZyZHhwdml5eGx3cXRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczMjcyMzUsImV4cCI6MjA5MjkwMzIzNX0.8AvY5isXAJfa2mYC2keDBTlw4hv9mVwytH0oWxW3vKA'; // ← הכנס את ה-anon key שלך
 
 var gSb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
