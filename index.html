@@ -6,43 +6,38 @@
   <title>מי הגליל | מערכת GIS</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="auth.js"></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     :root{--blue-dark:#0d3b5e;--blue-mid:#1a7fc1;--blue-light:#5ab8e8;--surface:#f8fafc;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--red:#dc2626;--green:#16a34a}
     html,body{height:100%;font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--surface);color:var(--text)}
-    #app{display:flex;flex-direction:column;height:100vh}
-
-    /* ── TOPBAR ── */
+    #app{display:flex;flex-direction:column;height:100vh;visibility:hidden}
+    #app.ready{visibility:visible}
     #topbar{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:52px;background:var(--blue-dark);color:#fff;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.3);gap:12px}
     .logo{font-size:15px;font-weight:600;white-space:nowrap}.logo span{color:var(--blue-light)}
     .stats{display:flex;gap:8px}
     .stat{background:rgba(255,255,255,0.1);border-radius:6px;padding:3px 12px;text-align:center}
     .stat .n{font-size:15px;font-weight:700;color:#fff}.stat .l{font-size:10px;color:rgba(255,255,255,0.65)}
     .stat.alert .n{color:#fca5a5}
-    #realtime-dot{width:9px;height:9px;background:#22c55e;border-radius:50%;animation:pulse 2s infinite;flex-shrink:0}
+    #realtime-dot{width:9px;height:9px;background:#f59e0b;border-radius:50%;animation:pulse 2s infinite;flex-shrink:0}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-
-    /* ── USER MENU ── */
     .user-area{display:flex;align-items:center;gap:8px;position:relative}
-    .user-btn{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:8px;padding:5px 12px;cursor:pointer;color:#fff;font-family:inherit;font-size:13px;transition:background 0.15s}
+    .user-btn{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:8px;padding:5px 12px;cursor:pointer;color:#fff;font-family:inherit;font-size:13px}
     .user-btn:hover{background:rgba(255,255,255,0.2)}
     .user-avatar{width:26px;height:26px;border-radius:50%;background:var(--blue-mid);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
     .user-name{font-weight:500;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .user-role{font-size:10px;color:rgba(255,255,255,0.6)}
+    .user-role-label{font-size:10px;color:rgba(255,255,255,0.6)}
     .dropdown{display:none;position:absolute;top:calc(100% + 8px);left:0;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,0.15);min-width:200px;z-index:500;overflow:hidden}
     .dropdown.open{display:block}
     .dd-header{padding:12px 14px;border-bottom:1px solid var(--border);background:var(--surface)}
     .dd-name{font-size:13px;font-weight:600;color:var(--text)}
     .dd-email{font-size:11px;color:var(--muted);margin-top:1px}
-    .dd-item{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;font-size:13px;color:var(--text);transition:background 0.12s;border:none;background:none;width:100%;text-align:right;font-family:inherit}
+    .dd-item{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;font-size:13px;color:var(--text);background:none;border:none;width:100%;text-align:right;font-family:inherit}
     .dd-item:hover{background:var(--surface)}
-    .dd-item.danger{color:var(--red)}
-    .dd-item.danger:hover{background:#fee2e2}
+    .dd-item.danger{color:var(--red)}.dd-item.danger:hover{background:#fee2e2}
     .dd-divider{height:1px;background:var(--border)}
-    .admin-link{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:4px 10px;color:#fff;text-decoration:none;font-size:12px;font-weight:500;white-space:nowrap}
+    .admin-link{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:4px 10px;color:#fff;text-decoration:none;font-size:12px;font-weight:500}
     .admin-link:hover{background:rgba(255,255,255,0.2)}
-
-    /* ── MAIN ── */
     #main{display:flex;flex:1;overflow:hidden}
     #map{flex:1;z-index:1}
     #sidebar{width:260px;flex-shrink:0;background:#fff;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
@@ -58,7 +53,6 @@
     .toggle::after{content:'';position:absolute;width:14px;height:14px;background:#fff;border-radius:50%;top:2px;right:2px;transition:transform 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2)}
     .toggle.on::after{transform:translateX(-14px)}
     #village-filter{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;color:var(--text);background:var(--surface);direction:rtl;appearance:none}
-    #village-filter:focus{outline:none;border-color:var(--blue-mid)}
     #incidents-panel{flex:1;overflow-y:auto;padding:12px 14px}
     .inc-item{background:#fff;border:1px solid var(--border);border-radius:8px;padding:9px 11px;margin-bottom:8px;cursor:pointer;transition:box-shadow 0.15s,border-color 0.15s}
     .inc-item:hover{border-color:var(--blue-mid);box-shadow:0 2px 8px rgba(26,127,193,0.12)}
@@ -68,16 +62,12 @@
     .badge-high{background:#fee2e2;color:#991b1b}.badge-medium{background:#fef3c7;color:#92400e}.badge-low{background:#dcfce7;color:#166534}
     .inc-meta{font-size:11px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap}
     .inc-village{color:var(--blue-mid);font-weight:500}
-    #add-btn{margin:12px 14px;padding:9px;border-radius:8px;cursor:pointer;background:var(--blue-dark);color:#fff;font-size:13px;font-weight:600;border:none;width:calc(100% - 28px);transition:background 0.15s}
+    #add-btn{margin:12px 14px;padding:9px;border-radius:8px;cursor:pointer;background:var(--blue-dark);color:#fff;font-size:13px;font-weight:600;border:none;width:calc(100% - 28px)}
     #add-btn:hover{background:var(--blue-mid)}
     #add-btn:disabled{background:#94a3b8;cursor:not-allowed}
-
-    /* ── STATUS BAR ── */
     #statusbar{height:26px;background:var(--blue-dark);display:flex;align-items:center;padding:0 14px;gap:12px;flex-shrink:0}
     #statusbar span{font-size:11px;color:rgba(255,255,255,0.6)}
     #coords{color:var(--blue-light);font-family:monospace;font-size:11px}
-
-    /* ── MODALS ── */
     .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1000;align-items:center;justify-content:center}
     .modal-bg.open{display:flex}
     .modal-box{background:#fff;border-radius:12px;padding:24px;width:420px;max-width:95vw;direction:rtl;box-shadow:0 8px 32px rgba(0,0,0,0.2)}
@@ -94,8 +84,6 @@
     .btn-secondary{padding:9px 18px;border-radius:7px;cursor:pointer;background:transparent;color:var(--muted);font-size:13px;border:1px solid var(--border)}
     .strength-bar{height:4px;border-radius:2px;background:#e2e8f0;margin-top:5px;overflow:hidden}
     .strength-fill{height:100%;border-radius:2px;width:0;transition:width 0.3s,background 0.3s}
-
-    /* Popup */
     .leaflet-popup-content-wrapper{border-radius:10px;font-family:'Segoe UI',Tahoma,Arial,sans-serif;direction:rtl;text-align:right}
     .leaflet-popup-content{margin:12px 16px;font-size:13px;line-height:1.6}
     .popup-title{font-weight:700;font-size:14px;color:var(--blue-dark);margin-bottom:6px;border-bottom:1px solid var(--border);padding-bottom:5px}
@@ -106,32 +94,13 @@
     .popup-btn:hover{background:#e2e8f0}
     .popup-btn.danger{border-color:#fca5a5;color:var(--red)}.popup-btn.danger:hover{background:#fee2e2}
     .village-label{background:transparent;border:none;font-size:12px;font-weight:700;color:#1e293b;text-shadow:1px 1px 0 #fff,-1px -1px 0 #fff,1px -1px 0 #fff,-1px 1px 0 #fff;white-space:nowrap;pointer-events:none}
-
-    /* Toast */
     #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--blue-dark);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:2000;transition:transform 0.3s;white-space:nowrap}
     #toast.show{transform:translateX(-50%) translateY(0)}
-
-    /* Loading */
-    #loading{position:fixed;inset:0;background:var(--blue-dark);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;transition:opacity 0.4s}
-    #loading .logo-big{font-size:28px;font-weight:700;color:#fff;margin-bottom:8px}
-    #loading .logo-big span{color:var(--blue-light)}
-    #loading .sub{font-size:13px;color:rgba(255,255,255,0.6);margin-bottom:28px}
-    .spinner{width:36px;height:36px;border:3px solid rgba(255,255,255,0.2);border-top-color:var(--blue-light);border-radius:50%;animation:spin 0.8s linear infinite}
-    @keyframes spin{to{transform:rotate(360deg)}}
-    ::-webkit-scrollbar{width:6px}
-    ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+    ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
   </style>
 </head>
 <body>
-
-<div id="loading">
-  <div class="logo-big">מי <span>הגליל</span></div>
-  <div class="sub">מערכת GIS | טוען...</div>
-  <div class="spinner"></div>
-</div>
-
 <div id="app">
-  <!-- TOPBAR -->
   <div id="topbar">
     <div class="logo">💧 מי <span>הגליל</span> | GIS</div>
     <div class="stats">
@@ -141,19 +110,17 @@
     </div>
     <div style="display:flex;align-items:center;gap:10px">
       <div id="realtime-dot"></div>
-      <!-- Admin link (shown only to admins) -->
       <a href="admin.html" id="admin-link" class="admin-link" style="display:none">⚙️ ניהול</a>
-      <!-- User menu -->
       <div class="user-area">
-        <button class="user-btn" onclick="toggleDropdown()" id="user-btn">
-          <div class="user-avatar" id="user-avatar">?</div>
+        <button class="user-btn" id="user-btn" onclick="toggleDD()">
+          <div class="user-avatar" id="user-avatar">—</div>
           <div>
-            <div class="user-name" id="user-name">טוען...</div>
-            <div class="user-role" id="user-role"></div>
+            <div class="user-name" id="user-name">—</div>
+            <div class="user-role-label" id="user-role-label"></div>
           </div>
           <span style="font-size:10px;opacity:0.7">▾</span>
         </button>
-        <div class="dropdown" id="user-dropdown">
+        <div class="dropdown" id="user-dd">
           <div class="dd-header">
             <div class="dd-name" id="dd-name">—</div>
             <div class="dd-email" id="dd-email">—</div>
@@ -166,138 +133,77 @@
       </div>
     </div>
   </div>
-
-  <!-- MAIN -->
   <div id="main">
     <div id="map"></div>
     <div id="sidebar">
       <div class="panel">
         <div class="panel-title">שכבות מפה</div>
-        <div class="layer-row" onclick="toggleLayer('water')">
-          <div class="layer-swatch" style="background:#1a7fc1"></div>
-          <span class="layer-label">קווי מים</span>
-          <span class="layer-count" id="cnt-water">—</span>
-          <div class="toggle on" id="tog-water"></div>
-        </div>
-        <div class="layer-row" onclick="toggleLayer('sewage')">
-          <div class="layer-swatch" style="background:#a16207"></div>
-          <span class="layer-label">קווי ביוב</span>
-          <span class="layer-count" id="cnt-sewage">—</span>
-          <div class="toggle on" id="tog-sewage"></div>
-        </div>
-        <div class="layer-row" onclick="toggleLayer('pumps')">
-          <div class="layer-swatch" style="background:#0891b2;border-radius:50%"></div>
-          <span class="layer-label">תחנות שאיבה</span>
-          <span class="layer-count" id="cnt-pumps">—</span>
-          <div class="toggle on" id="tog-pumps"></div>
-        </div>
-        <div class="layer-row" onclick="toggleLayer('reservoirs')">
-          <div class="layer-swatch" style="background:#0d9488;border-radius:50%"></div>
-          <span class="layer-label">מאגרים</span>
-          <span class="layer-count" id="cnt-reservoirs">—</span>
-          <div class="toggle on" id="tog-reservoirs"></div>
-        </div>
-        <div class="layer-row" onclick="toggleLayer('villages')">
-          <div class="layer-swatch" style="background:rgba(26,127,193,0.2);border:2px solid #1a7fc1"></div>
-          <span class="layer-label">גבולות ישובים</span>
-          <div class="toggle on" id="tog-villages"></div>
-        </div>
-        <div class="layer-row" onclick="toggleLayer('incidents')">
-          <div class="layer-swatch" style="background:#dc2626;border-radius:50%"></div>
-          <span class="layer-label">תקלות פעילות</span>
-          <span class="layer-count" id="cnt-incidents">—</span>
-          <div class="toggle on" id="tog-incidents"></div>
-        </div>
+        <div class="layer-row" onclick="toggleLayer('water')"><div class="layer-swatch" style="background:#1a7fc1"></div><span class="layer-label">קווי מים</span><span class="layer-count" id="cnt-water">—</span><div class="toggle on" id="tog-water"></div></div>
+        <div class="layer-row" onclick="toggleLayer('sewage')"><div class="layer-swatch" style="background:#a16207"></div><span class="layer-label">קווי ביוב</span><span class="layer-count" id="cnt-sewage">—</span><div class="toggle on" id="tog-sewage"></div></div>
+        <div class="layer-row" onclick="toggleLayer('pumps')"><div class="layer-swatch" style="background:#0891b2;border-radius:50%"></div><span class="layer-label">תחנות שאיבה</span><span class="layer-count" id="cnt-pumps">—</span><div class="toggle on" id="tog-pumps"></div></div>
+        <div class="layer-row" onclick="toggleLayer('reservoirs')"><div class="layer-swatch" style="background:#0d9488;border-radius:50%"></div><span class="layer-label">מאגרים</span><span class="layer-count" id="cnt-reservoirs">—</span><div class="toggle on" id="tog-reservoirs"></div></div>
+        <div class="layer-row" onclick="toggleLayer('villages')"><div class="layer-swatch" style="background:rgba(26,127,193,0.2);border:2px solid #1a7fc1"></div><span class="layer-label">גבולות ישובים</span><div class="toggle on" id="tog-villages"></div></div>
+        <div class="layer-row" onclick="toggleLayer('incidents')"><div class="layer-swatch" style="background:#dc2626;border-radius:50%"></div><span class="layer-label">תקלות פעילות</span><span class="layer-count" id="cnt-incidents">—</span><div class="toggle on" id="tog-incidents"></div></div>
       </div>
       <div class="panel">
         <div class="panel-title">סינון לפי ישוב</div>
         <select id="village-filter" onchange="filterByVillage(this.value)">
           <option value="">כל הישובים</option>
-          <option value="מגד אל-כרום">מגד אל-כרום</option>
-          <option value="בענה">בענה</option>
-          <option value="דיר אל-אסד">דיר אל-אסד</option>
-          <option value="נחף">נחף</option>
-          <option value="סחנין">סחנין</option>
-          <option value="דיר חנא">דיר חנא</option>
-          <option value="ערבה">ערבה</option>
+          <option>מגד אל-כרום</option><option>בענה</option><option>דיר אל-אסד</option>
+          <option>נחף</option><option>סחנין</option><option>דיר חנא</option><option>ערבה</option>
         </select>
       </div>
       <div style="padding:10px 14px 4px;border-bottom:1px solid var(--border)">
         <div class="panel-title" style="margin-bottom:0">תקלות</div>
       </div>
-      <div id="incidents-panel">
-        <div style="color:var(--muted);font-size:13px;text-align:center;padding:24px 0">טוען...</div>
-      </div>
-      <button id="add-btn" onclick="openModal()">+ פתח תקלה חדשה</button>
+      <div id="incidents-panel"><div style="color:var(--muted);font-size:13px;text-align:center;padding:24px 0">טוען...</div></div>
+      <button id="add-btn" onclick="openIncModal()">+ פתח תקלה חדשה</button>
     </div>
   </div>
-
   <div id="statusbar">
-    <span id="coords">לחץ על המפה</span>
-    <span>|</span><span>זום: <span id="zoom-level">11</span></span>
-    <span>|</span><span>OpenStreetMap</span>
-    <span>|</span><span>מי הגליל © 2025</span>
+    <span id="coords">לחץ על המפה</span><span>|</span>
+    <span>זום: <span id="zoom-level">11</span></span><span>|</span>
+    <span>OpenStreetMap</span><span>|</span><span>מי הגליל © 2025</span>
   </div>
 </div>
 
-<!-- Add Incident Modal -->
-<div class="modal-bg" id="inc-modal-bg" onclick="closeIncModalBg(event)">
+<!-- Incident Modal -->
+<div class="modal-bg" id="inc-modal-bg" onclick="if(event.target.id==='inc-modal-bg')closeIncModal()">
   <div class="modal-box">
     <div class="modal-title">פתיחת תקלה חדשה</div>
     <div class="form-row"><label class="form-label">כותרת *</label><input class="form-input" id="f-title" type="text" placeholder="נזילה בצנרת ראשית"/></div>
     <div class="form-row-2">
-      <div><label class="form-label">ישוב *</label>
-        <select class="form-select" id="f-village">
-          <option value="">בחר</option>
-          <option>מגד אל-כרום</option><option>בענה</option><option>דיר אל-אסד</option>
-          <option>נחף</option><option>סחנין</option><option>דיר חנא</option><option>ערבה</option>
-        </select>
-      </div>
-      <div><label class="form-label">עדיפות</label>
-        <select class="form-select" id="f-priority">
-          <option value="high">🔴 גבוהה</option>
-          <option value="medium" selected>🟡 בינונית</option>
-          <option value="low">🟢 נמוכה</option>
-        </select>
-      </div>
+      <div><label class="form-label">ישוב *</label><select class="form-select" id="f-village"><option value="">בחר</option><option>מגד אל-כרום</option><option>בענה</option><option>דיר אל-אסד</option><option>נחף</option><option>סחנין</option><option>דיר חנא</option><option>ערבה</option></select></div>
+      <div><label class="form-label">עדיפות</label><select class="form-select" id="f-priority"><option value="high">🔴 גבוהה</option><option value="medium" selected>🟡 בינונית</option><option value="low">🟢 נמוכה</option></select></div>
     </div>
     <div class="form-row"><label class="form-label">תיאור</label><textarea class="form-textarea" id="f-desc" placeholder="פרטים נוספים..."></textarea></div>
     <div class="form-row-2">
-      <div><label class="form-label">Lat</label><input class="form-input" id="f-lat" type="number" step="0.0001" placeholder="32.9211"/></div>
-      <div><label class="form-label">Lng</label><input class="form-input" id="f-lng" type="number" step="0.0001" placeholder="35.1028"/></div>
+      <div><label class="form-label">Lat</label><input class="form-input" id="f-lat" type="number" step="0.0001"/></div>
+      <div><label class="form-label">Lng</label><input class="form-input" id="f-lng" type="number" step="0.0001"/></div>
     </div>
     <div style="font-size:11px;color:var(--muted)">💡 לחץ על המפה לפני פתיחת הטופס למיקום אוטומטי</div>
-    <div class="modal-btns">
-      <button class="btn-primary" onclick="submitIncident()">שמור תקלה</button>
-      <button class="btn-secondary" onclick="closeIncModal()">ביטול</button>
-    </div>
+    <div class="modal-btns"><button class="btn-primary" onclick="submitIncident()">שמור תקלה</button><button class="btn-secondary" onclick="closeIncModal()">ביטול</button></div>
   </div>
 </div>
 
 <!-- Settings Modal -->
-<div class="modal-bg" id="settings-modal-bg" onclick="closeSettingsBg(event)">
+<div class="modal-bg" id="settings-bg" onclick="if(event.target.id==='settings-bg')closeSettings()">
   <div class="modal-box">
     <div class="modal-title">⚙️ הגדרות חשבון</div>
     <div class="form-row"><label class="form-label">שם מלא</label><input class="form-input" id="s-name" type="text"/></div>
-    <div class="form-row"><label class="form-label">טלפון</label><input class="form-input" id="s-phone" type="tel" placeholder="050-0000000"/></div>
-    <div class="form-row"><label class="form-label">אימייל (לא ניתן לשינוי)</label><input class="form-input" id="s-email" type="email" disabled style="background:#f1f5f9;color:#94a3b8"/></div>
-    <div class="modal-btns">
-      <button class="btn-primary" onclick="saveSettings()">💾 שמור</button>
-      <button class="btn-secondary" onclick="closeSettings()">ביטול</button>
-    </div>
+    <div class="form-row"><label class="form-label">טלפון</label><input class="form-input" id="s-phone" type="tel"/></div>
+    <div class="form-row"><label class="form-label">אימייל</label><input class="form-input" id="s-email" type="email" disabled style="background:#f1f5f9;color:#94a3b8"/></div>
+    <div class="modal-btns"><button class="btn-primary" onclick="saveSettings()">💾 שמור</button><button class="btn-secondary" onclick="closeSettings()">ביטול</button></div>
   </div>
 </div>
 
 <!-- Change Password Modal -->
-<div class="modal-bg" id="pass-modal-bg" onclick="closePassBg(event)">
+<div class="modal-bg" id="pass-bg" onclick="if(event.target.id==='pass-bg')closePassModal()">
   <div class="modal-box">
     <div class="modal-title">🔑 שינוי סיסמה</div>
     <div class="form-row"><label class="form-label">סיסמה חדשה</label><input class="form-input" id="p-new" type="password" placeholder="לפחות 8 תווים" oninput="checkStr(this.value)"/><div class="strength-bar"><div class="strength-fill" id="p-fill"></div></div></div>
     <div class="form-row"><label class="form-label">אימות סיסמה</label><input class="form-input" id="p-confirm" type="password" placeholder="הכנס שוב"/></div>
-    <div class="modal-btns">
-      <button class="btn-primary" onclick="changePass()">עדכן סיסמה</button>
-      <button class="btn-secondary" onclick="closePassModal()">ביטול</button>
-    </div>
+    <div class="modal-btns"><button class="btn-primary" onclick="changePass()">עדכן סיסמה</button><button class="btn-secondary" onclick="closePassModal()">ביטול</button></div>
   </div>
 </div>
 
@@ -305,10 +211,6 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
-var SUPABASE_URL  = 'https://hlbogufrdxpviyxlwqtf.supabase.co';
-var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhsYm9ndWZyZHhwdml5eGx3cXRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczMjcyMzUsImV4cCI6MjA5MjkwMzIzNX0.8AvY5isXAJfa2mYC2keDBTlw4hv9mVwytH0oWxW3vKA';
-
-var gSb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 var gMap, gLayers={}, gLayerState={}, gIncidents=[], gMarkers={};
 var gLastLat=null, gLastLng=null, gFilter='';
 var gUser=null, gProfile=null;
@@ -327,114 +229,57 @@ var VILLAGES=[
   {name:'דיר חנא',ar:'Deir Hanna',lat:32.9228,lng:35.2083,r:0.015},
   {name:'ערבה',ar:'Arrabeh',lat:32.8514,lng:35.3339,r:0.020},
 ];
-var WATER_PIPES=[
-  [[32.9292,35.1622],[32.9380,35.1610],[32.9467,35.1600],[32.9561,35.1597]],
-  [[32.9467,35.1597],[32.9520,35.1680],[32.9560,35.1742],[32.9797,35.1944]],
-  [[32.9292,35.1622],[32.9260,35.1850],[32.9228,35.2083]],
-  [[32.9228,35.2083],[32.9000,35.2076],[32.8653,35.2069]],
-  [[32.8653,35.2069],[32.8580,35.2600],[32.8514,35.3339]],
-  [[32.9228,35.2083],[32.9000,35.2700],[32.8514,35.3339]],
-];
-var SEWAGE_PIPES=[
-  [[32.9292,35.1622],[32.9380,35.1640],[32.9467,35.1742]],
-  [[32.9228,35.2083],[32.9100,35.2100],[32.8653,35.2069]],
-  [[32.8653,35.2069],[32.8590,35.2700],[32.8514,35.3339]],
-];
-var PUMP_STATIONS=[
-  {name:'תחנת שאיבה מגד',lat:32.9292,lng:35.1622,output:'620 מ"ק/ש',status:'פעיל'},
-  {name:'תחנת שאיבה צומת צפון',lat:32.9500,lng:35.1680,output:'380 מ"ק/ש',status:'פעיל'},
-  {name:'תחנת שאיבה סחנין',lat:32.8653,lng:35.2069,output:'450 מ"ק/ש',status:'פעיל'},
-  {name:'תחנת שאיבה דיר חנא',lat:32.9228,lng:35.2083,output:'290 מ"ק/ש',status:'תחזוקה'},
-  {name:'תחנת שאיבה ערבה',lat:32.8514,lng:35.3339,output:'310 מ"ק/ש',status:'פעיל'},
-];
-var RESERVOIRS=[
-  {name:'מאגר מגד אל-כרום',lat:32.9340,lng:35.1580,vol:'4,000 מ"ק',fill:'82%'},
-  {name:'מאגר נחף',lat:32.9840,lng:35.1980,vol:'2,500 מ"ק',fill:'91%'},
-  {name:'מאגר סחנין',lat:32.8700,lng:35.2100,vol:'6,000 מ"ק',fill:'74%'},
-  {name:'מאגר ערבה',lat:32.8550,lng:35.3300,vol:'3,200 מ"ק',fill:'88%'},
-];
+var WATER_PIPES=[[[32.9292,35.1622],[32.9380,35.1610],[32.9467,35.1600],[32.9561,35.1597]],[[32.9467,35.1597],[32.9520,35.1680],[32.9560,35.1742],[32.9797,35.1944]],[[32.9292,35.1622],[32.9260,35.1850],[32.9228,35.2083]],[[32.9228,35.2083],[32.9000,35.2076],[32.8653,35.2069]],[[32.8653,35.2069],[32.8580,35.2600],[32.8514,35.3339]],[[32.9228,35.2083],[32.9000,35.2700],[32.8514,35.3339]]];
+var SEWAGE_PIPES=[[[32.9292,35.1622],[32.9380,35.1640],[32.9467,35.1742]],[[32.9228,35.2083],[32.9100,35.2100],[32.8653,35.2069]],[[32.8653,35.2069],[32.8590,35.2700],[32.8514,35.3339]]];
+var PUMP_STATIONS=[{name:'תחנת שאיבה מגד',lat:32.9292,lng:35.1622,output:'620 מ"ק/ש',status:'פעיל'},{name:'תחנת שאיבה צומת צפון',lat:32.9500,lng:35.1680,output:'380 מ"ק/ש',status:'פעיל'},{name:'תחנת שאיבה סחנין',lat:32.8653,lng:35.2069,output:'450 מ"ק/ש',status:'פעיל'},{name:'תחנת שאיבה דיר חנא',lat:32.9228,lng:35.2083,output:'290 מ"ק/ש',status:'תחזוקה'},{name:'תחנת שאיבה ערבה',lat:32.8514,lng:35.3339,output:'310 מ"ק/ש',status:'פעיל'}];
+var RESERVOIRS=[{name:'מאגר מגד אל-כרום',lat:32.9340,lng:35.1580,vol:'4,000 מ"ק',fill:'82%'},{name:'מאגר נחף',lat:32.9840,lng:35.1980,vol:'2,500 מ"ק',fill:'91%'},{name:'מאגר סחנין',lat:32.8700,lng:35.2100,vol:'6,000 מ"ק',fill:'74%'},{name:'מאגר ערבה',lat:32.8550,lng:35.3300,vol:'3,200 מ"ק',fill:'88%'}];
 
-// ── AUTH GUARD ──
+// ── INIT — one clean auth check ──
 window.addEventListener('load', async function() {
   var res = await gSb.auth.getSession();
-  if (!res.data.session) { window.location.href='login.html'; return; }
+  if (!res.data || !res.data.session) { window.location.replace('login.html'); return; }
+
   gUser = res.data.session.user;
+  gProfile = await getProfile(gUser, true);
+  if (!gProfile) return; // getProfile handles redirect
 
-  // Load profile
-  var pRes = await gSb.from('profiles').select('*').eq('id', gUser.id).single();
-if (pRes.data) {
-  gProfile = pRes.data;
-  if (!gProfile.is_active) { await gSb.auth.signOut(); window.location.href='login.html'; return; }
-} else {
-  // fallback — use auth user data directly
-  gProfile = {
-    full_name: gUser.user_metadata && gUser.user_metadata.full_name 
-               ? gUser.user_metadata.full_name 
-               : gUser.email.split('@')[0],
-    email: gUser.email,
-    role: 'admin',
-    is_active: true,
-    permissions: {}
-  };
-}
-setUserUI(gProfile);
-
+  setUserUI(gProfile);
   initMap();
   initSB();
-  setTimeout(hideLoading, 900);
+  document.getElementById('app').classList.add('ready');
 });
 
 function setUserUI(p) {
   var name = p.full_name || gUser.email.split('@')[0];
-  var initials = name.split(' ').map(function(w){return w[0];}).join('').substring(0,2).toUpperCase();
-  document.getElementById('user-avatar').textContent = initials;
-  document.getElementById('user-name').textContent   = name;
-  document.getElementById('user-role').textContent   = ROLE_HE[p.role] || p.role;
-  document.getElementById('dd-name').textContent     = name;
-  document.getElementById('dd-email').textContent    = gUser.email;
-  if (p.role === 'admin') document.getElementById('admin-link').style.display = 'inline-flex';
-
-  // Disable add-btn if no edit permission on incidents
+  var initials = name.split(' ').map(function(w){return w[0]||'';}).join('').substring(0,2).toUpperCase() || '??';
+  document.getElementById('user-avatar').textContent      = initials;
+  document.getElementById('user-name').textContent        = name;
+  document.getElementById('user-role-label').textContent  = ROLE_HE[p.role] || p.role;
+  document.getElementById('dd-name').textContent          = name;
+  document.getElementById('dd-email').textContent         = gUser.email;
+  if (p.role === 'admin') document.getElementById('admin-link').style.display = 'inline-block';
   var perms = p.permissions || {};
   if (p.role !== 'admin' && !(perms.incidents && perms.incidents.edit)) {
     document.getElementById('add-btn').disabled = true;
-    document.getElementById('add-btn').title = 'אין לך הרשאת עריכת תקלות';
   }
-}
-
-function hideLoading() {
-  var el=document.getElementById('loading');
-  if(!el)return;
-  el.style.opacity='0';
-  setTimeout(function(){if(el.parentNode)el.parentNode.removeChild(el);},400);
 }
 
 // ── DROPDOWN ──
-function toggleDropdown() {
-  document.getElementById('user-dropdown').classList.toggle('open');
-}
+function toggleDD() { document.getElementById('user-dd').classList.toggle('open'); }
 document.addEventListener('click', function(e) {
-  if (!document.getElementById('user-btn').contains(e.target)) {
-    document.getElementById('user-dropdown').classList.remove('open');
-  }
+  var btn = document.getElementById('user-btn');
+  if (btn && !btn.contains(e.target)) document.getElementById('user-dd').classList.remove('open');
 });
-
-// ── LOGOUT ──
-async function logout() {
-  await gSb.auth.signOut();
-  window.location.href = 'login.html';
-}
 
 // ── SETTINGS ──
 function openSettings() {
-  document.getElementById('user-dropdown').classList.remove('open');
+  document.getElementById('user-dd').classList.remove('open');
   document.getElementById('s-name').value  = gProfile ? gProfile.full_name||'' : '';
   document.getElementById('s-phone').value = gProfile ? gProfile.phone||'' : '';
   document.getElementById('s-email').value = gUser ? gUser.email : '';
-  document.getElementById('settings-modal-bg').classList.add('open');
+  document.getElementById('settings-bg').classList.add('open');
 }
-function closeSettings() { document.getElementById('settings-modal-bg').classList.remove('open'); }
-function closeSettingsBg(e) { if(e.target.id==='settings-modal-bg') closeSettings(); }
+function closeSettings() { document.getElementById('settings-bg').classList.remove('open'); }
 
 async function saveSettings() {
   var name  = document.getElementById('s-name').value.trim();
@@ -449,41 +294,36 @@ async function saveSettings() {
 
 // ── CHANGE PASSWORD ──
 function openChangePass() {
-  document.getElementById('user-dropdown').classList.remove('open');
-  document.getElementById('p-new').value='';
-  document.getElementById('p-confirm').value='';
+  document.getElementById('user-dd').classList.remove('open');
+  document.getElementById('p-new').value=''; document.getElementById('p-confirm').value='';
   document.getElementById('p-fill').style.width='0';
-  document.getElementById('pass-modal-bg').classList.add('open');
+  document.getElementById('pass-bg').classList.add('open');
 }
-function closePassModal() { document.getElementById('pass-modal-bg').classList.remove('open'); }
-function closePassBg(e) { if(e.target.id==='pass-modal-bg') closePassModal(); }
+function closePassModal() { document.getElementById('pass-bg').classList.remove('open'); }
 
 function checkStr(val) {
-  var fill=document.getElementById('p-fill');
-  var score=0;
+  var fill=document.getElementById('p-fill'), score=0;
   if(val.length>=8)score++;if(val.length>=12)score++;
   if(/[A-Z]/.test(val))score++;if(/[0-9]/.test(val))score++;if(/[^A-Za-z0-9]/.test(val))score++;
   var map=[{w:'20%',bg:'#dc2626'},{w:'40%',bg:'#f97316'},{w:'60%',bg:'#eab308'},{w:'80%',bg:'#22c55e'},{w:'100%',bg:'#16a34a'}];
-  var s=map[Math.min(score-1,4)]||map[0];
-  fill.style.width=s.w; fill.style.background=s.bg;
+  var s=map[Math.min(score-1,4)]||map[0]; fill.style.width=s.w; fill.style.background=s.bg;
 }
 
 async function changePass() {
-  var p=document.getElementById('p-new').value;
-  var c=document.getElementById('p-confirm').value;
+  var p=document.getElementById('p-new').value, c=document.getElementById('p-confirm').value;
   if(p.length<8){showToast('הסיסמה חייבת להיות לפחות 8 תווים');return;}
   if(p!==c){showToast('הסיסמאות אינן תואמות');return;}
   var res=await gSb.auth.updateUser({password:p});
   if(res.error){showToast('שגיאה: '+res.error.message);return;}
   closePassModal();
-  showToast('✅ הסיסמה עודכנה בהצלחה');
+  showToast('✅ הסיסמה עודכנה');
 }
 
 // ── MAP ──
 function initMap() {
   gMap=L.map('map',{zoomControl:true,attributionControl:false}).setView([32.91,35.22],11);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(gMap);
-  gMap.on('mousemove',function(e){document.getElementById('coords').textContent=e.latlng.lat.toFixed(5)+'° N,  '+e.latlng.lng.toFixed(5)+'° E';});
+  gMap.on('mousemove',function(e){document.getElementById('coords').textContent=e.latlng.lat.toFixed(5)+'° N  '+e.latlng.lng.toFixed(5)+'° E';});
   gMap.on('zoomend',function(){document.getElementById('zoom-level').textContent=gMap.getZoom();});
   gMap.on('click',function(e){gLastLat=e.latlng.lat;gLastLng=e.latlng.lng;});
   buildLayers();
@@ -491,98 +331,54 @@ function initMap() {
 
 function buildLayers() {
   var vg=L.layerGroup();
-  VILLAGES.forEach(function(v){
-    L.circle([v.lat,v.lng],{radius:v.r*111000,color:'#1a7fc1',weight:2,opacity:0.7,fillColor:'#1a7fc1',fillOpacity:0.07}).bindPopup('<div class="popup-title">'+v.name+'</div><div class="popup-row"><span class="popup-key">שם ערבי</span><span class="popup-val">'+v.ar+'</span></div>').addTo(vg);
-    L.marker([v.lat,v.lng],{icon:L.divIcon({className:'village-label',html:'<div>'+v.name+'</div>',iconSize:null,iconAnchor:[0,0]})}).addTo(vg);
-  });
+  VILLAGES.forEach(function(v){L.circle([v.lat,v.lng],{radius:v.r*111000,color:'#1a7fc1',weight:2,opacity:0.7,fillColor:'#1a7fc1',fillOpacity:0.07}).bindPopup('<div class="popup-title">'+v.name+'</div><div class="popup-row"><span class="popup-key">שם ערבי</span><span class="popup-val">'+v.ar+'</span></div>').addTo(vg);L.marker([v.lat,v.lng],{icon:L.divIcon({className:'village-label',html:'<div>'+v.name+'</div>',iconSize:null,iconAnchor:[0,0]})}).addTo(vg);});
   gLayers.villages=vg;gLayerState.villages=true;vg.addTo(gMap);
-
-  var wg=L.layerGroup();
-  var wD=[200,200,250,200,150,200],wY=[2008,2010,2006,2009,2014,2011];
-  WATER_PIPES.forEach(function(c,i){
-    L.polyline(c,{color:'#1a7fc1',weight:3.5,opacity:0.85}).bindPopup('<div class="popup-title">קו מים ראשי</div><div class="popup-row"><span class="popup-key">קוטר</span><span class="popup-val">DN '+(wD[i]||150)+'</span></div><div class="popup-row"><span class="popup-key">שנת הנחה</span><span class="popup-val">'+(wY[i]||2010)+'</span></div>').addTo(wg);
-  });
-  gLayers.water=wg;gLayerState.water=true;wg.addTo(gMap);
-  document.getElementById('cnt-water').textContent=WATER_PIPES.length+' קטעים';
-
+  var wg=L.layerGroup(),wD=[200,200,250,200,150,200],wY=[2008,2010,2006,2009,2014,2011];
+  WATER_PIPES.forEach(function(c,i){L.polyline(c,{color:'#1a7fc1',weight:3.5,opacity:0.85}).bindPopup('<div class="popup-title">קו מים</div><div class="popup-row"><span class="popup-key">קוטר</span><span class="popup-val">DN '+(wD[i]||150)+'</span></div><div class="popup-row"><span class="popup-key">שנה</span><span class="popup-val">'+(wY[i]||2010)+'</span></div>').addTo(wg);});
+  gLayers.water=wg;gLayerState.water=true;wg.addTo(gMap);document.getElementById('cnt-water').textContent=WATER_PIPES.length+' קטעים';
   var sg=L.layerGroup();
-  SEWAGE_PIPES.forEach(function(c,i){
-    L.polyline(c,{color:'#a16207',weight:2.5,opacity:0.8,dashArray:'7,5'}).bindPopup('<div class="popup-title">קו ביוב</div><div class="popup-row"><span class="popup-key">שנת הנחה</span><span class="popup-val">'+(2011+i*2)+'</span></div>').addTo(sg);
-  });
-  gLayers.sewage=sg;gLayerState.sewage=true;sg.addTo(gMap);
-  document.getElementById('cnt-sewage').textContent=SEWAGE_PIPES.length+' קטעים';
-
+  SEWAGE_PIPES.forEach(function(c,i){L.polyline(c,{color:'#a16207',weight:2.5,opacity:0.8,dashArray:'7,5'}).bindPopup('<div class="popup-title">קו ביוב</div><div class="popup-row"><span class="popup-key">שנה</span><span class="popup-val">'+(2011+i*2)+'</span></div>').addTo(sg);});
+  gLayers.sewage=sg;gLayerState.sewage=true;sg.addTo(gMap);document.getElementById('cnt-sewage').textContent=SEWAGE_PIPES.length+' קטעים';
   var pg=L.layerGroup();
-  PUMP_STATIONS.forEach(function(p){
-    var col=p.status==='פעיל'?'#0891b2':'#f59e0b';
-    L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html:'<div style="width:18px;height:18px;background:'+col+';border:2.5px solid #fff;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,0.35)"></div>',iconSize:[18,18],iconAnchor:[9,9]})}).bindPopup('<div class="popup-title">'+p.name+'</div><div class="popup-row"><span class="popup-key">תפוקה</span><span class="popup-val">'+p.output+'</span></div><div class="popup-row"><span class="popup-key">סטטוס</span><span class="popup-val">'+p.status+'</span></div>').addTo(pg);
-  });
-  gLayers.pumps=pg;gLayerState.pumps=true;pg.addTo(gMap);
-  document.getElementById('cnt-pumps').textContent=PUMP_STATIONS.length;
-
+  PUMP_STATIONS.forEach(function(p){var col=p.status==='פעיל'?'#0891b2':'#f59e0b';L.marker([p.lat,p.lng],{icon:L.divIcon({className:'',html:'<div style="width:18px;height:18px;background:'+col+';border:2.5px solid #fff;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,0.35)"></div>',iconSize:[18,18],iconAnchor:[9,9]})}).bindPopup('<div class="popup-title">'+p.name+'</div><div class="popup-row"><span class="popup-key">תפוקה</span><span class="popup-val">'+p.output+'</span></div>').addTo(pg);});
+  gLayers.pumps=pg;gLayerState.pumps=true;pg.addTo(gMap);document.getElementById('cnt-pumps').textContent=PUMP_STATIONS.length;
   var rg=L.layerGroup();
-  RESERVOIRS.forEach(function(r){
-    L.marker([r.lat,r.lng],{icon:L.divIcon({className:'',html:'<div style="width:20px;height:20px;background:#0d9488;border:2.5px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.35)"></div>',iconSize:[20,20],iconAnchor:[10,10]})}).bindPopup('<div class="popup-title">'+r.name+'</div><div class="popup-row"><span class="popup-key">נפח</span><span class="popup-val">'+r.vol+'</span></div><div class="popup-row"><span class="popup-key">מילוי</span><span class="popup-val">'+r.fill+'</span></div>').addTo(rg);
-  });
-  gLayers.reservoirs=rg;gLayerState.reservoirs=true;rg.addTo(gMap);
-  document.getElementById('cnt-reservoirs').textContent=RESERVOIRS.length;
-
+  RESERVOIRS.forEach(function(r){L.marker([r.lat,r.lng],{icon:L.divIcon({className:'',html:'<div style="width:20px;height:20px;background:#0d9488;border:2.5px solid #fff;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.35)"></div>',iconSize:[20,20],iconAnchor:[10,10]})}).bindPopup('<div class="popup-title">'+r.name+'</div><div class="popup-row"><span class="popup-key">נפח</span><span class="popup-val">'+r.vol+'</span></div><div class="popup-row"><span class="popup-key">מילוי</span><span class="popup-val">'+r.fill+'</span></div>').addTo(rg);});
+  gLayers.reservoirs=rg;gLayerState.reservoirs=true;rg.addTo(gMap);document.getElementById('cnt-reservoirs').textContent=RESERVOIRS.length;
   gLayers.incidents=L.layerGroup();gLayerState.incidents=true;gLayers.incidents.addTo(gMap);
 }
 
-function toggleLayer(name){
-  var tog=document.getElementById('tog-'+name);
-  if(gLayerState[name]){gMap.removeLayer(gLayers[name]);tog.classList.remove('on');gLayerState[name]=false;}
-  else{if(gLayers[name])gMap.addLayer(gLayers[name]);tog.classList.add('on');gLayerState[name]=true;}
-}
+function toggleLayer(name){var tog=document.getElementById('tog-'+name);if(gLayerState[name]){gMap.removeLayer(gLayers[name]);tog.classList.remove('on');gLayerState[name]=false;}else{if(gLayers[name])gMap.addLayer(gLayers[name]);tog.classList.add('on');gLayerState[name]=true;}}
 
 // ── SUPABASE ──
 function initSB(){
-  loadIncidents();
-  subscribeRT();
-}
-
-function loadIncidents(){
   gSb.from('incidents').select('*').in('status',['open','in_progress']).order('created_at',{ascending:false}).then(function(res){
-    if(res.error){loadDemo();return;}
-    gIncidents=res.data||[];
-    renderIncidents();renderMarkers();updateStats();
-    document.getElementById('realtime-dot').style.background='#22c55e';
-  }).catch(function(){loadDemo();});
-}
-
-function subscribeRT(){
-  gSb.channel('incidents-rt').on('postgres_changes',{event:'*',schema:'public',table:'incidents'},function(payload){
-    var ev=payload.eventType;
-    if(ev==='INSERT'){gIncidents.unshift(payload.new);addMarker(payload.new,true);showToast('תקלה חדשה: '+payload.new.title);}
-    else if(ev==='UPDATE'){var idx=gIncidents.findIndex(function(i){return i.id===payload.new.id;});if(idx>=0)gIncidents[idx]=payload.new;else gIncidents.unshift(payload.new);if(gMarkers[payload.new.id])gLayers.incidents.removeLayer(gMarkers[payload.new.id]);addMarker(payload.new,false);}
-    else if(ev==='DELETE'){gIncidents=gIncidents.filter(function(i){return i.id!==payload.old.id;});if(gMarkers[payload.old.id])gLayers.incidents.removeLayer(gMarkers[payload.old.id]);delete gMarkers[payload.old.id];}
+    if(!res.error){gIncidents=res.data||[];renderIncidents();renderMarkers();updateStats();document.getElementById('realtime-dot').style.background='#22c55e';}
+    else loadDemo();
+  }).catch(loadDemo);
+  gSb.channel('inc-rt').on('postgres_changes',{event:'*',schema:'public',table:'incidents'},function(p){
+    if(p.eventType==='INSERT'){gIncidents.unshift(p.new);addMarker(p.new,true);showToast('תקלה חדשה: '+p.new.title);}
+    else if(p.eventType==='UPDATE'){var i=gIncidents.findIndex(function(x){return x.id===p.new.id;});if(i>=0)gIncidents[i]=p.new;else gIncidents.unshift(p.new);if(gMarkers[p.new.id])gLayers.incidents.removeLayer(gMarkers[p.new.id]);addMarker(p.new,false);}
+    else if(p.eventType==='DELETE'){gIncidents=gIncidents.filter(function(x){return x.id!==p.old.id;});if(gMarkers[p.old.id])gLayers.incidents.removeLayer(gMarkers[p.old.id]);delete gMarkers[p.old.id];}
     renderIncidents();updateStats();
   }).subscribe();
 }
 
 function loadDemo(){
-  gIncidents=[
-    {id:1,title:'נזילה בצנרת ראשית',village:'מגד אל-כרום',lat:32.9250,lng:35.1580,priority:'high',status:'open',description:'נזילה גדולה ברחוב הראשי',created_at:new Date(Date.now()-7200000).toISOString()},
-    {id:2,title:'לחץ מים נמוך',village:'סחנין',lat:32.8620,lng:35.2040,priority:'medium',status:'in_progress',description:'תושבים מדווחים על לחץ נמוך',created_at:new Date(Date.now()-14400000).toISOString()},
-    {id:3,title:'תקלת מד מים',village:'ערבה',lat:32.8490,lng:35.3300,priority:'low',status:'open',description:'מד מים לא מציג קריאה',created_at:new Date(Date.now()-86400000).toISOString()},
-  ];
+  gIncidents=[{id:1,title:'נזילה בצנרת ראשית',village:'מגד אל-כרום',lat:32.9250,lng:35.1580,priority:'high',status:'open',description:'נזילה גדולה ברחוב הראשי',created_at:new Date(Date.now()-7200000).toISOString()},{id:2,title:'לחץ מים נמוך',village:'סחנין',lat:32.8620,lng:35.2040,priority:'medium',status:'in_progress',description:'תושבים מדווחים על לחץ נמוך',created_at:new Date(Date.now()-14400000).toISOString()},{id:3,title:'תקלת מד מים',village:'ערבה',lat:32.8490,lng:35.3300,priority:'low',status:'open',description:'מד מים לא מציג קריאה',created_at:new Date(Date.now()-86400000).toISOString()}];
   renderIncidents();renderMarkers();updateStats();
-  document.getElementById('realtime-dot').style.background='#f59e0b';
 }
 
-// ── MARKERS ──
 function renderMarkers(){gLayers.incidents.clearLayers();gMarkers={};gIncidents.forEach(function(inc){addMarker(inc,false);});}
 function addMarker(inc,isNew){
   if(inc.status==='closed')return;
   var color=PRIORITY_COLORS[inc.priority]||'#888';
   var ic=L.divIcon({className:'',html:'<div style="width:22px;height:22px;background:'+color+';border:2.5px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center"><span style="color:#fff;font-size:12px;font-weight:800">!</span></div>',iconSize:[22,22],iconAnchor:[11,11]});
-  var m=L.marker([inc.lat,inc.lng],{icon:ic}).bindPopup('<div class="popup-title">'+inc.title+'</div><div class="popup-row"><span class="popup-key">ישוב</span><span class="popup-val">'+inc.village+'</span></div><div class="popup-row"><span class="popup-key">עדיפות</span><span class="popup-val" style="color:'+color+'">'+(PRIORITY_HE[inc.priority]||inc.priority)+'</span></div><div class="popup-row"><span class="popup-key">סטטוס</span><span class="popup-val">'+(STATUS_HE[inc.status]||inc.status)+'</span></div><div class="popup-row"><span class="popup-key">נפתח</span><span class="popup-val">'+timeAgo(inc.created_at)+'</span></div>'+(inc.description?'<div style="font-size:12px;color:#64748b;margin-top:6px;padding-top:5px;border-top:1px solid #e2e8f0">'+inc.description+'</div>':'')+'<div class="popup-actions"><button class="popup-btn" onclick="setStatus('+inc.id+',\'in_progress\')">📋 קח לטיפול</button><button class="popup-btn danger" onclick="setStatus('+inc.id+',\'closed\')">✔ סגור</button></div>');
+  var m=L.marker([inc.lat,inc.lng],{icon:ic}).bindPopup('<div class="popup-title">'+inc.title+'</div><div class="popup-row"><span class="popup-key">ישוב</span><span class="popup-val">'+inc.village+'</span></div><div class="popup-row"><span class="popup-key">עדיפות</span><span class="popup-val" style="color:'+color+'">'+(PRIORITY_HE[inc.priority]||inc.priority)+'</span></div><div class="popup-row"><span class="popup-key">סטטוס</span><span class="popup-val">'+(STATUS_HE[inc.status]||inc.status)+'</span></div><div class="popup-actions"><button class="popup-btn" onclick="setStatus('+inc.id+',\'in_progress\')">📋 קח לטיפול</button><button class="popup-btn danger" onclick="setStatus('+inc.id+',\'closed\')">✔ סגור</button></div>');
   m.addTo(gLayers.incidents);gMarkers[inc.id]=m;
   if(isNew){gMap.flyTo([inc.lat,inc.lng],15,{duration:1.5});setTimeout(function(){m.openPopup();},1600);}
 }
 
-// ── INCIDENTS ──
 function renderIncidents(){
   var panel=document.getElementById('incidents-panel');
   var list=gFilter?gIncidents.filter(function(i){return i.village===gFilter;}):gIncidents;
@@ -594,43 +390,21 @@ function renderIncidents(){
 function zoomTo(lat,lng,id){gMap.setView([lat,lng],16);if(gMarkers[id])setTimeout(function(){gMarkers[id].openPopup();},300);}
 function filterByVillage(val){gFilter=val;renderIncidents();if(val){var v=VILLAGES.find(function(v){return v.name===val;});if(v)gMap.flyTo([v.lat,v.lng],14,{duration:1});}else gMap.flyTo([32.91,35.22],11,{duration:1});}
 function updateStats(){document.getElementById('stat-incidents').textContent=gIncidents.filter(function(i){return i.status!=='closed';}).length;}
-
-// ── ADD INCIDENT ──
-function openModal(){
-  if(gLastLat){document.getElementById('f-lat').value=gLastLat.toFixed(5);document.getElementById('f-lng').value=gLastLng.toFixed(5);}
-  document.getElementById('inc-modal-bg').classList.add('open');
-}
+function openIncModal(){if(gLastLat){document.getElementById('f-lat').value=gLastLat.toFixed(5);document.getElementById('f-lng').value=gLastLng.toFixed(5);}document.getElementById('inc-modal-bg').classList.add('open');}
 function closeIncModal(){document.getElementById('inc-modal-bg').classList.remove('open');}
-function closeIncModalBg(e){if(e.target.id==='inc-modal-bg')closeIncModal();}
 
 function submitIncident(){
-  var title=document.getElementById('f-title').value.trim();
-  var village=document.getElementById('f-village').value;
-  var priority=document.getElementById('f-priority').value;
-  var desc=document.getElementById('f-desc').value.trim();
-  var lat=parseFloat(document.getElementById('f-lat').value);
-  var lng=parseFloat(document.getElementById('f-lng').value);
+  var title=document.getElementById('f-title').value.trim(),village=document.getElementById('f-village').value,priority=document.getElementById('f-priority').value,desc=document.getElementById('f-desc').value.trim(),lat=parseFloat(document.getElementById('f-lat').value),lng=parseFloat(document.getElementById('f-lng').value);
   if(!title||!village||isNaN(lat)||isNaN(lng)){showToast('אנא מלא את כל השדות החובה');return;}
-  var rec={title:title,village:village,priority:priority,description:desc,lat:lat,lng:lng,status:'open',created_by:gUser?gUser.id:null};
-  gSb.from('incidents').insert([rec]).then(function(res){if(res.error)showToast('שגיאה: '+res.error.message);}).catch(function(){
-    var demo=Object.assign({},rec,{id:Date.now(),created_at:new Date().toISOString()});
-    gIncidents.unshift(demo);addMarker(demo,true);renderIncidents();updateStats();showToast('תקלה נוספה');
-  });
+  var rec={title:title,village:village,priority:priority,description:desc,lat:lat,lng:lng,status:'open'};
+  gSb.from('incidents').insert([rec]).then(function(res){if(res.error)showToast('שגיאה: '+res.error.message);});
   closeIncModal();
   ['f-title','f-village','f-desc','f-lat','f-lng'].forEach(function(id){document.getElementById(id).value='';});
   document.getElementById('f-priority').value='medium';
 }
 
-function setStatus(id,status){
-  gSb.from('incidents').update({status:status}).eq('id',id).then(function(){}).catch(function(){
-    var inc=gIncidents.find(function(i){return i.id===id;});
-    if(inc)inc.status=status;
-    if(status==='closed'){gIncidents=gIncidents.filter(function(i){return i.id!==id;});if(gMarkers[id])gLayers.incidents.removeLayer(gMarkers[id]);delete gMarkers[id];}
-    renderIncidents();updateStats();gMap.closePopup();
-  });
-}
+function setStatus(id,status){gSb.from('incidents').update({status:status}).eq('id',id);}
 
-// ── HELPERS ──
 function timeAgo(iso){if(!iso)return'';var d=Math.floor((Date.now()-new Date(iso))/60000);if(d<1)return'הרגע';if(d<60)return'לפני '+d+' דק׳';var h=Math.floor(d/60);if(h<24)return'לפני '+h+' שעות';return'לפני '+Math.floor(h/24)+' ימים';}
 function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},3000);}
 </script>

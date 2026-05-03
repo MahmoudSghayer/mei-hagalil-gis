@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>מי הגליל | כניסה</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="auth.js"></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0d3b5e 0%,#1a5f8a 50%,#0d3b5e 100%);font-family:'Segoe UI',Tahoma,Arial,sans-serif;direction:rtl}
@@ -62,17 +63,17 @@
   <div class="form-group">
     <label>סיסמה</label>
     <div class="input-wrap">
-      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()"/>
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
       <button class="eye-btn" onclick="togglePass()" id="eye-btn">👁</button>
     </div>
     <a href="#" class="forgot-link" onclick="openFP(event)">שכחתי סיסמה</a>
   </div>
-  <button class="btn-login" id="login-btn" onclick="login()">כניסה למערכת</button>
+  <button class="btn-login" id="login-btn" onclick="doLogin()">כניסה למערכת</button>
   <div class="error-msg" id="err"></div>
   <div class="footer">גישה למורשים בלבד · מי הגליל © 2025<br>ליצירת חשבון פנה למנהל המערכת</div>
 </div>
 
-<div id="fp-overlay" onclick="closeFPBg(event)">
+<div id="fp-overlay" onclick="if(event.target.id==='fp-overlay')closeFP()">
   <div id="fp-modal">
     <div class="fp-title">🔑 שכחת סיסמה?</div>
     <div class="fp-sub">הכנס את כתובת האימייל שלך ונשלח לך קישור לאיפוס הסיסמה.</div>
@@ -89,41 +90,50 @@
 </div>
 
 <script>
-var SUPABASE_URL  = 'https://hlbogufrdxpviyxlwqtf.supabase.co';
-var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhsYm9ndWZyZHhwdml5eGx3cXRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczMjcyMzUsImV4cCI6MjA5MjkwMzIzNX0.8AvY5isXAJfa2mYC2keDBTlw4hv9mVwytH0oWxW3vKA';
-var gSb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-
+// Check if already logged in — only once, no loop
 window.addEventListener('load', async function() {
   var res = await gSb.auth.getSession();
-  if (res.data && res.data.session) redirectUser(res.data.session.user.id);
+  if (res.data && res.data.session) {
+    var role = await getUserRole(res.data.session.user.id);
+    window.location.replace(role === 'admin' ? 'admin.html' : 'index.html');
+  }
 });
 
-async function login() {
+async function doLogin() {
   var email = document.getElementById('email').value.trim();
   var pass  = document.getElementById('password').value;
   var btn   = document.getElementById('login-btn');
-  document.getElementById('err').classList.remove('show');
-  if (!email || !pass) { showErr('אנא מלא אימייל וסיסמה'); return; }
+  var err   = document.getElementById('err');
+  err.classList.remove('show');
+
+  if (!email || !pass) { err.textContent='אנא מלא אימייל וסיסמה'; err.classList.add('show'); return; }
+
   btn.disabled = true;
   btn.innerHTML = 'מתחבר...<span class="spinner"></span>';
-  var res = await gSb.auth.signInWithPassword({ email: email, password: pass });
-  if (res.error) {
-    btn.disabled = false; btn.innerHTML = 'כניסה למערכת';
-    showErr('אימייל או סיסמה שגויים'); return;
-  }
-  redirectUser(res.data.user.id);
-}
 
-async function redirectUser(userId) {
-  var res = await gSb.from('profiles').select('role,is_active').eq('id', userId).single();
-  if (res.data && res.data.is_active === false) {
-    await gSb.auth.signOut();
-    showErr('החשבון שלך מושהה. פנה למנהל המערכת.');
-    document.getElementById('login-btn').disabled = false;
-    document.getElementById('login-btn').innerHTML = 'כניסה למערכת';
+  var res = await gSb.auth.signInWithPassword({ email: email, password: pass });
+
+  if (res.error) {
+    btn.disabled = false;
+    btn.innerHTML = 'כניסה למערכת';
+    err.textContent = 'אימייל או סיסמה שגויים';
+    err.classList.add('show');
     return;
   }
-  window.location.href = (res.data && res.data.role === 'admin') ? 'admin.html' : 'index.html';
+
+  // Check if active
+  var profile = await getProfile(res.data.user, false);
+  if (profile && profile.is_active === false) {
+    await gSb.auth.signOut();
+    btn.disabled = false;
+    btn.innerHTML = 'כניסה למערכת';
+    err.textContent = 'החשבון שלך מושהה. פנה למנהל המערכת.';
+    err.classList.add('show');
+    return;
+  }
+
+  var role = profile ? profile.role : 'user';
+  window.location.replace(role === 'admin' ? 'admin.html' : 'index.html');
 }
 
 function togglePass() {
@@ -132,19 +142,25 @@ function togglePass() {
   btn.textContent = inp.type === 'password' ? '👁' : '🙈';
 }
 
-function openFP(e) { e.preventDefault(); document.getElementById('fp-email').value = document.getElementById('email').value; document.getElementById('fp-overlay').classList.add('open'); }
-function closeFP() { document.getElementById('fp-overlay').classList.remove('open'); document.getElementById('fp-ok').classList.remove('show'); }
-function closeFPBg(e) { if (e.target.id==='fp-overlay') closeFP(); }
+function openFP(e) {
+  e.preventDefault();
+  document.getElementById('fp-email').value = document.getElementById('email').value;
+  document.getElementById('fp-overlay').classList.add('open');
+}
+function closeFP() {
+  document.getElementById('fp-overlay').classList.remove('open');
+  document.getElementById('fp-ok').classList.remove('show');
+}
 
 async function sendReset() {
   var email = document.getElementById('fp-email').value.trim();
   if (!email) return;
-  await gSb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/reset.html' });
+  await gSb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + '/reset.html'
+  });
   document.getElementById('fp-ok').classList.add('show');
   setTimeout(closeFP, 3000);
 }
-
-function showErr(msg) { var el=document.getElementById('err'); el.textContent=msg; el.classList.add('show'); }
 </script>
 </body>
 </html>
