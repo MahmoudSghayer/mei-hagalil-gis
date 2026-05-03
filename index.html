@@ -54,7 +54,6 @@
     .village-name{flex:1;font-size:13px;font-weight:700;color:#1e3a8a}
     .village-arrow{font-size:10px;color:#1e40af;transition:transform 0.2s}
     .village-group.open .village-arrow{transform:rotate(180deg)}
-    .village-master-toggle{flex-shrink:0}
     .village-content{display:none;padding:8px 11px 10px;background:#fff}
     .village-group.open .village-content{display:block}
     .sub-layer{display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;font-size:12px}
@@ -142,6 +141,7 @@
     </div>
     <div style="display:flex;align-items:center;gap:10px">
       <div id="realtime-dot"></div>
+      <a href="upload.html" id="upload-link" class="admin-link" style="display:none">📤 העלאה</a>
       <a href="admin.html" id="admin-link" class="admin-link" style="display:none">⚙️ ניהול</a>
       <a href="logs.html" id="logs-link" class="admin-link" style="display:none">📋 יומן</a>
       <div class="user-area">
@@ -175,7 +175,7 @@
         <div id="my-list"></div>
       </div>
       <div class="panel">
-        <div class="panel-title">🗺️ שכבות תשתית</div>
+        <div class="panel-title">🗺️ שכבות תשתית <span class="count-pill" id="layer-count">0</span></div>
         <div id="dwg-layers-list">
           <div class="empty-msg" style="font-size:11px;padding:8px 0">טוען שכבות...</div>
         </div>
@@ -262,10 +262,6 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
-var DWG_VILLAGES = [
-  { id:'biina', name:'בענה', file:'biina.geojson', icon:'🏘️' },
-];
-
 var SUB_LAYERS = {
   sewage_pipe:      { label:'קווי ביוב', icon:'─', color:'#a16207', type:'line', weight:3, dashArray:'7,4', defaultOn:true },
   manhole:          { label:'שוחות ביוב', icon:'⭕', color:'#0d9488', type:'point', radius:5, defaultOn:true },
@@ -281,6 +277,7 @@ var SUB_LAYERS = {
 };
 
 var gMap, gIncidentsLayer, gIncidents=[], gMarkers={};
+var gVillages = []; // loaded from village_layers table
 var gVillageLayers = {}, gVillageState = {}, gVillageBounds = {};
 var gLastLat=null, gLastLng=null, gFilter='';
 var gUser=null, gProfile=null, gClosingId=null;
@@ -314,6 +311,7 @@ function setUserUI(p) {
   if (p.role === 'admin') {
     document.getElementById('admin-link').style.display = 'inline-block';
     document.getElementById('logs-link').style.display = 'inline-block';
+    document.getElementById('upload-link').style.display = 'inline-block';
   }
 }
 
@@ -347,20 +345,42 @@ function initMap() {
   gIncidentsLayer = L.layerGroup().addTo(gMap);
 }
 
+// ════════════════════════════════════════════════════════════
+//  LOAD VILLAGES FROM SUPABASE
+// ════════════════════════════════════════════════════════════
 async function loadAllVillages() {
-  for (var i = 0; i < DWG_VILLAGES.length; i++) await loadVillage(DWG_VILLAGES[i]);
+  // Get list of village layers from database
+  var listRes = await gSb.from('village_layers').select('*').eq('is_active', true).order('uploaded_at', {ascending: true});
+
+  if (listRes.error || !listRes.data || !listRes.data.length) {
+    document.getElementById('dwg-layers-list').innerHTML = '<div class="empty-msg" style="font-size:11px;padding:8px 0">אין שכבות עדיין' + (gProfile.role === 'admin' ? '. <a href="upload.html" style="color:var(--blue-mid)">העלה קובץ ראשון</a>' : '') + '</div>';
+    return;
+  }
+
+  gVillages = listRes.data;
+  document.getElementById('layer-count').textContent = gVillages.length;
+
+  // Load each village's GeoJSON from Supabase Storage
+  for (var i = 0; i < gVillages.length; i++) {
+    await loadVillageData(gVillages[i]);
+  }
   renderVillagesList();
 }
 
-async function loadVillage(village) {
+async function loadVillageData(village) {
   try {
-    var res = await fetch(village.file);
-    if (!res.ok) throw new Error('Failed: ' + village.file);
+    // Get public URL for the file
+    var urlRes = gSb.storage.from('village-layers').getPublicUrl(village.file_path);
+    var publicUrl = urlRes.data.publicUrl;
+
+    var res = await fetch(publicUrl);
+    if (!res.ok) throw new Error('Failed to fetch ' + village.file_path);
     var data = await res.json();
+
     var categories = {};
     var bounds = L.latLngBounds([]);
     data.features.forEach(function(f) {
-      var cat = f.properties._category || 'other';
+      var cat = (f.properties && f.properties._category) || 'other';
       if (!categories[cat]) categories[cat] = [];
       categories[cat].push(f);
       var g = f.geometry;
@@ -368,9 +388,10 @@ async function loadVillage(village) {
       else if (g.type === 'LineString') g.coordinates.forEach(function(c){bounds.extend([c[1],c[0]]);});
       else if (g.type === 'MultiLineString') g.coordinates.forEach(function(line){line.forEach(function(c){bounds.extend([c[1],c[0]]);});});
     });
-    gVillageBounds[village.id] = bounds;
-    gVillageLayers[village.id] = {};
-    gVillageState[village.id] = { masterOn: true, cats: {}, counts: {} };
+
+    gVillageBounds[village.village_id] = bounds;
+    gVillageLayers[village.village_id] = {};
+    gVillageState[village.village_id] = { masterOn: true, cats: {}, counts: {} };
 
     Object.keys(categories).forEach(function(catId) {
       var def = SUB_LAYERS[catId] || SUB_LAYERS.other;
@@ -381,19 +402,16 @@ async function loadVillage(village) {
         if (def.type === 'label' && g.type === 'Point' && p.Text) {
           var icon = L.divIcon({ className: 'map-label', html: '<span style="color:'+def.color+'">'+p.Text+'</span>', iconSize: null, iconAnchor:[0,0] });
           L.marker([g.coordinates[1], g.coordinates[0]], { icon: icon }).addTo(group);
-        }
-        else if (g.type === 'Point') {
+        } else if (g.type === 'Point') {
           var marker = L.circleMarker([g.coordinates[1], g.coordinates[0]], { radius: def.radius || 4, color: '#fff', weight: 1.5, fillColor: def.color, fillOpacity: 0.9 });
           marker.bindPopup(buildPopup(p, def, village));
           marker.addTo(group);
-        }
-        else if (g.type === 'LineString') {
+        } else if (g.type === 'LineString') {
           var coords = g.coordinates.map(function(c){return [c[1],c[0]];});
           var line = L.polyline(coords, { color: def.color, weight: def.weight || 2, opacity: 0.85, dashArray: def.dashArray });
           line.bindPopup(buildPopup(p, def, village));
           line.addTo(group);
-        }
-        else if (g.type === 'MultiLineString') {
+        } else if (g.type === 'MultiLineString') {
           g.coordinates.forEach(function(line) {
             var coords = line.map(function(c){return [c[1],c[0]];});
             var pl = L.polyline(coords, { color: def.color, weight: def.weight || 2, opacity: 0.85, dashArray: def.dashArray });
@@ -402,13 +420,14 @@ async function loadVillage(village) {
           });
         }
       });
-      gVillageLayers[village.id][catId] = group;
-      gVillageState[village.id].cats[catId] = !!def.defaultOn;
-      gVillageState[village.id].counts[catId] = categories[catId].length;
+      gVillageLayers[village.village_id][catId] = group;
+      gVillageState[village.village_id].cats[catId] = !!def.defaultOn;
+      gVillageState[village.village_id].counts[catId] = categories[catId].length;
       if (def.defaultOn) group.addTo(gMap);
     });
-    console.log('Loaded ' + village.name + ': ' + data.features.length + ' features');
-  } catch(e) { console.error('Failed to load ' + village.id, e); }
+  } catch(e) {
+    console.error('Failed to load ' + village.village_id, e);
+  }
 }
 
 function buildPopup(props, catDef, village) {
@@ -417,16 +436,16 @@ function buildPopup(props, catDef, village) {
   html += '<div class="popup-row"><span class="popup-key">סוג</span><span class="popup-val">'+catDef.label+'</span></div>';
   if (props.Layer) html += '<div class="popup-row"><span class="popup-key">שכבה</span><span class="popup-val">'+props.Layer+'</span></div>';
   if (props.EntityHand) html += '<div class="popup-row"><span class="popup-key">מזהה</span><span class="popup-val">'+props.EntityHand+'</span></div>';
-  html += '<div style="margin-top:6px;padding-top:5px;border-top:1px solid #e2e8f0;font-size:10px;color:#64748b">'+village.icon+' '+village.name+'</div>';
+  html += '<div style="margin-top:6px;padding-top:5px;border-top:1px solid #e2e8f0;font-size:10px;color:#64748b">'+village.icon+' '+village.village_name+'</div>';
   html += '</div>';
   return html;
 }
 
 function renderVillagesList() {
   var el = document.getElementById('dwg-layers-list');
-  if (!DWG_VILLAGES.length) { el.innerHTML = '<div class="empty-msg" style="font-size:11px">אין שכבות עדיין</div>'; return; }
-  el.innerHTML = DWG_VILLAGES.map(function(v) {
-    var state = gVillageState[v.id];
+  if (!gVillages.length) { el.innerHTML = '<div class="empty-msg" style="font-size:11px">אין שכבות עדיין</div>'; return; }
+  el.innerHTML = gVillages.map(function(v) {
+    var state = gVillageState[v.village_id];
     if (!state) return '';
     var subsHtml = Object.keys(state.cats).map(function(catId) {
       var def = SUB_LAYERS[catId] || SUB_LAYERS.other;
@@ -436,20 +455,20 @@ function renderVillagesList() {
       if (def.type === 'point') swatchStyle = 'background:'+def.color+';border-radius:50%';
       else if (def.type === 'label') swatchStyle = 'background:#fff;border:1px solid '+def.color+';color:'+def.color;
       else swatchStyle = def.dashArray ? 'background:repeating-linear-gradient(90deg,'+def.color+' 0 4px,transparent 4px 7px)' : 'background:'+def.color;
-      return '<div class="sub-layer" onclick="toggleSubLayer(\''+v.id+'\',\''+catId+'\')">'+
+      return '<div class="sub-layer" onclick="toggleSubLayer(\''+v.village_id+'\',\''+catId+'\')">'+
         '<div class="sub-swatch" style="'+swatchStyle+'">'+(def.type==='label'?def.icon:'')+'</div>'+
         '<span class="sub-label">'+def.label+'</span>'+
         '<span class="sub-count">'+count+'</span>'+
-        '<div class="mini-toggle '+(on?'on':'')+'" id="sub-tog-'+v.id+'-'+catId+'"></div>'+
+        '<div class="mini-toggle '+(on?'on':'')+'" id="sub-tog-'+v.village_id+'-'+catId+'"></div>'+
         '</div>';
     }).join('');
-    return '<div class="village-group open" id="vg-'+v.id+'">'+
+    return '<div class="village-group open" id="vg-'+v.village_id+'">'+
       '<div class="village-header">'+
         '<span class="village-icon">'+v.icon+'</span>'+
-        '<span class="village-name">'+v.name+'</span>'+
-        '<span class="zoom-link" onclick="event.stopPropagation();zoomToVillage(\''+v.id+'\')">🎯</span>'+
-        '<div class="toggle on village-master-toggle" id="master-tog-'+v.id+'" onclick="event.stopPropagation();toggleVillage(\''+v.id+'\')"></div>'+
-        '<span class="village-arrow" onclick="event.stopPropagation();toggleVillageOpen(\''+v.id+'\')">▾</span>'+
+        '<span class="village-name">'+v.village_name+'</span>'+
+        '<span class="zoom-link" onclick="event.stopPropagation();zoomToVillage(\''+v.village_id+'\')">🎯</span>'+
+        '<div class="toggle on" id="master-tog-'+v.village_id+'" onclick="event.stopPropagation();toggleVillage(\''+v.village_id+'\')"></div>'+
+        '<span class="village-arrow" onclick="event.stopPropagation();toggleVillageOpen(\''+v.village_id+'\')">▾</span>'+
       '</div>'+
       '<div class="village-content">' + subsHtml + '</div>'+
     '</div>';
@@ -457,7 +476,6 @@ function renderVillagesList() {
 }
 
 function toggleVillageOpen(villageId) { document.getElementById('vg-'+villageId).classList.toggle('open'); }
-
 function toggleVillage(villageId) {
   var state = gVillageState[villageId];
   state.masterOn = !state.masterOn;
@@ -468,7 +486,6 @@ function toggleVillage(villageId) {
     else if (!state.masterOn) gMap.removeLayer(layer);
   });
 }
-
 function toggleSubLayer(villageId, catId) {
   var state = gVillageState[villageId];
   var layer = gVillageLayers[villageId][catId];
@@ -477,7 +494,6 @@ function toggleSubLayer(villageId, catId) {
   if (state.cats[catId] && state.masterOn) gMap.addLayer(layer);
   else gMap.removeLayer(layer);
 }
-
 function zoomToVillage(villageId) {
   var bounds = gVillageBounds[villageId];
   if (bounds && bounds.isValid()) gMap.flyToBounds(bounds, {padding:[50,50], duration:1.2});
