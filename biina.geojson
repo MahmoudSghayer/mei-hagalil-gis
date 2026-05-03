@@ -1,0 +1,10697 @@
+{
+ "type": "FeatureCollection",
+ "features": [
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258311177811926,
+     32.93652352745719
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "46A",
+    "Text": "6.4",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.2582856945133,
+     32.93685838969064
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "46C",
+    "Text": "6.5",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25830715712889,
+     32.936489785148076
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "46E",
+    "Text": "IL=508.82",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258306062418015,
+     32.93649818433211
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "46F",
+    "Text": "TL=510.79",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25827931148467,
+     32.93682704360377
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "470",
+    "Text": "TL=512.07",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25826807562061,
+     32.936828344708054
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "471",
+    "Text": "IL=509.16",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25813782940037,
+     32.936965573332806
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "478",
+    "Text": "IL=510.52",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25804870175159,
+     32.936950444143974
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "479",
+    "Text": "TL=512.54",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.2580603974777,
+     32.936942756967696
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "47A",
+    "Text": "47.2",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25821390414815,
+     32.93699547159343
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "47B",
+    "Text": "IL=509.38",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25813731180386,
+     32.93701725322193
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "47C",
+    "Text": "IL=509.40",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258200530944066,
+     32.937031654373826
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "47D",
+    "Text": "6.6",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.2583548646301,
+     32.93649590819113
+    ]
+   },
+   "properties": {
+    "Layer": "2PNT_PRATIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "47E",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25835753783298,
+     32.93649590703943
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "47F",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25833710327856,
+     32.93648958209467
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "480",
+    "Text": "48TL",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25835562756773,
+     32.9364853372433
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "481",
+    "Text": "T.L.",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25836529278904,
+     32.936491665010756
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "482",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25821067824237,
+     32.93700168644667
+    ]
+   },
+   "properties": {
+    "Layer": "2PNT_PRATIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "484",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25821335146047,
+     32.93700168529804
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "485",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25822140383371,
+     32.936999779558995
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "486",
+    "Text": "52TL",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25822263413875,
+     32.93700063408785
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "487",
+    "Text": "T.L.",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25823898812448,
+     32.93700056565731
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "488",
+    "Text": "512.18",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25820835934371,
+     32.93700409492838
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "48A",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25821103256188,
+     32.93700409377983
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "48B",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25818109355793,
+     32.937013576399345
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "48C",
+    "Text": "53TL",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25818608117529,
+     32.93701931122426
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "48D",
+    "Text": "T.L.",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258203740242394,
+     32.93701923374129
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "48E",
+    "Text": "512.26",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258265985888535,
+     32.9368316779697
+    ]
+   },
+   "properties": {
+    "Layer": "2PNT_PRATIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "490",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258266540062216,
+     32.93682947274012
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "491",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258269492569056,
+     32.93682950864122
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "492",
+    "Text": "50TL",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25826950856119,
+     32.93682895411691
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "493",
+    "Text": "T.L.",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25827208070327,
+     32.93681591611781
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "494",
+    "Text": "512.06",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25826306995217,
+     32.93683699011871
+    ]
+   },
+   "properties": {
+    "Layer": "2PNT_PRATIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "496",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25826376675523,
+     32.936834813846055
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "497",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25825527150062,
+     32.936872377541036
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "498",
+    "Text": "51TL",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.2582544046304,
+     32.93687317040844
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "499",
+    "Text": "T.L.",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25825831330268,
+     32.93685956436894
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "49A",
+    "Text": "512.07",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25814983108534,
+     32.93702742314742
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "49E",
+    "Text": "\\U+008Câ\\U+008E",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258134418458816,
+     32.936989942901455
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "4AF",
+    "Text": "12.19",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25806057112194,
+     32.93695841990932
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "4B2",
+    "Text": ".\\U+0081.â¢",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25820072363382,
+     32.93700347650326
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "4B5",
+    "Text": ".\\U+0081.â¢",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25831697977329,
+     32.93650662139891
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "4B8",
+    "Text": ".\\U+0081.â¢",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258149438363326,
+     32.93698181604153
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "4BD",
+    "Text": "\\U+008Câ¦â¦Ëâ¢",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.2582103970925,
+     32.93685634314725
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "4C4",
+    "Text": "\\U+008Câ\\U+008E",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25818082256163,
+     32.93683514316044
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "4C7",
+    "Text": "\\U+008Câ¦â¦Ëâ¢",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25813889055481,
+     32.936859335174844
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "4CA",
+    "Text": "45.2",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25826100483008,
+     32.936834673689404
+    ]
+   },
+   "properties": {
+    "Layer": "TR_PNT",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "4CD",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25826367804316,
+     32.93683467253971
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "4CE",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25825275973883,
+     32.93684076357471
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "4CF",
+    "Text": "1BTL",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258267721746435,
+     32.936839194918946
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "4D0",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25823786244261,
+     32.936834683640065
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "4D1",
+    "Text": "512.07",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258275518974266,
+     32.936845307649
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "4D5",
+    "Text": ".\\U+0081.\\U+009A",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25821659641947,
+     32.93683267173798
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "4D6",
+    "Text": "49TL",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25827189319761,
+     32.93682806678396
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "4D7",
+    "Text": "512.07",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258267559423096,
+     32.93683446348391
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "4D8",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25825447214135,
+     32.93686804765834
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "4DC",
+    "Text": "I.L=509.18",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25820884409209,
+     32.9368259215755
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "4DF",
+    "Text": "I.L=510.20",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25830802656057,
+     32.93710544121434
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "4EC",
+    "Text": "46.2",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25798205654769,
+     32.93702566078954
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "4EE",
+    "Text": "47.3",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258433552800454,
+     32.936671213091024
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "4F0",
+    "Text": "43.2",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25848596654063,
+     32.93652408742503
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "4F2",
+    "Text": "6.3",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25869691162148,
+     32.936453798891215
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "4F4",
+    "Text": "42.2",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25869690440171,
+     32.936398747829635
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "4F6",
+    "Text": "6.2",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25890015282736,
+     32.936302169553336
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "4F8",
+    "Text": "aujv ehhn,",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25879828258613,
+     32.936260446491644
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "4F9",
+    "Text": "5.85",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25874619638957,
+     32.936467389043365
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "4FB",
+    "Text": "aujv ehhn,",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25848477621172,
+     32.93668464569757
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "4FC",
+    "Text": "aujv ehhn,",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25807887318897,
+     32.93674557573845
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "4FE",
+    "Text": "45.3",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25814504724765,
+     32.936980892325074
+    ]
+   },
+   "properties": {
+    "Layer": "KIR-TEXT",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "511",
+    "Text": "pksv \"61",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258204933672694,
+     32.93682658586869
+    ]
+   },
+   "properties": {
+    "Layer": "KIR-TEXT",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "512",
+    "Text": "pksv \"61",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25826359017723,
+     32.93703777862739
+    ]
+   },
+   "properties": {
+    "Layer": "Sewagedata",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "513",
+    "Text": "â225",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25811075179344,
+     32.93698495844046
+    ]
+   },
+   "properties": {
+    "Layer": "Sewagedata",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "514",
+    "Text": "â225",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25802502227558,
+     32.93700245688067
+    ]
+   },
+   "properties": {
+    "Layer": "Sewagedata",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "515",
+    "Text": "â225",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258229225750654,
+     32.93691332945004
+    ]
+   },
+   "properties": {
+    "Layer": "Sewagedata",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "516",
+    "Text": "â400",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258326303895004,
+     32.93685127058979
+    ]
+   },
+   "properties": {
+    "Layer": "Sewagedata",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "517",
+    "Text": "â225",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25817883388842,
+     32.93681906418878
+    ]
+   },
+   "properties": {
+    "Layer": "Sewagedata",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "518",
+    "Text": "â225",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25844731100964,
+     32.936588042216854
+    ]
+   },
+   "properties": {
+    "Layer": "Sewagedata",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "519",
+    "Text": "â225",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25867993056982,
+     32.93641714028414
+    ]
+   },
+   "properties": {
+    "Layer": "Sewagedata",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "51A",
+    "Text": "â225",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258810900641784,
+     32.936282057688935
+    ]
+   },
+   "properties": {
+    "Layer": "Sewagedata",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "51B",
+    "Text": "â225",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25810218998777,
+     32.936777105890776
+    ]
+   },
+   "properties": {
+    "Layer": "Sewagedata",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "51C",
+    "Text": "â225",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25829727818816,
+     32.93668079738917
+    ]
+   },
+   "properties": {
+    "Layer": "Sewagedata",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "51D",
+    "Text": "â400",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25840218315319,
+     32.93649143533543
+    ]
+   },
+   "properties": {
+    "Layer": "Sewagedata",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "51E",
+    "Text": "â400",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258564909727404,
+     32.93644894709946
+    ]
+   },
+   "properties": {
+    "Layer": "Sewagedata",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "51F",
+    "Text": "â400",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25873154244205,
+     32.93634016208829
+    ]
+   },
+   "properties": {
+    "Layer": "Sewagedata",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "520",
+    "Text": "â400",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25875344912313,
+     32.93626671386985
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "521",
+    "Text": "TL=506.19",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258765318465215,
+     32.936274689569174
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "523",
+    "Text": ".\\U+0081.â¢",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25877053478,
+     32.936304689420155
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "525",
+    "Text": "IL=504.10",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25881868740961,
+     32.93627999761159
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "526",
+    "Text": "IL=504.10",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.2586731135192,
+     32.9363966132103
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "527",
+    "Text": "IL=506.81",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258685774506084,
+     32.936417377754346
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "528",
+    "Text": "IL=506.93",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258632591643796,
+     32.936417629973064
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "529",
+    "Text": "IL=506.83",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25847262637408,
+     32.93649401855146
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "52A",
+    "Text": "IL=507.66",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258425968022074,
+     32.93649483505468
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "52B",
+    "Text": "IL=507.68",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25846463601128,
+     32.93654013834079
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "52C",
+    "Text": "IL=507.69",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25844788089415,
+     32.936642008847734
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "52D",
+    "Text": "IL=509.20",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25836305869503,
+     32.93686772822437
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "52E",
+    "Text": "IL=510.83",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25827280646212,
+     32.936830974416694
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "52F",
+    "Text": "IL=509.22",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258222419108506,
+     32.93700730005102
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "530",
+    "Text": "IL=509.40",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258286082402044,
+     32.93705276037621
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "531",
+    "Text": "IL=510.05",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258005109490085,
+     32.93700660706341
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "532",
+    "Text": "IL=510.82",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25863383498792,
+     32.936394677944136
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "533",
+    "Text": "TL=508.91",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25862059556022,
+     32.93644991939376
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "534",
+    "Text": "TL=509.17",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25868212698236,
+     32.93643862053148
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "535",
+    "Text": "IL=507.17",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258395105393035,
+     32.93664376423024
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "536",
+    "Text": "TL=511.58",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25836188921177,
+     32.93648966521841
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "537",
+    "Text": "IL=508.82",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25834577229556,
+     32.93653545492048
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "538",
+    "Text": "IL=508.84",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258135209286124,
+     32.93682449745483
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "53A",
+    "Text": "I.L=510.30",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258117157466415,
+     32.93679956172074
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbAttribute",
+    "Linetype": "",
+    "EntityHand": "53D",
+    "Text": "I.L=510.34",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258077995922775,
+     32.93696536036055
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "53F",
+    "Text": "IL=510.72",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25802805218818,
+     32.93698518984389
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "540",
+    "Text": "IL=510.74",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25795190744038,
+     32.9370003784253
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "Continuous",
+    "EntityHand": "541",
+    "Text": "TL=513.82",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25879624112648,
+     32.93624986161844
+    ]
+   },
+   "properties": {
+    "Layer": "Sewage-man-names",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "545",
+    "Text": "â125",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25865481140174,
+     32.93638756565086
+    ]
+   },
+   "properties": {
+    "Layer": "Sewage-man-names",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "546",
+    "Text": "â125",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258807693829006,
+     32.93631306676771
+    ]
+   },
+   "properties": {
+    "Layer": "Sewage-man-names",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "547",
+    "Text": "â100",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25866829797044,
+     32.93645588315782
+    ]
+   },
+   "properties": {
+    "Layer": "Sewage-man-names",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "548",
+    "Text": "â100",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258450755690305,
+     32.936486634586394
+    ]
+   },
+   "properties": {
+    "Layer": "Sewage-man-names",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "549",
+    "Text": "â125",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258433161059045,
+     32.9366565933418
+    ]
+   },
+   "properties": {
+    "Layer": "Sewage-man-names",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "54A",
+    "Text": "â100",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25833923483726,
+     32.93648298769823
+    ]
+   },
+   "properties": {
+    "Layer": "Sewage-man-names",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "54B",
+    "Text": "â125",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258241651087644,
+     32.93681882998493
+    ]
+   },
+   "properties": {
+    "Layer": "Sewage-man-names",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "54C",
+    "Text": "â125",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25822111283199,
+     32.937000159236995
+    ]
+   },
+   "properties": {
+    "Layer": "Sewage-man-names",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "54D",
+    "Text": "â125",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258105419092985,
+     32.93684217205021
+    ]
+   },
+   "properties": {
+    "Layer": "Sewage-man-names",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "54E",
+    "Text": "â100",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.2580774806503,
+     32.93673571649572
+    ]
+   },
+   "properties": {
+    "Layer": "Sewage-man-names",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "54F",
+    "Text": "â100",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25798415242415,
+     32.93701492687436
+    ]
+   },
+   "properties": {
+    "Layer": "Sewage-man-names",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "550",
+    "Text": "â125",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258059593154314,
+     32.936981916861335
+    ]
+   },
+   "properties": {
+    "Layer": "Sewage-man-names",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "551",
+    "Text": "â100",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25830873263609,
+     32.937094082236065
+    ]
+   },
+   "properties": {
+    "Layer": "Sewage-man-names",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbText:AcDbText",
+    "Linetype": "",
+    "EntityHand": "552",
+    "Text": "â125",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25825649276475,
+     32.93704575449736
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbMText",
+    "Linetype": "",
+    "EntityHand": "553",
+    "Text": "12.87",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258311442394124,
+     32.93708090979232
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "553",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25820835934371,
+     32.93700409492838
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "553",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25820778352782,
+     32.93700464439436
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "553",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258134559174906,
+     32.936998206096334
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbMText",
+    "Linetype": "",
+    "EntityHand": "556",
+    "Text": "13.65",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25820835934371,
+     32.93700409492838
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "556",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25806784563815,
+     32.93697088323164
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "556",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25806784563815,
+     32.93697088323164
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "556",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258027080264135,
+     32.936979762505224
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbMText",
+    "Linetype": "",
+    "EntityHand": "559",
+    "Text": "7.57",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25806784563815,
+     32.93697088323164
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "559",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25799817038049,
+     32.93700557364597
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "559",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25799006801215,
+     32.93699400194176
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "559",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25824074046779,
+     32.93692025549079
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbMText",
+    "Linetype": "",
+    "EntityHand": "55C",
+    "Text": "19.54",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25820835934371,
+     32.93700409492838
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "55C",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25826488621003,
+     32.93683446463369
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "55C",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25826488621003,
+     32.93683446463369
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "55C",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25832627404961,
+     32.93686328383466
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbMText",
+    "Linetype": "",
+    "EntityHand": "55F",
+    "Text": "13.12",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25826488621003,
+     32.9368344646337
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "55F",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25839136022235,
+     32.93688559854351
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "55F",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25839136022235,
+     32.93688559854351
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "55F",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258197820340854,
+     32.93684322230896
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbMText",
+    "Linetype": "",
+    "EntityHand": "562",
+    "Text": "12.47",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25826488621003,
+     32.93683446463369
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "562",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.2581315761683,
+     32.93683078894417
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "562",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25813130509412,
+     32.936837779653466
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "562",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258097999398196,
+     32.936789568894014
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbMText",
+    "Linetype": "",
+    "EntityHand": "565",
+    "Text": "11.06",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.2581315761683,
+     32.93683078894417
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "565",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25807180469355,
+     32.93674470413831
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "565",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25807180469355,
+     32.93674470413831
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "565",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258314049109984,
+     32.93666597516961
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbMText",
+    "Linetype": "",
+    "EntityHand": "568",
+    "Text": "38.48",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25826488621003,
+     32.93683446463369
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "568",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.2583548646301,
+     32.93649590819113
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "568",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.2583548646301,
+     32.93649590819113
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "568",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25841170955985,
+     32.93650240074301
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbMText",
+    "Linetype": "",
+    "EntityHand": "56B",
+    "Text": "10.70",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.2583548646301,
+     32.93649590819113
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "56B",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258469067398934,
+     32.936501692808
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "56B",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258469067398934,
+     32.936501692808
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "56B",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25846120639199,
+     32.93657542555423
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbMText",
+    "Linetype": "",
+    "EntityHand": "56E",
+    "Text": "16.40",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258469067398934,
+     32.936501692807994
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "56E",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258444872905095,
+     32.93664816313046
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "56E",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25844487290509,
+     32.93664816313046
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "56E",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.2585735119694,
+     32.93645599308094
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbMText",
+    "Linetype": "",
+    "EntityHand": "571",
+    "Text": "21.99",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258469067398934,
+     32.936501692808
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "571",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25867374319825,
+     32.93640401544943
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "571",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25867374319825,
+     32.93640401544943
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "571",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25866676648922,
+     32.936423932969
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbMText",
+    "Linetype": "",
+    "EntityHand": "574",
+    "Text": "4.49",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25867374319825,
+     32.93640401544943
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "574",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25867066691996,
+     32.93644443909701
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "574",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25866096000567,
+     32.93644391381424
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "574",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25874178525489,
+     32.93634494409481
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbMText",
+    "Linetype": "",
+    "EntityHand": "577",
+    "Text": "18.25",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25867374319825,
+     32.93640401544943
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "577",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25880343595524,
+     32.93628107822536
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "577",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25880343595524,
+     32.936281078225356
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "577",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25880736801033,
+     32.93629451227597
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbMText",
+    "Linetype": "",
+    "EntityHand": "57A",
+    "Text": "2.96",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.25880343595524,
+     32.93628107822536
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "57A",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258818783697045,
+     32.93630445212018
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "57A",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "Point",
+    "coordinates": [
+     35.258818783697045,
+     32.93630445212018
+    ]
+   },
+   "properties": {
+    "Layer": "DEFPOINTS",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPoint",
+    "Linetype": "",
+    "EntityHand": "57A",
+    "Text": "",
+    "_layer_type": "point"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25830866494532,
+      32.93651826708066
+     ],
+     [
+      35.25833085351487,
+      32.93651825752767
+     ],
+     [
+      35.25833086292324,
+      32.93653379338302
+     ],
+     [
+      35.25830867434979,
+      32.936533802936005
+     ],
+     [
+      35.25830866494532,
+      32.93651826708066
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "Continuous",
+    "EntityHand": "46B",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.2583548646301,
+      32.93649590819113
+     ],
+     [
+      35.25826488621003,
+      32.93683446463369
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "46D",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.2582106494274,
+      32.936997100246934
+     ],
+     [
+      35.25826349754964,
+      32.93683568408797
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "472",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25821696454451,
+      32.93700409123088
+     ],
+     [
+      35.258216943276786,
+      32.93700358506171
+     ],
+     [
+      35.258216880188996,
+      32.93700308137657
+     ],
+     [
+      35.25821677558851,
+      32.93700258262933
+     ],
+     [
+      35.25821662998492,
+      32.93700209124989
+     ],
+     [
+      35.25821644408761,
+      32.937001609632155
+     ],
+     [
+      35.25821621880223,
+      32.93700114012253
+     ],
+     [
+      35.25821595522638,
+      32.937000685008435
+     ],
+     [
+      35.25821565464415,
+      32.93700024650711
+     ],
+     [
+      35.25821531851995,
+      32.93699982675493
+     ],
+     [
+      35.25821494849135,
+      32.93699942779685
+     ],
+     [
+      35.25821454636109,
+      32.936999051576564
+     ],
+     [
+      35.25821411408831,
+      32.936998699926974
+     ],
+     [
+      35.258213653778995,
+      32.93699837456131
+     ],
+     [
+      35.25821316767573,
+      32.93699807706468
+     ],
+     [
+      35.25821265814676,
+      32.93699780888648
+     ],
+     [
+      35.258212127674454,
+      32.936997571333244
+     ],
+     [
+      35.25821157884323,
+      32.9369973655623
+     ],
+     [
+      35.25821101432693,
+      32.93699719257615
+     ],
+     [
+      35.258210436875814,
+      32.93699705321757
+     ],
+     [
+      35.258209849303185,
+      32.93699694816549
+     ],
+     [
+      35.258209254471616,
+      32.93699687793172
+     ],
+     [
+      35.25820865527908,
+      32.936996842858434
+     ],
+     [
+      35.258208054644776,
+      32.936996843116496
+     ],
+     [
+      35.258207455494926,
+      32.93699687870465
+     ],
+     [
+      35.258206860748544,
+      32.936996949449515
+     ],
+     [
+      35.25820627330317,
+      32.93699705500644
+     ],
+     [
+      35.25820569602077,
+      32.93699719486115
+     ],
+     [
+      35.2582051317138,
+      32.93699736833229
+     ],
+     [
+      35.25820458313152,
+      32.93699757457473
+     ],
+     [
+      35.25820405294657,
+      32.936997812583684
+     ],
+     [
+      35.258203543741935,
+      32.93699808119958
+     ],
+     [
+      35.258203057998436,
+      32.93699837911377
+     ],
+     [
+      35.25820259808254,
+      32.93699870487481
+     ],
+     [
+      35.25820216623494,
+      32.936999056895665
+     ],
+     [
+      35.25820176455952,
+      32.9369994334613
+     ],
+     [
+      35.25820139501324,
+      32.93699983273713
+     ],
+     [
+      35.25820105939646,
+      32.93700025277793
+     ],
+     [
+      35.25820075934429,
+      32.937000691537314
+     ],
+     [
+      35.25820049631855,
+      32.93700114687766
+     ],
+     [
+      35.25820027160067,
+      32.93700161658063
+     ],
+     [
+      35.25820008628546,
+      32.93700209835785
+     ],
+     [
+      35.258199941275755,
+      32.93700258986216
+     ],
+     [
+      35.25819983727803,
+      32.937003088699015
+     ],
+     [
+      35.25819977479895,
+      32.93700359243812
+     ],
+     [
+      35.25819975414291,
+      32.937004098625295
+     ],
+     [
+      35.25819977541054,
+      32.93700460479447
+     ],
+     [
+      35.258199838498236,
+      32.93700510847962
+     ],
+     [
+      35.25819994309863,
+      32.937005607226865
+     ],
+     [
+      35.258200088702125,
+      32.937006098606346
+     ],
+     [
+      35.25820027459937,
+      32.93700658022409
+     ],
+     [
+      35.258200499884666,
+      32.937007049733744
+     ],
+     [
+      35.258200763460465,
+      32.93700750484786
+     ],
+     [
+      35.25820106404265,
+      32.93700794334922
+     ],
+     [
+      35.25820140016681,
+      32.937008363101455
+     ],
+     [
+      35.258201770195384,
+      32.93700876205957
+     ],
+     [
+      35.25820217232564,
+      32.9370091382799
+     ],
+     [
+      35.25820260459842,
+      32.93700948992952
+     ],
+     [
+      35.258203064907754,
+      32.937009815295234
+     ],
+     [
+      35.25820355101105,
+      32.9370101127919
+     ],
+     [
+      35.25820406054006,
+      32.937010380970136
+     ],
+     [
+      35.25820459101242,
+      32.9370106185234
+     ],
+     [
+      35.25820513984371,
+      32.93701082429438
+     ],
+     [
+      35.25820570436009,
+      32.93701099728056
+     ],
+     [
+      35.258206281811276,
+      32.93701113663915
+     ],
+     [
+      35.258206869384004,
+      32.937011241691245
+     ],
+     [
+      35.258207464215666,
+      32.93701131192503
+     ],
+     [
+      35.2582080634083,
+      32.93701134699834
+     ],
+     [
+      35.258208664042705,
+      32.93701134674027
+     ],
+     [
+      35.25820926319264,
+      32.937011311152105
+     ],
+     [
+      35.25820985793912,
+      32.937011240407216
+     ],
+     [
+      35.25821044538459,
+      32.93701113485029
+     ],
+     [
+      35.258211022667076,
+      32.93701099499555
+     ],
+     [
+      35.25821158697412,
+      32.93701082152439
+     ],
+     [
+      35.25821213555646,
+      32.937010615281906
+     ],
+     [
+      35.258212665741475,
+      32.93701037727293
+     ],
+     [
+      35.258213174946135,
+      32.937010108657
+     ],
+     [
+      35.25821366068967,
+      32.93700981074277
+     ],
+     [
+      35.25821412060558,
+      32.93700948498169
+     ],
+     [
+      35.2582145524532,
+      32.93700913296079
+     ],
+     [
+      35.2582149541286,
+      32.93700875639512
+     ],
+     [
+      35.25821532367486,
+      32.93700835711925
+     ],
+     [
+      35.258215659291594,
+      32.937007937078405
+     ],
+     [
+      35.258215959343715,
+      32.937007498318984
+     ],
+     [
+      35.2582162223694,
+      32.93700704297861
+     ],
+     [
+      35.25821644708721,
+      32.93700657327561
+     ],
+     [
+      35.25821663240234,
+      32.937006091498375
+     ],
+     [
+      35.25821677741195,
+      32.93700559999404
+     ],
+     [
+      35.25821688140959,
+      32.93700510115717
+     ],
+     [
+      35.25821694388857,
+      32.93700459741806
+     ],
+     [
+      35.25821696454451,
+      32.93700409123088
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbCircle",
+    "Linetype": "Continuous",
+    "EntityHand": "473",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25820007347616,
+      32.93700213649304
+     ],
+     [
+      35.258074534670506,
+      32.93697246424964
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "474",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25820065156893,
+      32.93700086848489
+     ],
+     [
+      35.258074786827244,
+      32.93697111920353
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "SHARVUL",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "475",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25819978579194,
+      32.93700347314175
+     ],
+     [
+      35.25807392104685,
+      32.93697372385953
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "SHARVUL",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "476",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.258074792464846,
+      32.93697088025457
+     ],
+     [
+      35.258074775296436,
+      32.93697047163296
+     ],
+     [
+      35.25807472436743,
+      32.93697006501663
+     ],
+     [
+      35.25807463992595,
+      32.936969662386545
+     ],
+     [
+      35.25807452238338,
+      32.936969265704306
+     ],
+     [
+      35.25807437231238,
+      32.9369688769025
+     ],
+     [
+      35.25807419044408,
+      32.93696849787532
+     ],
+     [
+      35.25807397766453,
+      32.93696813046935
+     ],
+     [
+      35.25807373501036,
+      32.936967776474575
+     ],
+     [
+      35.25807346366377,
+      32.93696743761561
+     ],
+     [
+      35.25807316494672,
+      32.936967115543325
+     ],
+     [
+      35.25807284031455,
+      32.93696681182685
+     ],
+     [
+      35.258072491348805,
+      32.93696652794585
+     ],
+     [
+      35.25807211974964,
+      32.93696626528336
+     ],
+     [
+      35.25807172732743,
+      32.93696602511905
+     ],
+     [
+      35.25807131599403,
+      32.93696580862298
+     ],
+     [
+      35.258070887753405,
+      32.93696561684988
+     ],
+     [
+      35.2580704446919,
+      32.93696545073408
+     ],
+     [
+      35.25806998896807,
+      32.93696531108485
+     ],
+     [
+      35.25806952280216,
+      32.93696519858256
+     ],
+     [
+      35.25806904846527,
+      32.936965113775294
+     ],
+     [
+      35.258068568268335,
+      32.93696505707626
+     ],
+     [
+      35.258068084550814,
+      32.93696502876164
+     ],
+     [
+      35.25806759966934,
+      32.93696502896943
+     ],
+     [
+      35.258067115986194,
+      32.93696505769859
+     ],
+     [
+      35.25806663585784,
+      32.936965114809155
+     ],
+     [
+      35.25806616162341,
+      32.936965200022904
+     ],
+     [
+      35.25806569559333,
+      32.93696531292466
+     ],
+     [
+      35.25806524003805,
+      32.936965452964394
+     ],
+     [
+      35.25806479717699,
+      32.93696561945983
+     ],
+     [
+      35.258064369167734,
+      32.936965811599855
+     ],
+     [
+      35.25806395809548,
+      32.936966028448346
+     ],
+     [
+      35.25806356596294,
+      32.93696626894886
+     ],
+     [
+      35.258063194680545,
+      32.93696653192969
+     ],
+     [
+      35.25806284605714,
+      32.936966816109624
+     ],
+     [
+      35.2580625217912,
+      32.93696712010417
+     ],
+     [
+      35.258062223462495,
+      32.9369674424323
+     ],
+     [
+      35.258061952524464,
+      32.93696778152365
+     ],
+     [
+      35.25806171029709,
+      32.93696813572621
+     ],
+     [
+      35.25806149796047,
+      32.93696850331434
+     ],
+     [
+      35.2580613165491,
+      32.93696888249719
+     ],
+     [
+      35.258061166946796,
+      32.93696927142742
+     ],
+     [
+      35.2580610498824,
+      32.936969668210196
+     ],
+     [
+      35.25806096592624,
+      32.936970070912444
+     ],
+     [
+      35.25806091548735,
+      32.93697047757222
+     ],
+     [
+      35.25806089881146,
+      32.93697088620833
+     ],
+     [
+      35.2580609159798,
+      32.93697129482994
+     ],
+     [
+      35.258060966908744,
+      32.93697170144629
+     ],
+     [
+      35.25806105135016,
+      32.936972104076375
+     ],
+     [
+      35.25806116889268,
+      32.93697250075863
+     ],
+     [
+      35.25806131896362,
+      32.93697288956045
+     ],
+     [
+      35.25806150083188,
+      32.93697326858765
+     ],
+     [
+      35.25806171361139,
+      32.93697363599363
+     ],
+     [
+      35.25806195626553,
+      32.93697398998843
+     ],
+     [
+      35.25806222761209,
+      32.93697432884743
+     ],
+     [
+      35.25806252632912,
+      32.93697465091974
+     ],
+     [
+      35.258062850961295,
+      32.93697495463623
+     ],
+     [
+      35.25806319992703,
+      32.936975238517256
+     ],
+     [
+      35.258063571526215,
+      32.93697550117978
+     ],
+     [
+      35.25806396394844,
+      32.936975741344106
+     ],
+     [
+      35.25806437528187,
+      32.93697595784021
+     ],
+     [
+      35.25806480352254,
+      32.93697614961332
+     ],
+     [
+      35.25806524658408,
+      32.93697631572915
+     ],
+     [
+      35.25806570230796,
+      32.9369764553784
+     ],
+     [
+      35.258066168473924,
+      32.936976567880706
+     ],
+     [
+      35.25806664281087,
+      32.936976652687974
+     ],
+     [
+      35.258067123007876,
+      32.93697670938703
+     ],
+     [
+      35.258067606725454,
+      32.936976737701634
+     ],
+     [
+      35.258068091607,
+      32.93697673749385
+     ],
+     [
+      35.25806857529021,
+      32.93697670876469
+     ],
+     [
+      35.25806905541862,
+      32.936976651654106
+     ],
+     [
+      35.258069529653106,
+      32.936976566440364
+     ],
+     [
+      35.258069995683236,
+      32.936976453538584
+     ],
+     [
+      35.25807045123857,
+      32.93697631349883
+     ],
+     [
+      35.25807089409967,
+      32.93697614700337
+     ],
+     [
+      35.25807132210896,
+      32.936975954863335
+     ],
+     [
+      35.25807173318125,
+      32.936975738014816
+     ],
+     [
+      35.2580721253138,
+      32.93697549751428
+     ],
+     [
+      35.25807249659621,
+      32.93697523453341
+     ],
+     [
+      35.258072845219615,
+      32.93697495035345
+     ],
+     [
+      35.258073169485556,
+      32.93697464635889
+     ],
+     [
+      35.25807346781424,
+      32.936974324030736
+     ],
+     [
+      35.25807373875225,
+      32.936973984939364
+     ],
+     [
+      35.25807398097959,
+      32.93697363073677
+     ],
+     [
+      35.25807419331617,
+      32.93697326314863
+     ],
+     [
+      35.25807437472749,
+      32.93697288396575
+     ],
+     [
+      35.25807452432974,
+      32.936972495035505
+     ],
+     [
+      35.25807464139409,
+      32.936972098252724
+     ],
+     [
+      35.258074725350184,
+      32.936971695550476
+     ],
+     [
+      35.25807477578901,
+      32.93697128889069
+     ],
+     [
+      35.258074792464846,
+      32.93697088025457
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbCircle",
+    "Linetype": "Continuous",
+    "EntityHand": "477",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25813720280476,
+      32.93702349783131
+     ],
+     [
+      35.25817714554931,
+      32.93702348068634
+     ],
+     [
+      35.25819594223092,
+      32.937001160037816
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "",
+    "EntityHand": "49C",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.2581345939639,
+      32.936963444246494
+     ],
+     [
+      35.25817689377733,
+      32.93696325614117
+     ],
+     [
+      35.25819654425978,
+      32.93700130233251
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "",
+    "EntityHand": "4A0",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.258360370343446,
+      32.93649590581905
+     ],
+     [
+      35.25836035673557,
+      32.936495581963925
+     ],
+     [
+      35.258360316370705,
+      32.93649525969814
+     ],
+     [
+      35.258360249445516,
+      32.93649494059175
+     ],
+     [
+      35.258360156286045,
+      32.93649462619942
+     ],
+     [
+      35.25836003734616,
+      32.936494318052816
+     ],
+     [
+      35.25835989320532,
+      32.93649401765322
+     ],
+     [
+      35.25835972456577,
+      32.93649372646411
+     ],
+     [
+      35.25835953224911,
+      32.93649344590417
+     ],
+     [
+      35.25835931719228,
+      32.93649317734023
+     ],
+     [
+      35.258359080443014,
+      32.93649292208075
+     ],
+     [
+      35.25835882315473,
+      32.93649268136927
+     ],
+     [
+      35.258358546580915,
+      32.93649245637856
+     ],
+     [
+      35.25835825206901,
+      32.93649224820473
+     ],
+     [
+      35.25835794105384,
+      32.936492057861976
+     ],
+     [
+      35.25835761505065,
+      32.93649188627765
+     ],
+     [
+      35.25835727564769,
+      32.93649173428767
+     ],
+     [
+      35.25835692449849,
+      32.936491602632536
+     ],
+     [
+      35.25835656331383,
+      32.936491491953646
+     ],
+     [
+      35.258356193853345,
+      32.93649140279022
+     ],
+     [
+      35.25835581791702,
+      32.93649133557666
+     ],
+     [
+      35.25835543733639,
+      32.936491290640404
+     ],
+     [
+      35.25835505396559,
+      32.936491268200406
+     ],
+     [
+      35.25835466967236,
+      32.93649126836597
+     ],
+     [
+      35.25835428632894,
+      32.936491291136285
+     ],
+     [
+      35.25835390580294,
+      32.93649133640043
+     ],
+     [
+      35.25835352994826,
+      32.93649140393787
+     ],
+     [
+      35.258353160596016,
+      32.936491493419595
+     ],
+     [
+      35.258352799545655,
+      32.93649160440963
+     ],
+     [
+      35.258352448556174,
+      32.936491736367266
+     ],
+     [
+      35.25835210933755,
+      32.936491888649606
+     ],
+     [
+      35.258351783542444,
+      32.93649206051474
+     ],
+     [
+      35.25835147275808,
+      32.93649225112537
+     ],
+     [
+      35.25835117849858,
+      32.93649245955285
+     ],
+     [
+      35.25835090219753,
+      32.93649268478176
+     ],
+     [
+      35.25835064520106,
+      32.936492925714795
+     ],
+     [
+      35.258350408761224,
+      32.93649318117814
+     ],
+     [
+      35.25835019402992,
+      32.936493449927234
+     ],
+     [
+      35.25835000205332,
+      32.936493730652735
+     ],
+     [
+      35.2583498337667,
+      32.93649402198699
+     ],
+     [
+      35.258349689989934,
+      32.93649432251063
+     ],
+     [
+      35.258349571423494,
+      32.936494630759555
+     ],
+     [
+      35.25834947864503,
+      32.936494945232
+     ],
+     [
+      35.25834941210654,
+      32.93649526439588
+     ],
+     [
+      35.258349372132194,
+      32.936495586696275
+     ],
+     [
+      35.258349358916746,
+      32.93649591056296
+     ],
+     [
+      35.258349372524584,
+      32.93649623441808
+     ],
+     [
+      35.2583494128894,
+      32.93649655668386
+     ],
+     [
+      35.25834947981456,
+      32.936496875790255
+     ],
+     [
+      35.258349572974,
+      32.9364971901826
+     ],
+     [
+      35.25834969191385,
+      32.93649749832921
+     ],
+     [
+      35.258349836054656,
+      32.93649779872883
+     ],
+     [
+      35.25835000469418,
+      32.93649808991794
+     ],
+     [
+      35.25835019701083,
+      32.9364983704779
+     ],
+     [
+      35.25835041206764,
+      32.93649863904185
+     ],
+     [
+      35.25835064881691,
+      32.93649889430136
+     ],
+     [
+      35.25835090610518,
+      32.936499135012845
+     ],
+     [
+      35.25835118267899,
+      32.93649936000357
+     ],
+     [
+      35.25835147719091,
+      32.93649956817742
+     ],
+     [
+      35.258351788206085,
+      32.936499758520185
+     ],
+     [
+      35.258352114209295,
+      32.93649993010453
+     ],
+     [
+      35.258352453612275,
+      32.93650008209452
+     ],
+     [
+      35.2583528047615,
+      32.93650021374966
+     ],
+     [
+      35.2583531659462,
+      32.93650032442857
+     ],
+     [
+      35.25835353540672,
+      32.93650041359201
+     ],
+     [
+      35.25835391134307,
+      32.93650048080558
+     ],
+     [
+      35.25835429192375,
+      32.936500525741835
+     ],
+     [
+      35.2583546752946,
+      32.93650054818185
+     ],
+     [
+      35.25835505958787,
+      32.936500548016284
+     ],
+     [
+      35.25835544293132,
+      32.93650052524596
+     ],
+     [
+      35.25835582345735,
+      32.9365004799818
+     ],
+     [
+      35.25835619931207,
+      32.93650041244435
+     ],
+     [
+      35.258356568664354,
+      32.93650032296262
+     ],
+     [
+      35.25835692971475,
+      32.936500211972565
+     ],
+     [
+      35.25835728070426,
+      32.93650008001492
+     ],
+     [
+      35.25835761992289,
+      32.93649992773258
+     ],
+     [
+      35.25835794571802,
+      32.93649975586742
+     ],
+     [
+      35.2583582565024,
+      32.93649956525678
+     ],
+     [
+      35.258358550761905,
+      32.93649935682928
+     ],
+     [
+      35.25835882706295,
+      32.93649913160035
+     ],
+     [
+      35.25835908405942,
+      32.93649889066731
+     ],
+     [
+      35.258359320499245,
+      32.93649863520395
+     ],
+     [
+      35.25835953523053,
+      32.936498366454835
+     ],
+     [
+      35.25835972720712,
+      32.93649808572931
+     ],
+     [
+      35.25835989549372,
+      32.93649779439505
+     ],
+     [
+      35.25836003927045,
+      32.93649749387139
+     ],
+     [
+      35.25836015783685,
+      32.93649718562247
+     ],
+     [
+      35.25836025061528,
+      32.93649687115001
+     ],
+     [
+      35.25836031715374,
+      32.936496551986124
+     ],
+     [
+      35.25836035712804,
+      32.93649622968573
+     ],
+     [
+      35.258360370343446,
+      32.93649590581905
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbCircle",
+    "Linetype": "Continuous",
+    "EntityHand": "4AD",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.258056317887664,
+      32.9369497136374
+     ],
+     [
+      35.25807877854167,
+      32.93694970401254
+     ],
+     [
+      35.258078772483714,
+      32.93693965368865
+     ],
+     [
+      35.258056311832235,
+      32.9369396633135
+     ],
+     [
+      35.258056317887664,
+      32.9369497136374
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "Continuous",
+    "EntityHand": "4BA",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.258198144243586,
+      32.93702867906145
+     ],
+     [
+      35.25821839381429,
+      32.93702867036127
+     ],
+     [
+      35.25821840111178,
+      32.937040745586806
+     ],
+     [
+      35.25819815153833,
+      32.93704075428698
+     ],
+     [
+      35.258198144243586,
+      32.93702867906145
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "Continuous",
+    "EntityHand": "4BB",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25812956642353,
+      32.936831637385545
+     ],
+     [
+      35.258135232900564,
+      32.93683041768648
+     ],
+     [
+      35.25826100483008,
+      32.936834673689404
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "",
+    "EntityHand": "4BF",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25812983088813,
+      32.93683251105174
+     ],
+     [
+      35.2581353460581,
+      32.936831323921254
+     ],
+     [
+      35.25826096195576,
+      32.93683557464412
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "SHARVUL",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "",
+    "EntityHand": "4C0",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25812956642353,
+      32.936831637385545
+     ],
+     [
+      35.258135232900564,
+      32.93683041768648
+     ],
+     [
+      35.258262907697855,
+      32.93683473807967
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "",
+    "EntityHand": "4C1",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25812930195893,
+      32.93683076371936
+     ],
+     [
+      35.258135119743045,
+      32.93682951145171
+     ],
+     [
+      35.25826104770441,
+      32.93683377273468
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "SHARVUL",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "",
+    "EntityHand": "4C2",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.2581365525215,
+      32.936857182697544
+     ],
+     [
+      35.258155499290915,
+      32.93685717456657
+     ],
+     [
+      35.25815550367914,
+      32.93686444437097
+     ],
+     [
+      35.25813655690818,
+      32.93686445250194
+     ],
+     [
+      35.2581365525215,
+      32.936857182697544
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "",
+    "EntityHand": "4CC",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25828314256174,
+      32.93685611963977
+     ],
+     [
+      35.25829866846423,
+      32.93685611295886
+     ],
+     [
+      35.25829867339943,
+      32.93686426713963
+     ],
+     [
+      35.25828314749552,
+      32.93686427382055
+     ],
+     [
+      35.25828314256174,
+      32.93685611963977
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "Continuous",
+    "EntityHand": "4D3",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25826100483008,
+      32.936834673689404
+     ],
+     [
+      35.2582442073965,
+      32.93682409257232
+     ],
+     [
+      35.25820746786671,
+      32.93682410836249
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "",
+    "EntityHand": "4E1",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25826100483008,
+      32.936834673689404
+     ],
+     [
+      35.258234185386215,
+      32.9368545745258
+     ],
+     [
+      35.25820722541666,
+      32.936854586111735
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "0",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "",
+    "EntityHand": "4E2",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25880894165523,
+      32.93628107583354
+     ],
+     [
+      35.25880892804576,
+      32.936280751978444
+     ],
+     [
+      35.25880888767937,
+      32.93628042971281
+     ],
+     [
+      35.258808820752726,
+      32.93628011060666
+     ],
+     [
+      35.2588087275919,
+      32.93627979621464
+     ],
+     [
+      35.258808608650746,
+      32.936279488068465
+     ],
+     [
+      35.25880846450874,
+      32.93627918766935
+     ],
+     [
+      35.258808295868135,
+      32.93627889648086
+     ],
+     [
+      35.25880810355052,
+      32.9362786159216
+     ],
+     [
+      35.25880788849285,
+      32.93627834735843
+     ],
+     [
+      35.25880765174287,
+      32.936278092099776
+     ],
+     [
+      35.258807394453996,
+      32.93627785138922
+     ],
+     [
+      35.25880711787972,
+      32.9362776263995
+     ],
+     [
+      35.25880682336748,
+      32.9362774182267
+     ],
+     [
+      35.25880651235211,
+      32.93627722788507
+     ],
+     [
+      35.25880618634884,
+      32.936277056301904
+     ],
+     [
+      35.25880584694593,
+      32.93627690431314
+     ],
+     [
+      35.25880549579692,
+      32.93627677265926
+     ],
+     [
+      35.25880513461258,
+      32.93627666198167
+     ],
+     [
+      35.25880476515254,
+      32.93627657281956
+     ],
+     [
+      35.25880438921679,
+      32.936276505607346
+     ],
+     [
+      35.258804008636844,
+      32.93627646067246
+     ],
+     [
+      35.25880362526686,
+      32.93627643823382
+     ],
+     [
+      35.25880324097455,
+      32.93627643840076
+     ],
+     [
+      35.25880285763218,
+      32.93627646117246
+     ],
+     [
+      35.258802477107345,
+      32.936276506437984
+     ],
+     [
+      35.25880210125392,
+      32.93627657397677
+     ],
+     [
+      35.25880173190301,
+      32.93627666345982
+     ],
+     [
+      35.25880137085408,
+      32.93627677445116
+     ],
+     [
+      35.25880101986611,
+      32.93627690641004
+     ],
+     [
+      35.25880068064909,
+      32.936277058693605
+     ],
+     [
+      35.258800354855644,
+      32.93627723055992
+     ],
+     [
+      35.25880004407299,
+      32.93627742117167
+     ],
+     [
+      35.258799749815246,
+      32.93627762960022
+     ],
+     [
+      35.258799473516014,
+      32.93627785483012
+     ],
+     [
+      35.258799216521375,
+      32.936278095764074
+     ],
+     [
+      35.2587989800834,
+      32.93627835122829
+     ],
+     [
+      35.25879876535398,
+      32.936278619978154
+     ],
+     [
+      35.25879857337925,
+      32.93627890070435
+     ],
+     [
+      35.25879840509451,
+      32.936279192039216
+     ],
+     [
+      35.25879826131962,
+      32.93627949256339
+     ],
+     [
+      35.25879814275502,
+      32.93627980081275
+     ],
+     [
+      35.25879804997836,
+      32.93628011528553
+     ],
+     [
+      35.258797983441646,
+      32.936280434449664
+     ],
+     [
+      35.25879794346902,
+      32.93628075675021
+     ],
+     [
+      35.258797930255234,
+      32.93628108061695
+     ],
+     [
+      35.25879794386467,
+      32.93628140447203
+     ],
+     [
+      35.25879798423103,
+      32.936281726737676
+     ],
+     [
+      35.258798051157626,
+      32.936282045843846
+     ],
+     [
+      35.258798144318426,
+      32.93628236023586
+     ],
+     [
+      35.25879826325954,
+      32.936282668382056
+     ],
+     [
+      35.25879840740152,
+      32.936282968781164
+     ],
+     [
+      35.2587985760421,
+      32.93628325996968
+     ],
+     [
+      35.258798768359696,
+      32.936283540528954
+     ],
+     [
+      35.25879898341735,
+      32.93628380909214
+     ],
+     [
+      35.25879922016732,
+      32.93628406435081
+     ],
+     [
+      35.25879947745619,
+      32.93628430506136
+     ],
+     [
+      35.25879975403047,
+      32.936284530051125
+     ],
+     [
+      35.25880004854272,
+      32.936284738223925
+     ],
+     [
+      35.2588003595581,
+      32.93628492856557
+     ],
+     [
+      35.25880068556139,
+      32.93628510014875
+     ],
+     [
+      35.25880102496431,
+      32.93628525213753
+     ],
+     [
+      35.258801376113354,
+      32.93628538379142
+     ],
+     [
+      35.25880173729773,
+      32.936285494469026
+     ],
+     [
+      35.258802106757805,
+      32.93628558363114
+     ],
+     [
+      35.25880248269359,
+      32.936285650843374
+     ],
+     [
+      35.25880286327357,
+      32.93628569577826
+     ],
+     [
+      35.2588032466436,
+      32.93628571821689
+     ],
+     [
+      35.25880363093594,
+      32.93628571804995
+     ],
+     [
+      35.25880401427835,
+      32.93628569527826
+     ],
+     [
+      35.258804394803235,
+      32.93628565001275
+     ],
+     [
+      35.258804770656695,
+      32.93628558247393
+     ],
+     [
+      35.25880514000763,
+      32.93628549299087
+     ],
+     [
+      35.25880550105659,
+      32.93628538199952
+     ],
+     [
+      35.25880585204459,
+      32.93628525004062
+     ],
+     [
+      35.258806191261634,
+      32.93628509775705
+     ],
+     [
+      35.258806517055106,
+      32.936284925890725
+     ],
+     [
+      35.258806827837766,
+      32.93628473527896
+     ],
+     [
+      35.25880712209551,
+      32.9362845268504
+     ],
+     [
+      35.25880739839475,
+      32.93628430162047
+     ],
+     [
+      35.258807655389376,
+      32.9362840606865
+     ],
+     [
+      35.258807891827345,
+      32.93628380522228
+     ],
+     [
+      35.25880810655676,
+      32.9362835364724
+     ],
+     [
+      35.258808298531456,
+      32.936283255746176
+     ],
+     [
+      35.25880846681618,
+      32.9362829644113
+     ],
+     [
+      35.258808610591046,
+      32.93628266388712
+     ],
+     [
+      35.25880872915561,
+      32.93628235563776
+     ],
+     [
+      35.258808821932234,
+      32.93628204116497
+     ],
+     [
+      35.25880888846891,
+      32.93628172200082
+     ],
+     [
+      35.258808928441496,
+      32.93628139970028
+     ],
+     [
+      35.25880894165523,
+      32.93628107583354
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbCircle",
+    "Linetype": "Continuous",
+    "EntityHand": "4E4",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.2588242893985,
+      32.93630444972768
+     ],
+     [
+      35.25882427578896,
+      32.93630412587259
+     ],
+     [
+      35.2588242354225,
+      32.93630380360696
+     ],
+     [
+      35.258824168495785,
+      32.93630348450082
+     ],
+     [
+      35.25882407533488,
+      32.93630317010881
+     ],
+     [
+      35.25882395639364,
+      32.93630286196265
+     ],
+     [
+      35.25882381225155,
+      32.93630256156357
+     ],
+     [
+      35.258823643610846,
+      32.93630227037508
+     ],
+     [
+      35.25882345129313,
+      32.93630198981585
+     ],
+     [
+      35.25882323623536,
+      32.93630172125272
+     ],
+     [
+      35.258822999485275,
+      32.936301465994084
+     ],
+     [
+      35.25882274219629,
+      32.936301225283565
+     ],
+     [
+      35.258822465621904,
+      32.936301000293874
+     ],
+     [
+      35.25882217110954,
+      32.93630079212112
+     ],
+     [
+      35.25882186009406,
+      32.93630060177953
+     ],
+     [
+      35.25882153409068,
+      32.93630043019641
+     ],
+     [
+      35.25882119468765,
+      32.93630027820769
+     ],
+     [
+      35.25882084353853,
+      32.93630014655385
+     ],
+     [
+      35.25882048235407,
+      32.93630003587629
+     ],
+     [
+      35.25882011289392,
+      32.93629994671424
+     ],
+     [
+      35.25881973695805,
+      32.936299879502066
+     ],
+     [
+      35.258819356378005,
+      32.93629983456722
+     ],
+     [
+      35.25881897300791,
+      32.93629981212864
+     ],
+     [
+      35.258818588715506,
+      32.93629981229562
+     ],
+     [
+      35.258818205373046,
+      32.936299835067366
+     ],
+     [
+      35.25881782484811,
+      32.93629988033293
+     ],
+     [
+      35.2588174489946,
+      32.93629994787178
+     ],
+     [
+      35.25881707964361,
+      32.93630003735486
+     ],
+     [
+      35.2588167185946,
+      32.93630014834625
+     ],
+     [
+      35.25881636760657,
+      32.93630028030519
+     ],
+     [
+      35.25881602838948,
+      32.93630043258879
+     ],
+     [
+      35.25881570259597,
+      32.93630060445514
+     ],
+     [
+      35.25881539181328,
+      32.93630079506692
+     ],
+     [
+      35.2588150975555,
+      32.93630100349551
+     ],
+     [
+      35.25881482125622,
+      32.93630122872543
+     ],
+     [
+      35.25881456426156,
+      32.93630146965942
+     ],
+     [
+      35.258814327823565,
+      32.93630172512368
+     ],
+     [
+      35.25881411309413,
+      32.93630199387356
+     ],
+     [
+      35.25881392111941,
+      32.93630227459978
+     ],
+     [
+      35.25881375283467,
+      32.936302565934675
+     ],
+     [
+      35.258813609059786,
+      32.93630286645885
+     ],
+     [
+      35.258813490495214,
+      32.93630317470822
+     ],
+     [
+      35.25881339771858,
+      32.93630348918102
+     ],
+     [
+      35.258813331181905,
+      32.93630380834515
+     ],
+     [
+      35.25881329120933,
+      32.936304130645695
+     ],
+     [
+      35.2588132779956,
+      32.936304454512445
+     ],
+     [
+      35.2588132916051,
+      32.936304778367536
+     ],
+     [
+      35.25881333197152,
+      32.93630510063317
+     ],
+     [
+      35.25881339889819,
+      32.93630541973931
+     ],
+     [
+      35.25881349205906,
+      32.93630573413132
+     ],
+     [
+      35.25881361100027,
+      32.93630604227751
+     ],
+     [
+      35.25881375514233,
+      32.936306342676595
+     ],
+     [
+      35.258813923783016,
+      32.936306633865094
+     ],
+     [
+      35.2588141161007,
+      32.93630691442434
+     ],
+     [
+      35.25881433115846,
+      32.93630718298749
+     ],
+     [
+      35.258814567908544,
+      32.93630743824613
+     ],
+     [
+      35.25881482519751,
+      32.93630767895667
+     ],
+     [
+      35.25881510177191,
+      32.936307903946386
+     ],
+     [
+      35.25881539628427,
+      32.93630811211915
+     ],
+     [
+      35.25881570729977,
+      32.93630830246075
+     ],
+     [
+      35.25881603330317,
+      32.9363084740439
+     ],
+     [
+      35.258816372706214,
+      32.936308626032634
+     ],
+     [
+      35.25881672385537,
+      32.93630875768648
+     ],
+     [
+      35.25881708503986,
+      32.93630886836404
+     ],
+     [
+      35.25881745450004,
+      32.936308957526116
+     ],
+     [
+      35.25881783043594,
+      32.93630902473829
+     ],
+     [
+      35.25881821101603,
+      32.93630906967313
+     ],
+     [
+      35.25881859438617,
+      32.93630909211172
+     ],
+     [
+      35.258818978678605,
+      32.93630909194474
+     ],
+     [
+      35.25881936202111,
+      32.936309069172985
+     ],
+     [
+      35.25881974254608,
+      32.93630902390743
+     ],
+     [
+      35.25882011839964,
+      32.93630895636858
+     ],
+     [
+      35.258820487750654,
+      32.93630886688547
+     ],
+     [
+      35.25882084879969,
+      32.93630875589408
+     ],
+     [
+      35.258821199787754,
+      32.936308623935126
+     ],
+     [
+      35.25882153900486,
+      32.93630847165152
+     ],
+     [
+      35.258821864798385,
+      32.936308299785146
+     ],
+     [
+      35.258822175581095,
+      32.93630810917335
+     ],
+     [
+      35.25882246983888,
+      32.93630790074475
+     ],
+     [
+      35.258822746138165,
+      32.936307675514804
+     ],
+     [
+      35.25882300313281,
+      32.93630743458079
+     ],
+     [
+      35.2588232395708,
+      32.93630717911653
+     ],
+     [
+      35.25882345430022,
+      32.93630691036664
+     ],
+     [
+      35.25882364627493,
+      32.9363066296404
+     ],
+     [
+      35.25882381455963,
+      32.936306338305506
+     ],
+     [
+      35.258823958334496,
+      32.93630603778131
+     ],
+     [
+      35.25882407689903,
+      32.93630572953192
+     ],
+     [
+      35.25882416967562,
+      32.93630541505911
+     ],
+     [
+      35.25882423621226,
+      32.936305095894966
+     ],
+     [
+      35.258824276184804,
+      32.93630477359442
+     ],
+     [
+      35.2588242893985,
+      32.93630444972768
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbCircle",
+    "Linetype": "Continuous",
+    "EntityHand": "4E5",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25867924890588,
+      32.93640401306331
+     ],
+     [
+      35.25867923529686,
+      32.93640368920823
+     ],
+     [
+      35.25867919493088,
+      32.93640336694254
+     ],
+     [
+      35.25867912800461,
+      32.936403047836315
+     ],
+     [
+      35.25867903484411,
+      32.93640273344422
+     ],
+     [
+      35.25867891590324,
+      32.93640242529791
+     ],
+     [
+      35.258678771761474,
+      32.93640212489866
+     ],
+     [
+      35.25867860312106,
+      32.93640183371
+     ],
+     [
+      35.25867841080359,
+      32.936401553150546
+     ],
+     [
+      35.258678195746015,
+      32.936401284587156
+     ],
+     [
+      35.258677958996074,
+      32.936401029328266
+     ],
+     [
+      35.2586777017072,
+      32.936400788617455
+     ],
+     [
+      35.258677425132866,
+      32.93640056362743
+     ],
+     [
+      35.25867713062052,
+      32.93640035545435
+     ],
+     [
+      35.25867681960499,
+      32.9364001651124
+     ],
+     [
+      35.25867649360152,
+      32.9363999935289
+     ],
+     [
+      35.25867615419837,
+      32.93639984153979
+     ],
+     [
+      35.258675803049066,
+      32.93639970988554
+     ],
+     [
+      35.258675441864376,
+      32.936399599207576
+     ],
+     [
+      35.25867507240397,
+      32.9363995100451
+     ],
+     [
+      35.25867469646779,
+      32.936399442832474
+     ],
+     [
+      35.258674315887376,
+      32.936399397897205
+     ],
+     [
+      35.25867393251689,
+      32.93639937545818
+     ],
+     [
+      35.25867354822406,
+      32.93639937562472
+     ],
+     [
+      35.258673164881124,
+      32.936399398396006
+     ],
+     [
+      35.258672784355696,
+      32.936399443661124
+     ],
+     [
+      35.258672408501646,
+      32.93639951119955
+     ],
+     [
+      35.2586720391501,
+      32.93639960068221
+     ],
+     [
+      35.25867167810051,
+      32.93639971167316
+     ],
+     [
+      35.25867132711186,
+      32.93639984363168
+     ],
+     [
+      35.25867098789415,
+      32.9363999959149
+     ],
+     [
+      35.25867066209999,
+      32.93640016778087
+     ],
+     [
+      35.25867035131664,
+      32.936400358392284
+     ],
+     [
+      35.25867005705819,
+      32.936400566820524
+     ],
+     [
+      35.25866978075824,
+      32.936400792050144
+     ],
+     [
+      35.25866952376289,
+      32.936401032983824
+     ],
+     [
+      35.25866928732422,
+      32.936401288447776
+     ],
+     [
+      35.25866907259411,
+      32.93640155719742
+     ],
+     [
+      35.25866888061871,
+      32.93640183792342
+     ],
+     [
+      35.258668712333304,
+      32.936402129258106
+     ],
+     [
+      35.258668568557766,
+      32.93640242978211
+     ],
+     [
+      35.25866844999256,
+      32.936402738031354
+     ],
+     [
+      35.25866835721531,
+      32.93640305250403
+     ],
+     [
+      35.258668290678045,
+      32.93640337166809
+     ],
+     [
+      35.25866825070489,
+      32.9364036939686
+     ],
+     [
+      35.258668237490625,
+      32.93640401783531
+     ],
+     [
+      35.25866825109961,
+      32.936404341690405
+     ],
+     [
+      35.25866829146554,
+      32.93640466395609
+     ],
+     [
+      35.25866835839177,
+      32.93640498306232
+     ],
+     [
+      35.258668451552246,
+      32.93640529745442
+     ],
+     [
+      35.25866857049307,
+      32.93640560560073
+     ],
+     [
+      35.258668714634815,
+      32.93640590599999
+     ],
+     [
+      35.258668883275206,
+      32.93640619718867
+     ],
+     [
+      35.25866907559266,
+      32.936406477748136
+     ],
+     [
+      35.25866929065022,
+      32.93640674631153
+     ],
+     [
+      35.258669527400144,
+      32.93640700157045
+     ],
+     [
+      35.25866978468901,
+      32.93640724228128
+     ],
+     [
+      35.25867006126335,
+      32.93640746727131
+     ],
+     [
+      35.258670355775706,
+      32.93640767544441
+     ],
+     [
+      35.25867066679125,
+      32.93640786578639
+     ],
+     [
+      35.25867099279473,
+      32.93640803736991
+     ],
+     [
+      35.258671332197906,
+      32.93640818935903
+     ],
+     [
+      35.25867168334724,
+      32.93640832101328
+     ],
+     [
+      35.258672044531956,
+      32.93640843169126
+     ],
+     [
+      35.25867241399241,
+      32.93640852085375
+     ],
+     [
+      35.25867278992862,
+      32.93640858806637
+     ],
+     [
+      35.25867317050906,
+      32.936408633001655
+     ],
+     [
+      35.25867355387959,
+      32.93640865544068
+     ],
+     [
+      35.258673938172464,
+      32.93640865527414
+     ],
+     [
+      35.258674321515436,
+      32.93640863250284
+     ],
+     [
+      35.258674702040906,
+      32.93640858723772
+     ],
+     [
+      35.25867507789499,
+      32.936408519699306
+     ],
+     [
+      35.25867544724657,
+      32.93640843021664
+     ],
+     [
+      35.25867580829619,
+      32.93640831922567
+     ],
+     [
+      35.25867615928487,
+      32.936408187267126
+     ],
+     [
+      35.2586764985026,
+      32.936408034983906
+     ],
+     [
+      35.25867682429678,
+      32.93640786311792
+     ],
+     [
+      35.25867713508015,
+      32.936407672506476
+     ],
+     [
+      35.258677429338604,
+      32.936407464078215
+     ],
+     [
+      35.258677705638554,
+      32.936407238848595
+     ],
+     [
+      35.25867796263389,
+      32.9364069979149
+     ],
+     [
+      35.25867819907256,
+      32.93640674245091
+     ],
+     [
+      35.258678413802656,
+      32.936406473701254
+     ],
+     [
+      35.25867860577803,
+      32.93640619297525
+     ],
+     [
+      35.258678774063405,
+      32.93640590164055
+     ],
+     [
+      35.25867891783892,
+      32.93640560111652
+     ],
+     [
+      35.2586790364041,
+      32.93640529286728
+     ],
+     [
+      35.2586791291813,
+      32.9364049783946
+     ],
+     [
+      35.258679195718535,
+      32.93640465923053
+     ],
+     [
+      35.258679235691645,
+      32.93640433693003
+     ],
+     [
+      35.25867924890588,
+      32.93640401306331
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbCircle",
+    "Linetype": "Continuous",
+    "EntityHand": "4E6",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25867617263009,
+      32.93644443671103
+     ],
+     [
+      35.25867615902107,
+      32.93644411285593
+     ],
+     [
+      35.25867611865509,
+      32.93644379059025
+     ],
+     [
+      35.258676051728806,
+      32.93644347148403
+     ],
+     [
+      35.258675958568276,
+      32.93644315709193
+     ],
+     [
+      35.25867583962736,
+      32.936442848945624
+     ],
+     [
+      35.258675695485536,
+      32.93644254854639
+     ],
+     [
+      35.25867552684505,
+      32.93644225735771
+     ],
+     [
+      35.2586753345275,
+      32.93644197679825
+     ],
+     [
+      35.258675119469835,
+      32.93644170823487
+     ],
+     [
+      35.2586748827198,
+      32.93644145297596
+     ],
+     [
+      35.25867462543082,
+      32.936441212265144
+     ],
+     [
+      35.25867434885637,
+      32.93644098727513
+     ],
+     [
+      35.25867405434389,
+      32.93644077910204
+     ],
+     [
+      35.25867374332823,
+      32.93644058876007
+     ],
+     [
+      35.25867341732462,
+      32.93644041717656
+     ],
+     [
+      35.258673077921316,
+      32.93644026518745
+     ],
+     [
+      35.258672726771856,
+      32.9364401335332
+     ],
+     [
+      35.258672365587,
+      32.93644002285522
+     ],
+     [
+      35.25867199612643,
+      32.93643993369273
+     ],
+     [
+      35.258671620190086,
+      32.936439866480114
+     ],
+     [
+      35.258671239609505,
+      32.936439821544816
+     ],
+     [
+      35.258670856238844,
+      32.936439799105784
+     ],
+     [
+      35.25867047194584,
+      32.936439799272314
+     ],
+     [
+      35.25867008860273,
+      32.9364398220436
+     ],
+     [
+      35.25866970807712,
+      32.93643986730872
+     ],
+     [
+      35.2586693322229,
+      32.93643993484712
+     ],
+     [
+      35.258668962871184,
+      32.93644002432976
+     ],
+     [
+      35.25866860182143,
+      32.936440135320716
+     ],
+     [
+      35.25866825083261,
+      32.93644026727924
+     ],
+     [
+      35.25866791161474,
+      32.93644041956243
+     ],
+     [
+      35.25866758582043,
+      32.93644059142839
+     ],
+     [
+      35.25866727503693,
+      32.93644078203981
+     ],
+     [
+      35.25866698077834,
+      32.936440990468036
+     ],
+     [
+      35.25866670447825,
+      32.93644121569765
+     ],
+     [
+      35.25866644748279,
+      32.936441456631314
+     ],
+     [
+      35.25866621104399,
+      32.93644171209528
+     ],
+     [
+      35.25866599631377,
+      32.93644198084491
+     ],
+     [
+      35.25866580433828,
+      32.936442261570896
+     ],
+     [
+      35.25866563605279,
+      32.936442552905575
+     ],
+     [
+      35.258665492277174,
+      32.93644285342959
+     ],
+     [
+      35.2586653737119,
+      32.93644316167881
+     ],
+     [
+      35.25866528093461,
+      32.93644347615149
+     ],
+     [
+      35.2586652143973,
+      32.93644379531555
+     ],
+     [
+      35.25866517442412,
+      32.936444117616034
+     ],
+     [
+      35.25866516120983,
+      32.936444441482756
+     ],
+     [
+      35.2586651748188,
+      32.93644476533784
+     ],
+     [
+      35.25866521518475,
+      32.93644508760353
+     ],
+     [
+      35.258665282111,
+      32.93644540670976
+     ],
+     [
+      35.2586653752715,
+      32.93644572110187
+     ],
+     [
+      35.25866549421237,
+      32.936446029248174
+     ],
+     [
+      35.25866563835417,
+      32.93644632964744
+     ],
+     [
+      35.25866580699463,
+      32.93644662083612
+     ],
+     [
+      35.25866599931216,
+      32.93644690139559
+     ],
+     [
+      35.25866621436981,
+      32.936447169958996
+     ],
+     [
+      35.25866645111983,
+      32.936447425217914
+     ],
+     [
+      35.25866670840881,
+      32.936447665928746
+     ],
+     [
+      35.25866698498327,
+      32.936447890918785
+     ],
+     [
+      35.25866727949575,
+      32.93644809909189
+     ],
+     [
+      35.25866759051142,
+      32.93644828943387
+     ],
+     [
+      35.258667916515044,
+      32.93644846101739
+     ],
+     [
+      35.25866825591838,
+      32.93644861300652
+     ],
+     [
+      35.25866860706786,
+      32.93644874466077
+     ],
+     [
+      35.258668968252735,
+      32.93644885533877
+     ],
+     [
+      35.25866933771336,
+      32.93644894450127
+     ],
+     [
+      35.25866971364974,
+      32.9364490117139
+     ],
+     [
+      35.258670094230354,
+      32.93644905664919
+     ],
+     [
+      35.25867047760105,
+      32.93644907908822
+     ],
+     [
+      35.258670861894096,
+      32.9364490789217
+     ],
+     [
+      35.25867124523725,
+      32.9364490561504
+     ],
+     [
+      35.258671625762894,
+      32.9364490108853
+     ],
+     [
+      35.25867200161716,
+      32.93644894334688
+     ],
+     [
+      35.2586723709689,
+      32.93644885386422
+     ],
+     [
+      35.258672732018695,
+      32.93644874287326
+     ],
+     [
+      35.25867308300753,
+      32.936448610914724
+     ],
+     [
+      35.25867342222543,
+      32.93644845863152
+     ],
+     [
+      35.25867374801975,
+      32.93644828676555
+     ],
+     [
+      35.25867405880327,
+      32.93644809615412
+     ],
+     [
+      35.25867435306187,
+      32.93644788772586
+     ],
+     [
+      35.25867462936195,
+      32.936447662496256
+     ],
+     [
+      35.25867488635742,
+      32.93644742156256
+     ],
+     [
+      35.2586751227962,
+      32.93644716609858
+     ],
+     [
+      35.2586753375264,
+      32.93644689734894
+     ],
+     [
+      35.25867552950188,
+      32.93644661662294
+     ],
+     [
+      35.25867569778734,
+      32.936446325288244
+     ],
+     [
+      35.25867584156292,
+      32.93644602476422
+     ],
+     [
+      35.258675960128166,
+      32.93644571651498
+     ],
+     [
+      35.25867605290543,
+      32.936445402042295
+     ],
+     [
+      35.258676119442704,
+      32.936445082878244
+     ],
+     [
+      35.25867615941584,
+      32.936444760577736
+     ],
+     [
+      35.25867617263009,
+      32.93644443671103
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbCircle",
+    "Linetype": "Continuous",
+    "EntityHand": "4E7",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.258474573112636,
+      32.93650169043088
+     ],
+     [
+      35.258474559504336,
+      32.936501366575776
+     ],
+     [
+      35.258474519139064,
+      32.93650104431003
+     ],
+     [
+      35.258474452213456,
+      32.93650072520371
+     ],
+     [
+      35.25847435905357,
+      32.936500410811455
+     ],
+     [
+      35.25847424011328,
+      32.93650010266496
+     ],
+     [
+      35.25847409597205,
+      32.93649980226549
+     ],
+     [
+      35.25847392733211,
+      32.93649951107654
+     ],
+     [
+      35.25847373501508,
+      32.93649923051677
+     ],
+     [
+      35.25847351995789,
+      32.93649896195304
+     ],
+     [
+      35.258473283208275,
+      32.93649870669377
+     ],
+     [
+      35.25847302591967,
+      32.93649846598254
+     ],
+     [
+      35.25847274934555,
+      32.93649824099208
+     ],
+     [
+      35.25847245483335,
+      32.936498032818506
+     ],
+     [
+      35.258472143817926,
+      32.936497842476044
+     ],
+     [
+      35.258471817814495,
+      32.93649767089201
+     ],
+     [
+      35.258471478411316,
+      32.93649751890236
+     ],
+     [
+      35.25847112726193,
+      32.93649738724754
+     ],
+     [
+      35.258470766077096,
+      32.93649727656897
+     ],
+     [
+      35.25847039661648,
+      32.9364971874059
+     ],
+     [
+      35.25847002068004,
+      32.93649712019266
+     ],
+     [
+      35.25846964009932,
+      32.936497075256774
+     ],
+     [
+      35.25846925672847,
+      32.9364970528171
+     ],
+     [
+      35.25846887243521,
+      32.936497052983015
+     ],
+     [
+      35.258468489091804,
+      32.9364970757537
+     ],
+     [
+      35.25846810856584,
+      32.936497121018185
+     ],
+     [
+      35.25846773271123,
+      32.93649718855598
+     ],
+     [
+      35.25846736335907,
+      32.93649727803803
+     ],
+     [
+      35.25846700230883,
+      32.93649738902841
+     ],
+     [
+      35.25846665131949,
+      32.93649752098636
+     ],
+     [
+      35.25846631210105,
+      32.936497673268995
+     ],
+     [
+      35.25846598630614,
+      32.93649784513443
+     ],
+     [
+      35.258465675522004,
+      32.936498035745345
+     ],
+     [
+      35.258465381262745,
+      32.9364982441731
+     ],
+     [
+      35.25846510496197,
+      32.93649846940226
+     ],
+     [
+      35.2584648479658,
+      32.93649871033552
+     ],
+     [
+      35.258464611526264,
+      32.93649896579909
+     ],
+     [
+      35.2584643967953,
+      32.93649923454837
+     ],
+     [
+      35.25846420481905,
+      32.93649951527405
+     ],
+     [
+      35.258464036532786,
+      32.93649980660846
+     ],
+     [
+      35.2584638927564,
+      32.93650010713223
+     ],
+     [
+      35.25846377419035,
+      32.93650041538126
+     ],
+     [
+      35.25846368141229,
+      32.93650072985379
+     ],
+     [
+      35.258463614874195,
+      32.93650104901774
+     ],
+     [
+      35.25846357490027,
+      32.93650137131817
+     ],
+     [
+      35.25846356168524,
+      32.93650169518486
+     ],
+     [
+      35.25846357529349,
+      32.93650201903998
+     ],
+     [
+      35.25846361565873,
+      32.93650234130571
+     ],
+     [
+      35.2584636825843,
+      32.936502660412046
+     ],
+     [
+      35.25846377574414,
+      32.93650297480431
+     ],
+     [
+      35.258463894684404,
+      32.93650328295081
+     ],
+     [
+      35.25846403882561,
+      32.9365035833503
+     ],
+     [
+      35.25846420746551,
+      32.93650387453925
+     ],
+     [
+      35.25846439978253,
+      32.93650415509903
+     ],
+     [
+      35.25846461483971,
+      32.93650442366278
+     ],
+     [
+      35.25846485158931,
+      32.936504678922084
+     ],
+     [
+      35.258465108877914,
+      32.93650491963333
+     ],
+     [
+      35.258465385452034,
+      32.93650514462381
+     ],
+     [
+      35.25846567996423,
+      32.936505352797376
+     ],
+     [
+      35.25846599097968,
+      32.93650554313986
+     ],
+     [
+      35.25846631698313,
+      32.936505714723914
+     ],
+     [
+      35.258466656386325,
+      32.93650586671359
+     ],
+     [
+      35.25846700753574,
+      32.936505998368425
+     ],
+     [
+      35.25846736872061,
+      32.93650610904699
+     ],
+     [
+      35.25846773818125,
+      32.936506198210076
+     ],
+     [
+      35.258468114117726,
+      32.93650626542331
+     ],
+     [
+      35.25846849469849,
+      32.93650631035921
+     ],
+     [
+      35.25846887806938,
+      32.93650633279887
+     ],
+     [
+      35.25846926236268,
+      32.93650633263296
+     ],
+     [
+      35.25846964570613,
+      32.93650630986229
+     ],
+     [
+      35.258470026232125,
+      32.93650626459779
+     ],
+     [
+      35.25847040208678,
+      32.936506197059984
+     ],
+     [
+      35.25847077143897,
+      32.93650610757793
+     ],
+     [
+      35.25847113248925,
+      32.93650599658755
+     ],
+     [
+      35.25847148347861,
+      32.93650586462959
+     ],
+     [
+      35.258471822697075,
+      32.93650571234693
+     ],
+     [
+      35.258472148492,
+      32.93650554048148
+     ],
+     [
+      35.25847245927614,
+      32.936505349870544
+     ],
+     [
+      35.25847275353541,
+      32.93650514144278
+     ],
+     [
+      35.25847302983618,
+      32.9365049162136
+     ],
+     [
+      35.258473286832356,
+      32.93650467528032
+     ],
+     [
+      35.258473523271874,
+      32.936504419816735
+     ],
+     [
+      35.25847373800282,
+      32.93650415106743
+     ],
+     [
+      35.25847392997906,
+      32.93650387034174
+     ],
+     [
+      35.258474098265296,
+      32.93650357900733
+     ],
+     [
+      35.25847424204166,
+      32.936503278483535
+     ],
+     [
+      35.258474360607664,
+      32.9365029702345
+     ],
+     [
+      35.2584744533857,
+      32.936502655761956
+     ],
+     [
+      35.258474519923745,
+      32.936502336598004
+     ],
+     [
+      35.258474559897635,
+      32.93650201429758
+     ],
+     [
+      35.258474573112636,
+      32.93650169043088
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbCircle",
+    "Linetype": "Continuous",
+    "EntityHand": "4E8",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25845037862786,
+      32.93664816075441
+     ],
+     [
+      35.258450365019634,
+      32.9366478368993
+     ],
+     [
+      35.258450324654376,
+      32.93664751463356
+     ],
+     [
+      35.258450257728754,
+      32.93664719552722
+     ],
+     [
+      35.2584501645688,
+      32.93664688113497
+     ],
+     [
+      35.2584500456284,
+      32.936646572988465
+     ],
+     [
+      35.25844990148701,
+      32.936646272588966
+     ],
+     [
+      35.25844973284688,
+      32.93664598139999
+     ],
+     [
+      35.258449540529604,
+      32.936645700840195
+     ],
+     [
+      35.25844932547212,
+      32.93664543227643
+     ],
+     [
+      35.25844908872219,
+      32.93664517701711
+     ],
+     [
+      35.25844883143322,
+      32.93664493630583
+     ],
+     [
+      35.25844855485871,
+      32.936644711315324
+     ],
+     [
+      35.258448260346086,
+      32.93664450314171
+     ],
+     [
+      35.258447949330204,
+      32.936644312799196
+     ],
+     [
+      35.25844762332627,
+      32.93664414121509
+     ],
+     [
+      35.25844728392258,
+      32.936643989225374
+     ],
+     [
+      35.25844693277265,
+      32.9366438575705
+     ],
+     [
+      35.25844657158725,
+      32.93664374689187
+     ],
+     [
+      35.258446202126045,
+      32.936643657728716
+     ],
+     [
+      35.25844582618901,
+      32.936643590515416
+     ],
+     [
+      35.25844544560768,
+      32.93664354557944
+     ],
+     [
+      35.25844506223619,
+      32.93664352313972
+     ],
+     [
+      35.2584446779423,
+      32.936643523305555
+     ],
+     [
+      35.258444294598256,
+      32.93664354607615
+     ],
+     [
+      35.258443914071655,
+      32.93664359134056
+     ],
+     [
+      35.2584435382164,
+      32.936643658878296
+     ],
+     [
+      35.25844316886361,
+      32.93664374836027
+     ],
+     [
+      35.25844280781274,
+      32.93664385935058
+     ],
+     [
+      35.258442456822785,
+      32.93664399130845
+     ],
+     [
+      35.25844211760375,
+      32.936644143591025
+     ],
+     [
+      35.25844179180825,
+      32.9366443154564
+     ],
+     [
+      35.25844148102355,
+      32.936644506067246
+     ],
+     [
+      35.25844118676376,
+      32.93664471449494
+     ],
+     [
+      35.25844091046247,
+      32.93664493972404
+     ],
+     [
+      35.258440653465804,
+      32.936645180657244
+     ],
+     [
+      35.25844041702582,
+      32.93664543612076
+     ],
+     [
+      35.25844020229442,
+      32.936645704869996
+     ],
+     [
+      35.25844001031777,
+      32.93664598559564
+     ],
+     [
+      35.258439842031166,
+      32.93664627693
+     ],
+     [
+      35.258439698254456,
+      32.93664657745374
+     ],
+     [
+      35.25843957968813,
+      32.93664688570275
+     ],
+     [
+      35.25843948690982,
+      32.936647200175244
+     ],
+     [
+      35.258439420371545,
+      32.936647519339175
+     ],
+     [
+      35.25843938039746,
+      32.936647841639584
+     ],
+     [
+      35.25843936718232,
+      32.93664816550626
+     ],
+     [
+      35.258439380790506,
+      32.936648489361374
+     ],
+     [
+      35.25843942115572,
+      32.93664881162712
+     ],
+     [
+      35.25843948808132,
+      32.93664913073346
+     ],
+     [
+      35.258439581241234,
+      32.93664944512571
+     ],
+     [
+      35.2584397001816,
+      32.936649753272235
+     ],
+     [
+      35.258439844322965,
+      32.93665005367175
+     ],
+     [
+      35.25844001296308,
+      32.93665034486073
+     ],
+     [
+      35.25844020528033,
+      32.93665062542054
+     ],
+     [
+      35.25844042033779,
+      32.93665089398432
+     ],
+     [
+      35.25844065708771,
+      32.936651149243666
+     ],
+     [
+      35.25844091437668,
+      32.936651389954946
+     ],
+     [
+      35.25844119095119,
+      32.936651614945475
+     ],
+     [
+      35.25844148546382,
+      32.936651823119114
+     ],
+     [
+      35.25844179647973,
+      32.93665201346164
+     ],
+     [
+      35.258442122483665,
+      32.93665218504575
+     ],
+     [
+      35.258442461887384,
+      32.93665233703549
+     ],
+     [
+      35.25844281303734,
+      32.93665246869038
+     ],
+     [
+      35.25844317422277,
+      32.93665257936901
+     ],
+     [
+      35.258443543684,
+      32.93665266853219
+     ],
+     [
+      35.25844391962108,
+      32.93665273574549
+     ],
+     [
+      35.258444300202456,
+      32.93665278068146
+     ],
+     [
+      35.25844468357398,
+      32.93665280312119
+     ],
+     [
+      35.2584450678679,
+      32.93665280295535
+     ],
+     [
+      35.258445451212,
+      32.936652780184765
+     ],
+     [
+      35.25844583173863,
+      32.93665273492034
+     ],
+     [
+      35.25844620759392,
+      32.9366526673826
+     ],
+     [
+      35.25844657694674,
+      32.93665257790061
+     ],
+     [
+      35.25844693799765,
+      32.936652466910296
+     ],
+     [
+      35.25844728898762,
+      32.93665233495241
+     ],
+     [
+      35.25844762820669,
+      32.936652182669825
+     ],
+     [
+      35.2584479540022,
+      32.93665201080444
+     ],
+     [
+      35.258448264786914,
+      32.936651820193575
+     ],
+     [
+      35.25844855904671,
+      32.93665161176587
+     ],
+     [
+      35.258448835348,
+      32.93665138653674
+     ],
+     [
+      35.25844909234466,
+      32.936651145603534
+     ],
+     [
+      35.25844932878464,
+      32.93665089013999
+     ],
+     [
+      35.25844954351602,
+      32.93665062139073
+     ],
+     [
+      35.25844973549265,
+      32.93665034066508
+     ],
+     [
+      35.25844990377924,
+      32.93665004933071
+     ],
+     [
+      35.25845004755591,
+      32.93664974880695
+     ],
+     [
+      35.25845016612221,
+      32.936649440557936
+     ],
+     [
+      35.25845025890048,
+      32.936649126085435
+     ],
+     [
+      35.258450325438716,
+      32.936648806921504
+     ],
+     [
+      35.25845036541276,
+      32.93664848462109
+     ],
+     [
+      35.25845037862786,
+      32.93664816075441
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbCircle",
+    "Linetype": "Continuous",
+    "EntityHand": "4E9",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25831694814372,
+      32.93708090742212
+     ],
+     [
+      35.25831693453591,
+      32.93708058356702
+     ],
+     [
+      35.25831689417094,
+      32.93708026130126
+     ],
+     [
+      35.25831682724546,
+      32.93707994219488
+     ],
+     [
+      35.258316734085525,
+      32.93707962780255
+     ],
+     [
+      35.258316615145,
+      32.93707931965593
+     ],
+     [
+      35.258316471003354,
+      32.93707901925629
+     ],
+     [
+      35.25831630236284,
+      32.93707872806717
+     ],
+     [
+      35.258316110045044,
+      32.93707844750719
+     ],
+     [
+      35.25831589498692,
+      32.93707817894321
+     ],
+     [
+      35.25831565823622,
+      32.93707792368366
+     ],
+     [
+      35.25831540094636,
+      32.93707768297213
+     ],
+     [
+      35.25831512437083,
+      32.937077457981346
+     ],
+     [
+      35.258314829857085,
+      32.93707724980742
+     ],
+     [
+      35.25831451883997,
+      32.937077059464585
+     ],
+     [
+      35.25831419283471,
+      32.93707688788015
+     ],
+     [
+      35.258313853429584,
+      32.93707673589008
+     ],
+     [
+      35.25831350227814,
+      32.93707660423483
+     ],
+     [
+      35.25831314109115,
+      32.937076493555836
+     ],
+     [
+      35.25831277162828,
+      32.93707640439229
+     ],
+     [
+      35.25831239568952,
+      32.93707633717861
+     ],
+     [
+      35.25831201510639,
+      32.93707629224223
+     ],
+     [
+      35.25831163173307,
+      32.93707626980209
+     ],
+     [
+      35.25831124743731,
+      32.93707626996752
+     ],
+     [
+      35.258310864091364,
+      32.937076292737714
+     ],
+     [
+      35.258310483562845,
+      32.937076338001724
+     ],
+     [
+      35.25831010770566,
+      32.937076405539045
+     ],
+     [
+      35.25830973835094,
+      32.93707649502062
+     ],
+     [
+      35.25830937729814,
+      32.937076606010535
+     ],
+     [
+      35.258309026306286,
+      32.937076737968034
+     ],
+     [
+      35.25830868708536,
+      32.93707689025024
+     ],
+     [
+      35.25830836128802,
+      32.93707706211525
+     ],
+     [
+      35.258308050501526,
+      32.93707725272576
+     ],
+     [
+      35.25830775623999,
+      32.93707746115313
+     ],
+     [
+      35.25830747993701,
+      32.93707768638191
+     ],
+     [
+      35.25830722293873,
+      32.937077927314824
+     ],
+     [
+      35.25830698649721,
+      32.93707818277808
+     ],
+     [
+      35.258306771764374,
+      32.93707845152707
+     ],
+     [
+      35.25830657978637,
+      32.93707873225248
+     ],
+     [
+      35.2583064114985,
+      32.93707902358664
+     ],
+     [
+      35.25830626772065,
+      32.93707932411022
+     ],
+     [
+      35.258306149153285,
+      32.93707963235908
+     ],
+     [
+      35.25830605637405,
+      32.93707994683145
+     ],
+     [
+      35.25830598983497,
+      32.93708026599529
+     ],
+     [
+      35.258305949860215,
+      32.937080588295636
+     ],
+     [
+      35.25830593664452,
+      32.93708091216228
+     ],
+     [
+      35.25830595025229,
+      32.93708123601738
+     ],
+     [
+      35.258305990617224,
+      32.93708155828315
+     ],
+     [
+      35.25830605754267,
+      32.937081877389524
+     ],
+     [
+      35.258306150702566,
+      32.937082191781876
+     ],
+     [
+      35.25830626964306,
+      32.93708249992849
+     ],
+     [
+      35.258306413784666,
+      32.937082800328135
+     ],
+     [
+      35.25830658242516,
+      32.93708309151729
+     ],
+     [
+      35.258306774742934,
+      32.93708337207728
+     ],
+     [
+      35.25830698980105,
+      32.93708364064127
+     ],
+     [
+      35.25830722655174,
+      32.937083895900834
+     ],
+     [
+      35.25830748384159,
+      32.9370841366124
+     ],
+     [
+      35.258307760417125,
+      32.93708436160319
+     ],
+     [
+      35.25830805493088,
+      32.93708456977713
+     ],
+     [
+      35.25830836594801,
+      32.93708476011998
+     ],
+     [
+      35.25830869195329,
+      32.93708493170442
+     ],
+     [
+      35.25830903135843,
+      32.93708508369451
+     ],
+     [
+      35.2583093825099,
+      32.93708521534977
+     ],
+     [
+      35.25830974369692,
+      32.93708532602877
+     ],
+     [
+      35.25831011315982,
+      32.93708541519233
+     ],
+     [
+      35.258310489098626,
+      32.93708548240602
+     ],
+     [
+      35.25831086968179,
+      32.937085527342404
+     ],
+     [
+      35.25831125305515,
+      32.93708554978254
+     ],
+     [
+      35.25831163735095,
+      32.93708554961711
+     ],
+     [
+      35.258312020696934,
+      32.93708552684692
+     ],
+     [
+      35.258312401225496,
+      32.937085481582905
+     ],
+     [
+      35.25831277708272,
+      32.93708541404558
+     ],
+     [
+      35.25831314643747,
+      32.93708532456399
+     ],
+     [
+      35.2583135074903,
+      32.93708521357407
+     ],
+     [
+      35.25831385848219,
+      32.937085081616566
+     ],
+     [
+      35.258314197703136,
+      32.93708492933435
+     ],
+     [
+      35.25831452350049,
+      32.937084757469314
+     ],
+     [
+      35.258314834287,
+      32.93708456685879
+     ],
+     [
+      35.258315128548546,
+      32.937084358431406
+     ],
+     [
+      35.25831540485152,
+      32.93708413320261
+     ],
+     [
+      35.25831566184979,
+      32.93708389226967
+     ],
+     [
+      35.2583158982913,
+      32.9370836368064
+     ],
+     [
+      35.25831611302413,
+      32.937083368057394
+     ],
+     [
+      35.25831630500211,
+      32.93708308733197
+     ],
+     [
+      35.25831647328995,
+      32.93708279599779
+     ],
+     [
+      35.258316617067784,
+      32.93708249547421
+     ],
+     [
+      35.25831673563511,
+      32.93708218722534
+     ],
+     [
+      35.2583168284143,
+      32.93708187275295
+     ],
+     [
+      35.258316894953346,
+      32.93708155358912
+     ],
+     [
+      35.258316934928075,
+      32.937081231288765
+     ],
+     [
+      35.25831694814372,
+      32.93708090742212
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbCircle",
+    "Linetype": "Continuous",
+    "EntityHand": "4EA",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25800367612544,
+      32.937005571289575
+     ],
+     [
+      35.25800366251879,
+      32.93700524743444
+     ],
+     [
+      35.25800362215499,
+      32.93700492516857
+     ],
+     [
+      35.25800355523069,
+      32.937004606062025
+     ],
+     [
+      35.25800346207195,
+      32.93700429166945
+     ],
+     [
+      35.25800334313261,
+      32.93700398352253
+     ],
+     [
+      35.25800319899215,
+      32.93700368312253
+     ],
+     [
+      35.258003030352796,
+      32.937003391932976
+     ],
+     [
+      35.25800283803615,
+      32.937003111372505
+     ],
+     [
+      35.258002622979156,
+      32.937002842807985
+     ],
+     [
+      35.25800238622956,
+      32.93700258754784
+     ],
+     [
+      35.25800212894077,
+      32.937002346835655
+     ],
+     [
+      35.25800185236626,
+      32.93700212184417
+     ],
+     [
+      35.258001557853504,
+      32.93700191366951
+     ],
+     [
+      35.25800124683732,
+      32.9370017233259
+     ],
+     [
+      35.25800092083294,
+      32.93700155174064
+     ],
+     [
+      35.25800058142863,
+      32.93700139974972
+     ],
+     [
+      35.25800023027796,
+      32.93700126809358
+     ],
+     [
+      35.25799986909166,
+      32.93700115741368
+     ],
+     [
+      35.25799949962941,
+      32.93700106824921
+     ],
+     [
+      35.2579991236912,
+      32.93700100103459
+     ],
+     [
+      35.25799874310856,
+      32.93700095609724
+     ],
+     [
+      35.257998359735645,
+      32.93700093365615
+     ],
+     [
+      35.257997975440205,
+      32.93700093382061
+     ],
+     [
+      35.2579975920945,
+      32.93700095658984
+     ],
+     [
+      35.25799721156614,
+      32.93700100185291
+     ],
+     [
+      35.25799683570904,
+      32.937001069389275
+     ],
+     [
+      35.25799646635431,
+      32.93700115886994
+     ],
+     [
+      35.25799610530142,
+      32.93700126985894
+     ],
+     [
+      35.2579957543094,
+      32.93700140181556
+     ],
+     [
+      35.257995415088224,
+      32.93700155409691
+     ],
+     [
+      35.25799508929056,
+      32.93700172596112
+     ],
+     [
+      35.25799477850365,
+      32.93700191657084
+     ],
+     [
+      35.25799448424162,
+      32.937002124997484
+     ],
+     [
+      35.25799420793809,
+      32.93700235022557
+     ],
+     [
+      35.25799395093917,
+      32.93700259115786
+     ],
+     [
+      35.25799371449696,
+      32.93700284662052
+     ],
+     [
+      35.257993499763344,
+      32.93700311536897
+     ],
+     [
+      35.257993307784524,
+      32.9370033960939
+     ],
+     [
+      35.25799313949576,
+      32.937003687427655
+     ],
+     [
+      35.257992995716975,
+      32.937003987950874
+     ],
+     [
+      35.25799287714862,
+      32.93700429619944
+     ],
+     [
+      35.25799278436836,
+      32.937004610671586
+     ],
+     [
+      35.25799271782821,
+      32.937004929835254
+     ],
+     [
+      35.25799267785234,
+      32.937005252135506
+     ],
+     [
+      35.25799266463552,
+      32.937005576002115
+     ],
+     [
+      35.25799267824214,
+      32.93700589985727
+     ],
+     [
+      35.257992718605905,
+      32.93700622212314
+     ],
+     [
+      35.25799278553016,
+      32.93700654122969
+     ],
+     [
+      35.257992878688874,
+      32.937006855622286
+     ],
+     [
+      35.25799299762817,
+      32.9370071637692
+     ],
+     [
+      35.25799314176861,
+      32.93700746416921
+     ],
+     [
+      35.25799331040793,
+      32.937007755358785
+     ],
+     [
+      35.25799350272456,
+      32.93700803591926
+     ],
+     [
+      35.25799371778154,
+      32.9370083044838
+     ],
+     [
+      35.25799395453113,
+      32.93700855974396
+     ],
+     [
+      35.25799421181993,
+      32.93700880045616
+     ],
+     [
+      35.25799448839442,
+      32.93700902544767
+     ],
+     [
+      35.25799478290719,
+      32.937009233622334
+     ],
+     [
+      35.25799509392339,
+      32.93700942396597
+     ],
+     [
+      35.25799541992779,
+      32.937009595551245
+     ],
+     [
+      35.257995759332104,
+      32.93700974754218
+     ],
+     [
+      35.257996110482814,
+      32.937009879198335
+     ],
+     [
+      35.257996471669145,
+      32.937009989878234
+     ],
+     [
+      35.25799684113142,
+      32.93701007904272
+     ],
+     [
+      35.25799721706967,
+      32.93701014625736
+     ],
+     [
+      35.257997597652356,
+      32.93701019119469
+     ],
+     [
+      35.25799798102531,
+      32.937010213635794
+     ],
+     [
+      35.25799836532079,
+      32.937010213471325
+     ],
+     [
+      35.25799874866653,
+      32.93701019070209
+     ],
+     [
+      35.25799912919493,
+      32.93701014543903
+     ],
+     [
+      35.25799950505207,
+      32.93701007790265
+     ],
+     [
+      35.257999874406835,
+      32.937009988421984
+     ],
+     [
+      35.25800023545975,
+      32.93700987743298
+     ],
+     [
+      35.2580005864518,
+      32.93700974547634
+     ],
+     [
+      35.258000925672995,
+      32.93700959319497
+     ],
+     [
+      35.25800125147068,
+      32.93700942133075
+     ],
+     [
+      35.258001562257604,
+      32.937009230721
+     ],
+     [
+      35.258001856519634,
+      32.93700902229436
+     ],
+     [
+      35.258002132823165,
+      32.93700879706624
+     ],
+     [
+      35.25800238982208,
+      32.93700855613394
+     ],
+     [
+      35.25800262626429,
+      32.93700830067128
+     ],
+     [
+      35.25800284099788,
+      32.937008031922794
+     ],
+     [
+      35.25800303297669,
+      32.937007751197854
+     ],
+     [
+      35.258003201265424,
+      32.93700745986409
+     ],
+     [
+      35.25800334504419,
+      32.93700715934086
+     ],
+     [
+      35.2580034636125,
+      32.9370068510923
+     ],
+     [
+      35.25800355639272,
+      32.93700653662013
+     ],
+     [
+      35.25800362293284,
+      32.93700621745646
+     ],
+     [
+      35.25800366290866,
+      32.937005895156204
+     ],
+     [
+      35.25800367612544,
+      32.937005571289575
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbCircle",
+    "Linetype": "Continuous",
+    "EntityHand": "4EB",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.2583056398545,
+      32.93710246590405
+     ],
+     [
+      35.25833286733764,
+      32.93710211936299
+     ],
+     [
+      35.25833287465071,
+      32.93711419458836
+     ],
+     [
+      35.25830564716387,
+      32.93711454112944
+     ],
+     [
+      35.2583056398545,
+      32.93710246590405
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "Continuous",
+    "EntityHand": "4ED",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25797966985468,
+      32.937022685472975
+     ],
+     [
+      35.25800629886094,
+      32.937023066140966
+     ],
+     [
+      35.258006306129616,
+      32.93703514136655
+     ],
+     [
+      35.25797967711973,
+      32.93703476069856
+     ],
+     [
+      35.25797966985468,
+      32.937022685472975
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "Continuous",
+    "EntityHand": "4EF",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25843116610187,
+      32.93666823778291
+     ],
+     [
+      35.25845709403733,
+      32.936668226594165
+     ],
+     [
+      35.25845710136716,
+      32.93668030182035
+     ],
+     [
+      35.258431173428185,
+      32.936680313009106
+     ],
+     [
+      35.25843116610187,
+      32.93666823778291
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "Continuous",
+    "EntityHand": "4F1",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25848357984426,
+      32.93652111211785
+     ],
+     [
+      35.25850382929921,
+      32.93652110337154
+     ],
+     [
+      35.258503836635356,
+      32.936533178598
+     ],
+     [
+      35.25848358717766,
+      32.93653318734431
+     ],
+     [
+      35.25848357984426,
+      32.93652111211785
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "Continuous",
+    "EntityHand": "4F3",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25869452491993,
+      32.936450823588046
+     ],
+     [
+      35.258720863400136,
+      32.93645081216663
+     ],
+     [
+      35.25872087076575,
+      32.936462887393176
+     ],
+     [
+      35.25869453228197,
+      32.9364628988146
+     ],
+     [
+      35.25869452491993,
+      32.936450823588046
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "Continuous",
+    "EntityHand": "4F5",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25869451770164,
+      32.93639577252642
+     ],
+     [
+      35.25871476712796,
+      32.93639576374597
+     ],
+     [
+      35.25871477449273,
+      32.93640783897263
+     ],
+     [
+      35.25869452506367,
+      32.93640784775309
+     ],
+     [
+      35.25869451770164,
+      32.93639577252642
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "Continuous",
+    "EntityHand": "4F7",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.258795895886394,
+      32.93625747119031
+     ],
+     [
+      35.25882242404939,
+      32.93625745966513
+     ],
+     [
+      35.25882243142876,
+      32.93626953489204
+     ],
+     [
+      35.258795903262154,
+      32.93626954641722
+     ],
+     [
+      35.258795895886394,
+      32.93625747119031
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "Continuous",
+    "EntityHand": "4FA",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25807653516011,
+      32.93674342325999
+     ],
+     [
+      35.258095481905286,
+      32.936743415138146
+     ],
+     [
+      35.258095486288596,
+      32.93675068494268
+     ],
+     [
+      35.25807653954186,
+      32.93675069306453
+     ],
+     [
+      35.25807653516011,
+      32.93674342325999
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "",
+    "EntityHand": "500",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.258311442394124,
+      32.93708090979232
+     ],
+     [
+      35.25820835934371,
+      32.93700409492838
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "",
+    "EntityHand": "501",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25799817038049,
+      32.93700557364597
+     ],
+     [
+      35.25806784563815,
+      32.93697088323164
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "",
+    "EntityHand": "502",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25839136022235,
+      32.936885598543505
+     ],
+     [
+      35.25826488621003,
+      32.93683446463369
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "",
+    "EntityHand": "503",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.258444872905095,
+      32.93664816313046
+     ],
+     [
+      35.258469067398934,
+      32.936501692807994
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "",
+    "EntityHand": "504",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.2583548646301,
+      32.93649590819113
+     ],
+     [
+      35.258469067398934,
+      32.936501692807994
+     ],
+     [
+      35.25867374319825,
+      32.93640401544943
+     ],
+     [
+      35.25880343595524,
+      32.93628107822536
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "",
+    "EntityHand": "505",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.258818783697045,
+      32.93630445212018
+     ],
+     [
+      35.25880289103079,
+      32.936281745705294
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "",
+    "EntityHand": "506",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25867034621273,
+      32.936444565471184
+     ],
+     [
+      35.25867374319825,
+      32.93640401544943
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "",
+    "EntityHand": "507",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25872329518792,
+      32.93641590471967
+     ],
+     [
+      35.2586853438719,
+      32.93641592117584
+     ],
+     [
+      35.258673271809855,
+      32.93640964244348
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "",
+    "EntityHand": "542",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.258717631197385,
+      32.936438443224525
+     ],
+     [
+      35.25868087478528,
+      32.936437829653144
+     ],
+     [
+      35.258670891151375,
+      32.93643806050807
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "",
+    "EntityHand": "543",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.258855450310044,
+      32.93627958015725
+     ],
+     [
+      35.258817754383216,
+      32.93627921690459
+     ],
+     [
+      35.25880658604514,
+      32.93628702490432
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbPolyline",
+    "Linetype": "",
+    "EntityHand": "544",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25831101755428,
+      32.937081315191506
+     ],
+     [
+      35.25830959205882,
+      32.937082675456296
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "553",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.258207934503766,
+      32.93700450032723
+     ],
+     [
+      35.25820650900796,
+      32.937005860590865
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "553",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25820853249907,
+      32.937003573997
+     ],
+     [
+      35.25820887880977,
+      32.93700253213424
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "556",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.258067672482035,
+      32.936971404162826
+     ],
+     [
+      35.258067326169794,
+      32.93697244602522
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "556",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25806751944506,
+      32.93697041736723
+     ],
+     [
+      35.25805876468492,
+      32.93695791393856
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "559",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25799784418764,
+      32.93700510778137
+     ],
+     [
+      35.25798908943387,
+      32.936992604347886
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "559",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25820897699385,
+      32.93700424128443
+     ],
+     [
+      35.25821021229414,
+      32.937004533996515
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "55C",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25826550385908,
+      32.93683461098948
+     ],
+     [
+      35.258266739157186,
+      32.936834903701005
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "55C",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25826460883751,
+      32.93683495246806
+     ],
+     [
+      35.25826405409246,
+      32.93683592813679
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "55F",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25839108285036,
+      32.93688608637816
+     ],
+     [
+      35.25839052810638,
+      32.93688706204743
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "55F",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25826486524373,
+      32.936835005352634
+     ],
+     [
+      35.25826455224743,
+      32.93684307750007
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "562",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.2581315552012,
+      32.93683132966308
+     ],
+     [
+      35.258131242192796,
+      32.936839401810204
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "562",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.2581310225154,
+      32.93683106229666
+     ],
+     [
+      35.25812991520959,
+      32.936831609001636
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "565",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.258071251041,
+      32.936744977490555
+     ],
+     [
+      35.258070143735885,
+      32.93674552419501
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "565",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25826426016823,
+      32.93683434632143
+     ],
+     [
+      35.25826300808465,
+      32.936834109696875
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "568",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25835423859057,
+      32.936495789879295
+     ],
+     [
+      35.258352986511525,
+      32.93649555325563
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "568",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25835482616183,
+      32.93649644822567
+     ],
+     [
+      35.25835474922529,
+      32.936497528294765
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "56B",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25846902893136,
+      32.93650223284257
+     ],
+     [
+      35.25846895199621,
+      32.936503312911725
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "56B",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25846843196495,
+      32.936501618170446
+     ],
+     [
+      35.258467161096966,
+      32.93650146889533
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "56E",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25844423747008,
+      32.936648088492774
+     ],
+     [
+      35.25844296660004,
+      32.93664793921742
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "56E",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25846938339074,
+      32.936502163644775
+     ],
+     [
+      35.25847001537435,
+      32.93650310531835
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "571",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.258674059190795,
+      32.93640448628571
+     ],
+     [
+      35.25867469117587,
+      32.93640542795824
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "571",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.258673102947114,
+      32.93640398080272
+     ],
+     [
+      35.25866211553496,
+      32.9364033862266
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "574",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.258670026668526,
+      32.936444404450285
+     ],
+     [
+      35.2586590392514,
+      32.9364438098739
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "574",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.258673263853204,
+      32.936403655863124
+     ],
+     [
+      35.25867230516311,
+      32.93640293669051
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "577",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.25880295661033,
+      32.936280718639544
+     ],
+     [
+      35.258801997920514,
+      32.93627999946791
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "577",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.258803997227396,
+      32.93628081615994
+     ],
+     [
+      35.258805119771694,
+      32.9362802920291
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "57A",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "LineString",
+    "coordinates": [
+     [
+      35.258819344969304,
+      32.93630419005469
+     ],
+     [
+      35.258820467513814,
+      32.93630366592372
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "DIM",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbLine",
+    "Linetype": "",
+    "EntityHand": "57A",
+    "Text": "",
+    "_layer_type": "line"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "MultiLineString",
+    "coordinates": [
+     [
+      [
+       35.25813337200048,
+       32.9369863710082
+      ],
+      [
+       35.2581305454658,
+       32.936986522307365
+      ]
+     ],
+     [
+      [
+       35.25813337200048,
+       32.9369863710082
+      ],
+      [
+       35.258131050503465,
+       32.93698500292447
+      ]
+     ],
+     [
+      [
+       35.258131050503465,
+       32.93698500292447
+      ],
+      [
+       35.258132599795715,
+       32.93698618849053
+      ]
+     ],
+     [
+      [
+       35.258132599795715,
+       32.93698618849053
+      ],
+      [
+       35.2581305454658,
+       32.936986522307365
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "4A1",
+    "Text": "",
+    "_layer_type": "multiline"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "MultiLineString",
+    "coordinates": [
+     [
+      [
+       35.25819240872096,
+       32.93700032486234
+      ],
+      [
+       35.25818958218594,
+       32.93700047616284
+      ]
+     ],
+     [
+      [
+       35.25819240872096,
+       32.93700032486234
+      ],
+      [
+       35.25819008722268,
+       32.93699895677971
+      ]
+     ],
+     [
+      [
+       35.25819008722268,
+       32.93699895677971
+      ],
+      [
+       35.25819163651597,
+       32.93700014234503
+      ]
+     ],
+     [
+      [
+       35.25819163651597,
+       32.93700014234503
+      ],
+      [
+       35.25818958218594,
+       32.93700047616284
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "4A2",
+    "Text": "",
+    "_layer_type": "multiline"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "MultiLineString",
+    "coordinates": [
+     [
+      [
+       35.25808140148736,
+       32.9369740872883
+      ],
+      [
+       35.25807857495297,
+       32.93697423858629
+      ]
+     ],
+     [
+      [
+       35.25808140148736,
+       32.9369740872883
+      ],
+      [
+       35.25807907999146,
+       32.9369727192036
+      ]
+     ],
+     [
+      [
+       35.25807907999146,
+       32.9369727192036
+      ],
+      [
+       35.258080629282816,
+       32.9369739047703
+      ]
+     ],
+     [
+      [
+       35.258080629282816,
+       32.9369739047703
+      ],
+      [
+       35.25807857495297,
+       32.93697423858629
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "4A3",
+    "Text": "",
+    "_layer_type": "multiline"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "MultiLineString",
+    "coordinates": [
+     [
+      [
+       35.25821605158284,
+       32.93698060025294
+      ],
+      [
+       35.25821624205079,
+       32.93698298312776
+      ]
+     ],
+     [
+      [
+       35.25821605158284,
+       32.93698060025294
+      ],
+      [
+       35.258214438279836,
+       32.93698256319418
+      ]
+     ],
+     [
+      [
+       35.258214438279836,
+       32.93698256319418
+      ],
+      [
+       35.25821583815758,
+       32.93698125212535
+      ]
+     ],
+     [
+      [
+       35.25821583815758,
+       32.93698125212535
+      ],
+      [
+       35.25821624205079,
+       32.93698298312776
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "4A4",
+    "Text": "",
+    "_layer_type": "multiline"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "MultiLineString",
+    "coordinates": [
+     [
+      [
+       35.258224201022806,
+       32.93695570911882
+      ],
+      [
+       35.25822439149092,
+       32.93695809199363
+      ]
+     ],
+     [
+      [
+       35.258224201022806,
+       32.93695570911882
+      ],
+      [
+       35.25822258772043,
+       32.93695767206017
+      ]
+     ],
+     [
+      [
+       35.25822258772043,
+       32.93695767206017
+      ],
+      [
+       35.258223987597674,
+       32.93695636099124
+      ]
+     ],
+     [
+      [
+       35.258223987597674,
+       32.93695636099124
+      ],
+      [
+       35.25822439149092,
+       32.93695809199363
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "4A5",
+    "Text": "",
+    "_layer_type": "multiline"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "MultiLineString",
+    "coordinates": [
+     [
+      [
+       35.25824079561678,
+       32.93690502359536
+      ],
+      [
+       35.258240986085234,
+       32.93690740647017
+      ]
+     ],
+     [
+      [
+       35.25824079561678,
+       32.93690502359536
+      ],
+      [
+       35.25823918231569,
+       32.93690698653693
+      ]
+     ],
+     [
+      [
+       35.25823918231569,
+       32.93690698653693
+      ],
+      [
+       35.25824058219189,
+       32.93690567546783
+      ]
+     ],
+     [
+      [
+       35.25824058219189,
+       32.93690567546783
+      ],
+      [
+       35.258240986085234,
+       32.93690740647017
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "4A6",
+    "Text": "",
+    "_layer_type": "multiline"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "MultiLineString",
+    "coordinates": [
+     [
+      [
+       35.258256759163636,
+       32.93685626544713
+      ],
+      [
+       35.258256949632404,
+       32.93685864832194
+      ]
+     ],
+     [
+      [
+       35.258256759163636,
+       32.93685626544713
+      ],
+      [
+       35.25825514586378,
+       32.93685822838893
+      ]
+     ],
+     [
+      [
+       35.25825514586378,
+       32.93685822838893
+      ],
+      [
+       35.25825654573897,
+       32.93685691731963
+      ]
+     ],
+     [
+      [
+       35.25825654573897,
+       32.93685691731963
+      ],
+      [
+       35.258256949632404,
+       32.93685864832194
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "4A7",
+    "Text": "",
+    "_layer_type": "multiline"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "MultiLineString",
+    "coordinates": [
+     [
+      [
+       35.25826889739778,
+       32.93681937203301
+      ],
+      [
+       35.258269087866786,
+       32.936821754907804
+      ]
+     ],
+     [
+      [
+       35.25826889739778,
+       32.93681937203301
+      ],
+      [
+       35.25826728409886,
+       32.936821334974965
+      ]
+     ],
+     [
+      [
+       35.25826728409886,
+       32.936821334974965
+      ],
+      [
+       35.25826868397329,
+       32.936820023905526
+      ]
+     ],
+     [
+      [
+       35.25826868397329,
+       32.936820023905526
+      ],
+      [
+       35.258269087866786,
+       32.936821754907804
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "4A8",
+    "Text": "",
+    "_layer_type": "multiline"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "MultiLineString",
+    "coordinates": [
+     [
+      [
+       35.25827982844741,
+       32.93677824255087
+      ],
+      [
+       35.25828001891662,
+       32.936780625425676
+      ]
+     ],
+     [
+      [
+       35.25827982844741,
+       32.93677824255087
+      ],
+      [
+       35.25827821514948,
+       32.93678020549297
+      ]
+     ],
+     [
+      [
+       35.25827821514948,
+       32.93678020549297
+      ],
+      [
+       35.258279615023106,
+       32.9367788944234
+      ]
+     ],
+     [
+      [
+       35.258279615023106,
+       32.9367788944234
+      ],
+      [
+       35.25828001891662,
+       32.936780625425676
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "4A9",
+    "Text": "",
+    "_layer_type": "multiline"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "MultiLineString",
+    "coordinates": [
+     [
+      [
+       35.25830728086941,
+       32.936674949104486
+      ],
+      [
+       35.25830747133913,
+       32.936677331979276
+      ]
+     ],
+     [
+      [
+       35.25830728086941,
+       32.936674949104486
+      ],
+      [
+       35.25830566757396,
+       32.936676912046984
+      ]
+     ],
+     [
+      [
+       35.25830566757396,
+       32.936676912046984
+      ],
+      [
+       35.25830706744555,
+       32.93667560097708
+      ]
+     ],
+     [
+      [
+       35.25830706744555,
+       32.93667560097708
+      ],
+      [
+       35.25830747133913,
+       32.936677331979276
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "4AA",
+    "Text": "",
+    "_layer_type": "multiline"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "MultiLineString",
+    "coordinates": [
+     [
+      [
+       35.25832757671127,
+       32.93659858309873
+      ],
+      [
+       35.25832776718138,
+       32.93660096597352
+      ]
+     ],
+     [
+      [
+       35.25832757671127,
+       32.93659858309873
+      ],
+      [
+       35.258325963417654,
+       32.93660054604152
+      ]
+     ],
+     [
+      [
+       35.258325963417654,
+       32.93660054604152
+      ],
+      [
+       35.25832736328775,
+       32.936599234971375
+      ]
+     ],
+     [
+      [
+       35.25832736328775,
+       32.936599234971375
+      ],
+      [
+       35.25832776718138,
+       32.93660096597352
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "4AB",
+    "Text": "",
+    "_layer_type": "multiline"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "MultiLineString",
+    "coordinates": [
+     [
+      [
+       35.258352656766945,
+       32.9365042156181
+      ],
+      [
+       35.25835284723752,
+       32.93650659849289
+      ]
+     ],
+     [
+      [
+       35.258352656766945,
+       32.9365042156181
+      ],
+      [
+       35.25835104347559,
+       32.93650617856124
+      ]
+     ],
+     [
+      [
+       35.25835104347559,
+       32.93650617856124
+      ],
+      [
+       35.25835244334383,
+       32.93650486749079
+      ]
+     ],
+     [
+      [
+       35.25835244334383,
+       32.93650486749079
+      ],
+      [
+       35.25835284723752,
+       32.93650659849289
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "4AC",
+    "Text": "",
+    "_layer_type": "multiline"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "MultiLineString",
+    "coordinates": [
+     [
+      [
+       35.2581970779367,
+       32.936832510479775
+      ],
+      [
+       35.258194369357525,
+       32.93683320842882
+      ]
+     ],
+     [
+      [
+       35.2581970779367,
+       32.936832510479775
+      ],
+      [
+       35.258194444388764,
+       32.9368316317581
+      ]
+     ],
+     [
+      [
+       35.258194444388764,
+       32.9368316317581
+      ],
+      [
+       35.25819627661764,
+       32.936832483363894
+      ]
+     ],
+     [
+      [
+       35.25819627661764,
+       32.936832483363894
+      ],
+      [
+       35.258194369357525,
+       32.93683320842882
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "4DA",
+    "Text": "",
+    "_layer_type": "multiline"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "MultiLineString",
+    "coordinates": [
+     [
+      [
+       35.25824840808649,
+       32.937033996788664
+      ],
+      [
+       35.258251060786385,
+       32.93703483355834
+      ]
+     ],
+     [
+      [
+       35.25824840808649,
+       32.937033996788664
+      ],
+      [
+       35.258249862987014,
+       32.93703604586916
+      ]
+     ],
+     [
+      [
+       35.258249862987014,
+       32.93703604586916
+      ],
+      [
+       35.258249024226544,
+       32.93703442966621
+      ]
+     ],
+     [
+      [
+       35.258249024226544,
+       32.93703442966621
+      ],
+      [
+       35.258251060786385,
+       32.93703483355834
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "508",
+    "Text": "",
+    "_layer_type": "multiline"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "MultiLineString",
+    "coordinates": [
+     [
+      [
+       35.25833020150771,
+       32.936860980504036
+      ],
+      [
+       35.25833301755694,
+       32.93686123534975
+      ]
+     ],
+     [
+      [
+       35.25833020150771,
+       32.936860980504036
+      ],
+      [
+       35.25833221445326,
+       32.93686266057459
+      ]
+     ],
+     [
+      [
+       35.25833221445326,
+       32.93686266057459
+      ],
+      [
+       35.258330925856924,
+       32.93686127074148
+      ]
+     ],
+     [
+      [
+       35.258330925856924,
+       32.93686127074148
+      ],
+      [
+       35.25833301755694,
+       32.93686123534975
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "509",
+    "Text": "",
+    "_layer_type": "multiline"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "MultiLineString",
+    "coordinates": [
+     [
+      [
+       35.25845655895797,
+       32.93657748564646
+      ],
+      [
+       35.25845701286612,
+       32.93657984305676
+      ]
+     ],
+     [
+      [
+       35.25845655895797,
+       32.93657748564646
+      ],
+      [
+       35.25845517043566,
+       32.93657956721475
+      ]
+     ],
+     [
+      [
+       35.25845517043566,
+       32.93657956721475
+      ],
+      [
+       35.25845641876584,
+       32.93657815149326
+      ]
+     ],
+     [
+      [
+       35.25845641876584,
+       32.93657815149326
+      ],
+      [
+       35.25845701286612,
+       32.93657984305676
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "50A",
+    "Text": "",
+    "_layer_type": "multiline"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "MultiLineString",
+    "coordinates": [
+     [
+      [
+       35.2585771352375,
+       32.93645001792052
+      ],
+      [
+       35.25857532567466,
+       32.93645185515506
+      ]
+     ],
+     [
+      [
+       35.2585771352375,
+       32.93645001792052
+      ],
+      [
+       35.25857436195971,
+       32.9364505025736
+      ]
+     ],
+     [
+      [
+       35.25857436195971,
+       32.9364505025736
+      ],
+      [
+       35.258576447811414,
+       32.93645036620367
+      ]
+     ],
+     [
+      [
+       35.258576447811414,
+       32.93645036620367
+      ],
+      [
+       35.25857532567466,
+       32.93645185515506
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "50B",
+    "Text": "",
+    "_layer_type": "multiline"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "MultiLineString",
+    "coordinates": [
+     [
+      [
+       35.25841852955274,
+       32.9364990972121
+      ],
+      [
+       35.258415784927806,
+       32.93649968655037
+      ]
+     ],
+     [
+      [
+       35.25841852955274,
+       32.9364990972121
+      ],
+      [
+       35.25841594814854,
+       32.93649811462482
+      ]
+     ],
+     [
+      [
+       35.25841594814854,
+       32.93649811462482
+      ],
+      [
+       35.258417730648375,
+       32.936499038224746
+      ]
+     ],
+     [
+      [
+       35.258417730648375,
+       32.936499038224746
+      ],
+      [
+       35.258415784927806,
+       32.93649968655037
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "50C",
+    "Text": "",
+    "_layer_type": "multiline"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "MultiLineString",
+    "coordinates": [
+     [
+      [
+       35.258672108825905,
+       32.93642350121046
+      ],
+      [
+       35.25867278546715,
+       32.9364258203319
+      ]
+     ],
+     [
+      [
+       35.258672108825905,
+       32.93642350121046
+      ],
+      [
+       35.258670922740855,
+       32.936425669974405
+      ]
+     ],
+     [
+      [
+       35.258670922740855,
+       32.936425669974405
+      ],
+      [
+       35.258672032409336,
+       32.93642417439327
+      ]
+     ],
+     [
+      [
+       35.258672032409336,
+       32.93642417439327
+      ],
+      [
+       35.25867278546715,
+       32.9364258203319
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "50D",
+    "Text": "",
+    "_layer_type": "multiline"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "MultiLineString",
+    "coordinates": [
+     [
+      [
+       35.25881042880306,
+       32.93629261825166
+      ],
+      [
+       35.258812568215745,
+       32.93629418323811
+      ]
+     ],
+     [
+      [
+       35.25881042880306,
+       32.93629261825166
+      ],
+      [
+       35.25881094392178,
+       32.936294966699016
+      ]
+     ],
+     [
+      [
+       35.25881094392178,
+       32.936294966699016
+      ],
+      [
+       35.25881082698277,
+       32.936293205266736
+      ]
+     ],
+     [
+      [
+       35.25881082698277,
+       32.936293205266736
+      ],
+      [
+       35.258812568215745,
+       32.93629418323811
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "50E",
+    "Text": "",
+    "_layer_type": "multiline"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "MultiLineString",
+    "coordinates": [
+     [
+      [
+       35.258741840555885,
+       32.93633923859523
+      ],
+      [
+       35.25874095792987,
+       32.93634150794168
+      ]
+     ],
+     [
+      [
+       35.258741840555885,
+       32.93633923859523
+      ],
+      [
+       35.25873947234495,
+       32.93634054848709
+      ]
+     ],
+     [
+      [
+       35.25873947234495,
+       32.93634054848709
+      ],
+      [
+       35.25874135293034,
+       32.93633977548098
+      ]
+     ],
+     [
+      [
+       35.25874135293034,
+       32.93633977548098
+      ],
+      [
+       35.25874095792987,
+       32.93634150794168
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "50F",
+    "Text": "",
+    "_layer_type": "multiline"
+   }
+  },
+  {
+   "type": "Feature",
+   "geometry": {
+    "type": "MultiLineString",
+    "coordinates": [
+     [
+      [
+       35.25803044763874,
+       32.9369895107093
+      ],
+      [
+       35.258028772204916,
+       32.93699143628537
+      ]
+     ],
+     [
+      [
+       35.25803044763874,
+       32.9369895107093
+      ],
+      [
+       35.258027713875315,
+       32.93699013496107
+      ]
+     ],
+     [
+      [
+       35.258027713875315,
+       32.93699013496107
+      ],
+      [
+       35.258029786259165,
+       32.93698989318348
+      ]
+     ],
+     [
+      [
+       35.258029786259165,
+       32.93698989318348
+      ],
+      [
+       35.258028772204916,
+       32.93699143628537
+      ]
+     ]
+    ]
+   },
+   "properties": {
+    "Layer": "BIUV",
+    "PaperSpace": "*********",
+    "SubClasses": "AcDbEntity:AcDbBlockReference",
+    "Linetype": "",
+    "EntityHand": "510",
+    "Text": "",
+    "_layer_type": "multiline"
+   }
+  }
+ ]
+}
