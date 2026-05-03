@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>מי הגליל | יומן פעילות</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="auth.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    :root{--blue-dark:#0d3b5e;--blue-mid:#1a7fc1;--blue-light:#5ab8e8;--surface:#f8fafc;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--red:#dc2626;--green:#16a34a;--amber:#d97706;--purple:#7c3aed}
+    body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;direction:rtl;background:var(--surface);color:var(--text);visibility:hidden;min-height:100vh}
+    body.ready{visibility:visible}
+    #topbar{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:52px;background:var(--blue-dark);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.3)}
+    .logo{font-size:15px;font-weight:600}.logo span{color:var(--blue-light)}
+    .topbar-right{display:flex;align-items:center;gap:10px}
+    .badge-admin{background:rgba(255,255,255,0.15);border-radius:5px;padding:2px 10px;font-size:11px;color:rgba(255,255,255,0.85)}
+    .topbar-btn{padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;border:1px solid rgba(255,255,255,0.3);color:#fff;background:transparent;text-decoration:none;display:inline-block}
+    .topbar-btn:hover{background:rgba(255,255,255,0.1)}
+    .topbar-btn.solid{background:var(--blue-mid);border-color:var(--blue-mid)}
+
+    #content{max-width:1200px;margin:0 auto;padding:28px 20px}
+    h1{font-size:22px;font-weight:700;color:var(--blue-dark);margin-bottom:4px}
+    .page-sub{font-size:13px;color:var(--muted);margin-bottom:24px}
+
+    /* Filters */
+    .filters{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:flex-end}
+    .filter-group{display:flex;flex-direction:column;gap:5px}
+    .filter-group label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px}
+    .filter-group select,.filter-group input{padding:8px 12px;border:1px solid var(--border);border-radius:7px;font-size:13px;font-family:inherit;background:#fff;min-width:140px}
+    .btn-clear{padding:8px 14px;border-radius:7px;border:1px solid var(--border);background:#fff;color:var(--muted);cursor:pointer;font-size:12px;font-family:inherit}
+    .btn-clear:hover{background:var(--surface)}
+
+    /* Stats */
+    .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+    .stat-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px}
+    .stat-num{font-size:22px;font-weight:700;color:var(--blue-dark)}
+    .stat-label{font-size:11px;color:var(--muted);margin-top:2px}
+    .stat-card.green .stat-num{color:var(--green)}
+    .stat-card.amber .stat-num{color:var(--amber)}
+    .stat-card.red .stat-num{color:var(--red)}
+
+    /* Logs table */
+    .card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:0;overflow:hidden}
+    .card-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+    .card-title{font-size:15px;font-weight:600;color:var(--blue-dark)}
+
+    table.logs{width:100%;border-collapse:collapse}
+    table.logs th{text-align:right;padding:11px 14px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;border-bottom:2px solid var(--border);background:var(--surface);position:sticky;top:0}
+    table.logs td{padding:12px 14px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:top}
+    table.logs tr:hover td{background:#f8fafc}
+
+    .action-tag{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:5px;font-size:11px;font-weight:600;white-space:nowrap}
+    .action-created{background:#eff6ff;color:#1e40af}
+    .action-taken{background:#fef3c7;color:#92400e}
+    .action-closed{background:#dcfce7;color:#166534}
+    .action-reopened{background:#fee2e2;color:#991b1b}
+    .action-updated{background:#f3e8ff;color:#6b21a8}
+
+    .priority-pill{display:inline-block;padding:1px 7px;border-radius:4px;font-size:10px;font-weight:600}
+    .priority-high{background:#fee2e2;color:#991b1b}.priority-medium{background:#fef3c7;color:#92400e}.priority-low{background:#dcfce7;color:#166534}
+
+    .user-cell{display:flex;align-items:center;gap:8px}
+    .avatar-sm{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:#fff;flex-shrink:0}
+    .user-cell-name{font-weight:600}
+
+    .time-cell{font-size:12px;color:var(--text)}
+    .time-rel{font-size:10px;color:var(--muted);margin-top:2px}
+
+    .duration-cell{font-weight:600;color:var(--blue-mid);font-size:12px;font-family:monospace}
+
+    .notes-cell{max-width:280px;font-size:12px;color:var(--text);line-height:1.5}
+    .notes-empty{color:var(--muted);font-style:italic}
+
+    .empty{text-align:center;padding:60px 20px;color:var(--muted)}
+    .empty-icon{font-size:42px;margin-bottom:10px}
+
+    #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--blue-dark);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:2000;transition:transform 0.3s;white-space:nowrap}
+    #toast.show{transform:translateX(-50%) translateY(0)}
+
+    .pagination{display:flex;justify-content:center;align-items:center;gap:8px;padding:16px;border-top:1px solid var(--border)}
+    .page-btn{padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:#fff;color:var(--text);cursor:pointer;font-size:13px;font-family:inherit}
+    .page-btn:hover:not(:disabled){background:var(--surface);border-color:var(--blue-mid)}
+    .page-btn:disabled{opacity:0.5;cursor:not-allowed}
+    .page-info{font-size:13px;color:var(--muted)}
+  </style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="logo">💧 מי <span>הגליל</span> | יומן פעילות</div>
+  <div class="topbar-right">
+    <span class="badge-admin">👑 מנהל מערכת</span>
+    <a href="index.html" class="topbar-btn solid">🗺️ למפה</a>
+    <a href="admin.html" class="topbar-btn">⚙️ ניהול</a>
+    <button class="topbar-btn" onclick="logout()">התנתק</button>
+  </div>
+</div>
+
+<div id="content">
+  <h1>📋 יומן פעילות</h1>
+  <p class="page-sub">היסטוריה של כל הפעולות על תקלות — מי עשה מה ומתי</p>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-num" id="s-total">—</div><div class="stat-label">סה"כ פעולות</div></div>
+    <div class="stat-card green"><div class="stat-num" id="s-closed">—</div><div class="stat-label">תקלות נסגרו</div></div>
+    <div class="stat-card amber"><div class="stat-num" id="s-taken">—</div><div class="stat-label">בטיפול עכשיו</div></div>
+    <div class="stat-card red"><div class="stat-num" id="s-avg">—</div><div class="stat-label">זמן טיפול ממוצע</div></div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <div class="filter-group">
+      <label>פעולה</label>
+      <select id="f-action" onchange="applyFilters()">
+        <option value="">הכל</option>
+        <option value="created">נפתח</option>
+        <option value="taken">נלקח לטיפול</option>
+        <option value="closed">נסגר</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>ישוב</label>
+      <select id="f-village" onchange="applyFilters()">
+        <option value="">הכל</option>
+        <option>מגד אל-כרום</option><option>בענה</option><option>דיר אל-אסד</option>
+        <option>נחף</option><option>סחנין</option><option>דיר חנא</option><option>ערבה</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>משתמש</label>
+      <select id="f-user" onchange="applyFilters()"><option value="">הכל</option></select>
+    </div>
+    <div class="filter-group">
+      <label>חיפוש</label>
+      <input type="text" id="f-search" placeholder="כותרת תקלה, הערות..." oninput="applyFilters()"/>
+    </div>
+    <button class="btn-clear" onclick="clearFilters()">🗑️ נקה סינון</button>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">📑 יומן (<span id="filtered-count">0</span> רשומות)</div>
+    </div>
+    <div id="logs-container"><div class="empty"><div class="empty-icon">⏳</div>טוען...</div></div>
+    <div class="pagination" id="pagination" style="display:none">
+      <button class="page-btn" id="prev-btn" onclick="changePage(-1)">‹ הקודם</button>
+      <span class="page-info" id="page-info">—</span>
+      <button class="page-btn" id="next-btn" onclick="changePage(1)">הבא ›</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+var gAllLogs = [];
+var gFilteredLogs = [];
+var gPage = 0;
+var PAGE_SIZE = 50;
+var AV_COLORS = ['#0d3b5e','#1a7fc1','#0d9488','#7c3aed','#b45309','#dc2626','#0891b2','#16a34a'];
+var ACTION_LABEL = { created:'🆕 נפתח', taken:'📋 נלקח', closed:'✔ נסגר', reopened:'🔄 נפתח מחדש', updated:'✏️ עודכן' };
+
+window.addEventListener('load', async function() {
+  var res = await gSb.auth.getSession();
+  if (!res.data || !res.data.session) { window.location.replace('login.html'); return; }
+  var role = await getUserRole(res.data.session.user.id);
+  if (role !== 'admin') { window.location.replace('index.html'); return; }
+  document.body.classList.add('ready');
+  loadLogs();
+});
+
+async function loadLogs() {
+  var res = await gSb.from('incident_logs').select('*').order('created_at', {ascending:false}).limit(2000);
+  if (res.error) { showToast('שגיאה: ' + res.error.message); return; }
+  gAllLogs = res.data || [];
+  populateUserFilter();
+  updateStats();
+  applyFilters();
+}
+
+function populateUserFilter() {
+  var users = {};
+  gAllLogs.forEach(function(l) { if (l.user_name) users[l.user_id] = l.user_name; });
+  var sel = document.getElementById('f-user');
+  sel.innerHTML = '<option value="">הכל</option>' + 
+    Object.keys(users).map(function(id) { return '<option value="'+id+'">'+users[id]+'</option>'; }).join('');
+}
+
+function updateStats() {
+  var total  = gAllLogs.length;
+  var closed = gAllLogs.filter(function(l){return l.action==='closed';}).length;
+  var taken  = gAllLogs.filter(function(l){return l.action==='taken';}).length;
+  var closedLogs = gAllLogs.filter(function(l){return l.action==='closed' && l.duration_seconds;});
+  var avgSec = closedLogs.length ? Math.floor(closedLogs.reduce(function(s,l){return s+l.duration_seconds;},0) / closedLogs.length) : 0;
+  document.getElementById('s-total').textContent  = total;
+  document.getElementById('s-closed').textContent = closed;
+  document.getElementById('s-taken').textContent  = taken;
+  document.getElementById('s-avg').textContent    = avgSec ? formatDuration(avgSec) : '—';
+}
+
+function applyFilters() {
+  var fAction  = document.getElementById('f-action').value;
+  var fVillage = document.getElementById('f-village').value;
+  var fUser    = document.getElementById('f-user').value;
+  var fSearch  = document.getElementById('f-search').value.trim().toLowerCase();
+
+  gFilteredLogs = gAllLogs.filter(function(l) {
+    if (fAction  && l.action !== fAction) return false;
+    if (fVillage && l.incident_village !== fVillage) return false;
+    if (fUser    && l.user_id !== fUser) return false;
+    if (fSearch) {
+      var hay = ((l.incident_title||'')+' '+(l.notes||'')+' '+(l.user_name||'')).toLowerCase();
+      if (hay.indexOf(fSearch) === -1) return false;
+    }
+    return true;
+  });
+  gPage = 0;
+  document.getElementById('filtered-count').textContent = gFilteredLogs.length;
+  renderLogs();
+}
+
+function clearFilters() {
+  document.getElementById('f-action').value  = '';
+  document.getElementById('f-village').value = '';
+  document.getElementById('f-user').value    = '';
+  document.getElementById('f-search').value  = '';
+  applyFilters();
+}
+
+function renderLogs() {
+  var el = document.getElementById('logs-container');
+  if (!gFilteredLogs.length) {
+    el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div>אין רשומות להצגה</div>';
+    document.getElementById('pagination').style.display = 'none';
+    return;
+  }
+
+  var start = gPage * PAGE_SIZE;
+  var end   = Math.min(start + PAGE_SIZE, gFilteredLogs.length);
+  var page  = gFilteredLogs.slice(start, end);
+
+  el.innerHTML = '<table class="logs"><thead><tr>' +
+    '<th>פעולה</th><th>תקלה</th><th>ישוב</th><th>משתמש</th><th>זמן</th><th>משך טיפול</th><th>הערות</th>' +
+    '</tr></thead><tbody>' +
+    page.map(function(l, i) {
+      var col = AV_COLORS[(start+i) % AV_COLORS.length];
+      var initials = (l.user_name || '?').split(' ').map(function(w){return w[0]||'';}).join('').substring(0,2).toUpperCase() || '??';
+      var dt = new Date(l.created_at);
+      var dateStr = dt.toLocaleDateString('he-IL') + ' ' + dt.toLocaleTimeString('he-IL', {hour:'2-digit',minute:'2-digit'});
+      return '<tr>' +
+        '<td><span class="action-tag action-'+l.action+'">'+(ACTION_LABEL[l.action]||l.action)+'</span></td>' +
+        '<td><div style="font-weight:600">'+(l.incident_title||'—')+'</div>'+
+            (l.incident_priority ? '<span class="priority-pill priority-'+l.incident_priority+'">'+priorityLabel(l.incident_priority)+'</span>' : '')+
+        '</td>' +
+        '<td>'+(l.incident_village||'—')+'</td>' +
+        '<td><div class="user-cell"><div class="avatar-sm" style="background:'+col+'">'+initials+'</div><div class="user-cell-name">'+(l.user_name||'—')+'</div></div></td>' +
+        '<td><div class="time-cell">'+dateStr+'</div><div class="time-rel">'+timeAgo(l.created_at)+'</div></td>' +
+        '<td><div class="duration-cell">'+(l.duration_seconds ? formatDuration(l.duration_seconds) : '—')+'</div></td>' +
+        '<td><div class="notes-cell">'+(l.notes ? l.notes : '<span class="notes-empty">—</span>')+'</div></td>' +
+      '</tr>';
+    }).join('') +
+    '</tbody></table>';
+
+  // Pagination
+  var totalPages = Math.ceil(gFilteredLogs.length / PAGE_SIZE);
+  document.getElementById('pagination').style.display = totalPages > 1 ? 'flex' : 'none';
+  document.getElementById('page-info').textContent = 'עמוד '+(gPage+1)+' מתוך '+totalPages+' · '+gFilteredLogs.length+' רשומות';
+  document.getElementById('prev-btn').disabled = gPage === 0;
+  document.getElementById('next-btn').disabled = gPage >= totalPages - 1;
+}
+
+function changePage(dir) {
+  gPage += dir;
+  renderLogs();
+  window.scrollTo({top:0, behavior:'smooth'});
+}
+
+// ── HELPERS ──
+function priorityLabel(p) { return {high:'גבוהה',medium:'בינונית',low:'נמוכה'}[p] || p; }
+
+function timeAgo(iso) {
+  if (!iso) return '';
+  var d = Math.floor((Date.now()-new Date(iso))/60000);
+  if (d < 1) return 'הרגע';
+  if (d < 60) return 'לפני '+d+' דקות';
+  var h = Math.floor(d/60);
+  if (h < 24) return 'לפני '+h+' שעות';
+  return 'לפני '+Math.floor(h/24)+' ימים';
+}
+
+function formatDuration(seconds) {
+  if (!seconds || seconds < 0) return '—';
+  var m = Math.floor(seconds/60);
+  if (m < 1) return seconds+' שנ׳';
+  if (m < 60) return m+' דק׳';
+  var h = Math.floor(m/60);
+  m = m % 60;
+  if (h < 24) return h+'ש׳ '+(m?m+'דק׳':'');
+  var d = Math.floor(h/24);
+  h = h % 24;
+  return d+'י׳ '+(h?h+'ש׳':'');
+}
+
+function showToast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function(){t.classList.remove('show');}, 3000);
+}
+</script>
+</body>
+</html>
