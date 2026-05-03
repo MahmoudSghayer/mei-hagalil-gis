@@ -8,101 +8,143 @@
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0d3b5e 0%,#1a5f8a 50%,#0d3b5e 100%);font-family:'Segoe UI',Tahoma,Arial,sans-serif;direction:rtl}
-    .bg-pattern{position:fixed;inset:0;opacity:0.04;background-image:repeating-linear-gradient(0deg,transparent,transparent 40px,#fff 40px,#fff 41px),repeating-linear-gradient(90deg,transparent,transparent 40px,#fff 40px,#fff 41px);pointer-events:none}
-    .card{background:#fff;border-radius:16px;padding:40px;width:380px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);position:relative;z-index:1}
+    .bg-grid{position:fixed;inset:0;opacity:0.04;background-image:repeating-linear-gradient(0deg,transparent,transparent 40px,#fff 40px,#fff 41px),repeating-linear-gradient(90deg,transparent,transparent 40px,#fff 40px,#fff 41px);pointer-events:none}
+    .card{background:#fff;border-radius:16px;padding:40px;width:390px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);position:relative;z-index:1}
     .logo-wrap{text-align:center;margin-bottom:32px}
-    .logo-icon{font-size:36px;margin-bottom:8px}
-    .logo-text{font-size:22px;font-weight:700;color:#0d3b5e}
+    .logo-icon{font-size:42px;margin-bottom:10px}
+    .logo-text{font-size:24px;font-weight:700;color:#0d3b5e}
     .logo-text span{color:#1a7fc1}
-    .logo-sub{font-size:12px;color:#64748b;margin-top:3px}
+    .logo-sub{font-size:12px;color:#64748b;margin-top:4px}
+    .divider{height:1px;background:#e2e8f0;margin:20px 0}
     .form-group{margin-bottom:18px}
-    label{display:block;font-size:12px;font-weight:600;color:#64748b;margin-bottom:6px}
-    input{width:100%;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;color:#1e293b;font-family:inherit;transition:border-color 0.15s;direction:ltr;text-align:right}
+    label{display:block;font-size:12px;font-weight:600;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.4px}
+    .input-wrap{position:relative}
+    input{width:100%;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;color:#1e293b;font-family:inherit;transition:border-color 0.15s}
     input:focus{outline:none;border-color:#1a7fc1;box-shadow:0 0 0 3px rgba(26,127,193,0.1)}
     input[type="email"]{direction:ltr;text-align:left}
-    .btn{width:100%;padding:12px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-weight:700;font-family:inherit;transition:all 0.15s;margin-top:8px}
-    .btn-primary{background:#0d3b5e;color:#fff}
-    .btn-primary:hover{background:#1a7fc1}
-    .btn-primary:disabled{background:#94a3b8;cursor:not-allowed}
-    .error-msg{background:#fee2e2;color:#991b1b;border-radius:8px;padding:10px 14px;font-size:13px;margin-top:16px;display:none}
-    .error-msg.show{display:block}
-    .spinner-inline{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-left:8px}
+    .eye-btn{position:absolute;left:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;font-size:16px;padding:0}
+    .forgot-link{display:block;text-align:left;font-size:12px;color:#1a7fc1;text-decoration:none;margin-top:6px}
+    .forgot-link:hover{text-decoration:underline}
+    .btn-login{width:100%;padding:13px;border-radius:8px;border:none;cursor:pointer;font-size:15px;font-weight:700;font-family:inherit;background:#0d3b5e;color:#fff;transition:background 0.15s;margin-top:4px}
+    .btn-login:hover{background:#1a7fc1}
+    .btn-login:disabled{background:#94a3b8;cursor:not-allowed}
+    .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-left:8px}
     @keyframes spin{to{transform:rotate(360deg)}}
-    .footer-text{text-align:center;font-size:11px;color:#94a3b8;margin-top:24px}
+    .error-msg{background:#fee2e2;color:#991b1b;border-radius:8px;padding:10px 14px;font-size:13px;margin-top:14px;display:none;text-align:center}
+    .error-msg.show{display:block}
+    .footer{text-align:center;font-size:11px;color:#94a3b8;margin-top:24px;line-height:1.6}
+    #fp-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100;align-items:center;justify-content:center}
+    #fp-overlay.open{display:flex}
+    #fp-modal{background:#fff;border-radius:12px;padding:28px;width:360px;max-width:95vw;direction:rtl;box-shadow:0 8px 32px rgba(0,0,0,0.2)}
+    .fp-title{font-size:16px;font-weight:700;color:#0d3b5e;margin-bottom:8px}
+    .fp-sub{font-size:13px;color:#64748b;margin-bottom:20px;line-height:1.5}
+    .fp-btns{display:flex;gap:10px;margin-top:16px}
+    .btn-send{flex:1;padding:10px;border-radius:7px;border:none;cursor:pointer;background:#0d3b5e;color:#fff;font-size:13px;font-weight:600;font-family:inherit}
+    .btn-send:hover{background:#1a7fc1}
+    .btn-cancel{padding:10px 16px;border-radius:7px;cursor:pointer;background:transparent;color:#64748b;font-size:13px;border:1px solid #e2e8f0;font-family:inherit}
+    .fp-ok{background:#dcfce7;color:#166534;border-radius:8px;padding:10px 14px;font-size:13px;margin-top:12px;display:none}
+    .fp-ok.show{display:block}
   </style>
 </head>
 <body>
-<div class="bg-pattern"></div>
+<div class="bg-grid"></div>
 <div class="card">
   <div class="logo-wrap">
     <div class="logo-icon">💧</div>
     <div class="logo-text">מי <span>הגליל</span></div>
-    <div class="logo-sub">מערכת GIS — כניסה לאתר</div>
+    <div class="logo-sub">מערכת ניהול GIS | כניסה למורשים בלבד</div>
   </div>
-
+  <div class="divider"></div>
   <div class="form-group">
     <label>כתובת אימייל</label>
     <input type="email" id="email" placeholder="your@email.com" autocomplete="username"/>
   </div>
   <div class="form-group">
     <label>סיסמה</label>
-    <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()"/>
+    <div class="input-wrap">
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()"/>
+      <button class="eye-btn" onclick="togglePass()" id="eye-btn">👁</button>
+    </div>
+    <a href="#" class="forgot-link" onclick="openFP(event)">שכחתי סיסמה</a>
   </div>
-
-  <button class="btn btn-primary" id="login-btn" onclick="login()">כניסה למערכת</button>
+  <button class="btn-login" id="login-btn" onclick="login()">כניסה למערכת</button>
   <div class="error-msg" id="err"></div>
-  <div class="footer-text">גישה למורשים בלבד | מי הגליל © 2025</div>
+  <div class="footer">גישה למורשים בלבד · מי הגליל © 2025<br>ליצירת חשבון פנה למנהל המערכת</div>
+</div>
+
+<div id="fp-overlay" onclick="closeFPBg(event)">
+  <div id="fp-modal">
+    <div class="fp-title">🔑 שכחת סיסמה?</div>
+    <div class="fp-sub">הכנס את כתובת האימייל שלך ונשלח לך קישור לאיפוס הסיסמה.</div>
+    <div class="form-group" style="margin-bottom:0">
+      <label>כתובת אימייל</label>
+      <input type="email" id="fp-email" placeholder="your@email.com"/>
+    </div>
+    <div class="fp-ok" id="fp-ok">✅ קישור נשלח! בדוק את תיבת הדואר.</div>
+    <div class="fp-btns">
+      <button class="btn-send" onclick="sendReset()">שלח קישור</button>
+      <button class="btn-cancel" onclick="closeFP()">ביטול</button>
+    </div>
+  </div>
 </div>
 
 <script>
-var SUPABASE_URL  = 'https://YOUR_PROJECT_ID.supabase.co';
+var SUPABASE_URL  = 'https://hlbogufrdxpviyxlwqtf.supabase.co';
 var SUPABASE_ANON = 'YOUR_PUBLISHABLE_KEY';
-
 var gSb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-// If already logged in, redirect
-gSb.auth.getSession().then(function(res) {
+window.addEventListener('load', async function() {
+  var res = await gSb.auth.getSession();
   if (res.data && res.data.session) redirectUser(res.data.session.user.id);
 });
 
 async function login() {
-  var email    = document.getElementById('email').value.trim();
-  var password = document.getElementById('password').value;
-  var btn      = document.getElementById('login-btn');
-  var err      = document.getElementById('err');
-
-  err.classList.remove('show');
-  if (!email || !password) { showErr('אנא מלא אימייל וסיסמה'); return; }
-
+  var email = document.getElementById('email').value.trim();
+  var pass  = document.getElementById('password').value;
+  var btn   = document.getElementById('login-btn');
+  document.getElementById('err').classList.remove('show');
+  if (!email || !pass) { showErr('אנא מלא אימייל וסיסמה'); return; }
   btn.disabled = true;
-  btn.innerHTML = 'מתחבר...<span class="spinner-inline"></span>';
-
-  var res = await gSb.auth.signInWithPassword({ email: email, password: password });
-
+  btn.innerHTML = 'מתחבר...<span class="spinner"></span>';
+  var res = await gSb.auth.signInWithPassword({ email: email, password: pass });
   if (res.error) {
-    btn.disabled = false;
-    btn.innerHTML = 'כניסה למערכת';
-    showErr('אימייל או סיסמה שגויים');
-    return;
+    btn.disabled = false; btn.innerHTML = 'כניסה למערכת';
+    showErr('אימייל או סיסמה שגויים'); return;
   }
-
   redirectUser(res.data.user.id);
 }
 
 async function redirectUser(userId) {
-  var res = await gSb.from('profiles').select('role').eq('id', userId).single();
-  if (res.data && res.data.role === 'admin') {
-    window.location.href = 'admin.html';
-  } else {
-    window.location.href = 'index.html';
+  var res = await gSb.from('profiles').select('role,is_active').eq('id', userId).single();
+  if (res.data && res.data.is_active === false) {
+    await gSb.auth.signOut();
+    showErr('החשבון שלך מושהה. פנה למנהל המערכת.');
+    document.getElementById('login-btn').disabled = false;
+    document.getElementById('login-btn').innerHTML = 'כניסה למערכת';
+    return;
   }
+  window.location.href = (res.data && res.data.role === 'admin') ? 'admin.html' : 'index.html';
 }
 
-function showErr(msg) {
-  var el = document.getElementById('err');
-  el.textContent = msg;
-  el.classList.add('show');
+function togglePass() {
+  var inp = document.getElementById('password'), btn = document.getElementById('eye-btn');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? '👁' : '🙈';
 }
+
+function openFP(e) { e.preventDefault(); document.getElementById('fp-email').value = document.getElementById('email').value; document.getElementById('fp-overlay').classList.add('open'); }
+function closeFP() { document.getElementById('fp-overlay').classList.remove('open'); document.getElementById('fp-ok').classList.remove('show'); }
+function closeFPBg(e) { if (e.target.id==='fp-overlay') closeFP(); }
+
+async function sendReset() {
+  var email = document.getElementById('fp-email').value.trim();
+  if (!email) return;
+  await gSb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/reset.html' });
+  document.getElementById('fp-ok').classList.add('show');
+  setTimeout(closeFP, 3000);
+}
+
+function showErr(msg) { var el=document.getElementById('err'); el.textContent=msg; el.classList.add('show'); }
 </script>
 </body>
 </html>

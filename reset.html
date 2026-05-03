@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>מי הגליל | איפוס סיסמה</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0d3b5e 0%,#1a5f8a 50%,#0d3b5e 100%);font-family:'Segoe UI',Tahoma,Arial,sans-serif;direction:rtl}
+    .card{background:#fff;border-radius:16px;padding:40px;width:400px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+    .logo-wrap{text-align:center;margin-bottom:32px}
+    .logo-icon{font-size:36px;margin-bottom:8px}
+    .logo-text{font-size:22px;font-weight:700;color:#0d3b5e}
+    .logo-text span{color:#1a7fc1}
+    .logo-sub{font-size:12px;color:#64748b;margin-top:3px}
+    .form-group{margin-bottom:16px}
+    label{display:block;font-size:12px;font-weight:600;color:#64748b;margin-bottom:6px}
+    input{width:100%;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;color:#1e293b;font-family:inherit;transition:border-color 0.15s}
+    input:focus{outline:none;border-color:#1a7fc1;box-shadow:0 0 0 3px rgba(26,127,193,0.1)}
+    .strength-bar{height:4px;border-radius:2px;margin-top:6px;background:#e2e8f0;overflow:hidden}
+    .strength-fill{height:100%;border-radius:2px;width:0;transition:width 0.3s,background 0.3s}
+    .strength-label{font-size:11px;color:#64748b;margin-top:4px}
+    .btn{width:100%;padding:12px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-weight:700;font-family:inherit;background:#0d3b5e;color:#fff;margin-top:8px;transition:background 0.15s}
+    .btn:hover{background:#1a7fc1}
+    .btn:disabled{background:#94a3b8;cursor:not-allowed}
+    .msg{border-radius:8px;padding:10px 14px;font-size:13px;margin-top:16px;display:none}
+    .msg.show{display:block}
+    .msg.error{background:#fee2e2;color:#991b1b}
+    .msg.success{background:#dcfce7;color:#166534}
+    .spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-left:8px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .back-link{display:block;text-align:center;margin-top:20px;font-size:13px;color:#64748b;text-decoration:none}
+    .back-link:hover{color:#1a7fc1}
+    #loading-state{text-align:center;padding:20px 0;color:#64748b;font-size:13px}
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo-wrap">
+    <div class="logo-icon">💧</div>
+    <div class="logo-text">מי <span>הגליל</span></div>
+    <div class="logo-sub">איפוס סיסמה</div>
+  </div>
+
+  <div id="loading-state">⏳ מאמת קישור...</div>
+
+  <div id="form-section" style="display:none">
+    <div class="form-group">
+      <label>סיסמה חדשה</label>
+      <input type="password" id="new-pass" placeholder="לפחות 8 תווים" oninput="checkStrength(this.value)"/>
+      <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
+      <div class="strength-label" id="strength-label"></div>
+    </div>
+    <div class="form-group">
+      <label>אימות סיסמה</label>
+      <input type="password" id="confirm-pass" placeholder="הכנס שוב את הסיסמה"/>
+    </div>
+    <button class="btn" id="reset-btn" onclick="doReset()">עדכן סיסמה</button>
+    <div class="msg error" id="err-msg"></div>
+    <div class="msg success" id="ok-msg"></div>
+  </div>
+
+  <div id="invalid-section" style="display:none;text-align:center;padding:10px 0">
+    <div style="font-size:40px;margin-bottom:12px">❌</div>
+    <div style="font-size:14px;font-weight:600;color:#991b1b;margin-bottom:8px">הקישור לא תקין או פג תוקף</div>
+    <div style="font-size:12px;color:#64748b">בקש קישור חדש מהמנהל</div>
+  </div>
+
+  <a href="login.html" class="back-link">← חזרה לדף הכניסה</a>
+</div>
+
+<script>
+var SUPABASE_URL  = 'https://YOUR_PROJECT_ID.supabase.co';
+var SUPABASE_ANON = 'YOUR_PUBLISHABLE_KEY';
+
+var gSb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// Handle the token from URL hash
+window.addEventListener('load', async function() {
+  // Supabase puts the tokens in the URL hash after redirect
+  var hash = window.location.hash;
+
+  if (hash && hash.includes('access_token')) {
+    // Let Supabase parse the hash and set the session
+    var res = await gSb.auth.getSession();
+    if (res.data && res.data.session) {
+      document.getElementById('loading-state').style.display = 'none';
+      document.getElementById('form-section').style.display = 'block';
+    } else {
+      showInvalid();
+    }
+  } else {
+    // Check if already has valid session from hash exchange
+    var { data: { session } } = await gSb.auth.getSession();
+    if (session) {
+      document.getElementById('loading-state').style.display = 'none';
+      document.getElementById('form-section').style.display = 'block';
+    } else {
+      showInvalid();
+    }
+  }
+});
+
+function showInvalid() {
+  document.getElementById('loading-state').style.display = 'none';
+  document.getElementById('invalid-section').style.display = 'block';
+}
+
+function checkStrength(val) {
+  var fill  = document.getElementById('strength-fill');
+  var label = document.getElementById('strength-label');
+  if (!val) { fill.style.width='0'; label.textContent=''; return; }
+  var score = 0;
+  if (val.length >= 8)  score++;
+  if (val.length >= 12) score++;
+  if (/[A-Z]/.test(val)) score++;
+  if (/[0-9]/.test(val)) score++;
+  if (/[^A-Za-z0-9]/.test(val)) score++;
+  var map = [
+    { w:'20%', bg:'#dc2626', t:'חלשה מאוד' },
+    { w:'40%', bg:'#f97316', t:'חלשה' },
+    { w:'60%', bg:'#eab308', t:'בינונית' },
+    { w:'80%', bg:'#22c55e', t:'חזקה' },
+    { w:'100%',bg:'#16a34a', t:'חזקה מאוד' },
+  ];
+  var s = map[Math.min(score-1, 4)] || map[0];
+  fill.style.width = s.w; fill.style.background = s.bg; label.textContent = s.t;
+}
+
+async function doReset() {
+  var pass    = document.getElementById('new-pass').value;
+  var confirm = document.getElementById('confirm-pass').value;
+  var btn     = document.getElementById('reset-btn');
+  var err     = document.getElementById('err-msg');
+  var ok      = document.getElementById('ok-msg');
+
+  err.classList.remove('show'); ok.classList.remove('show');
+
+  if (pass.length < 8)    { showErr('הסיסמה חייבת להיות לפחות 8 תווים'); return; }
+  if (pass !== confirm)   { showErr('הסיסמאות אינן תואמות'); return; }
+
+  btn.disabled = true;
+  btn.innerHTML = 'מעדכן...<span class="spinner"></span>';
+
+  var res = await gSb.auth.updateUser({ password: pass });
+
+  if (res.error) {
+    btn.disabled = false;
+    btn.innerHTML = 'עדכן סיסמה';
+    showErr('שגיאה: ' + res.error.message);
+    return;
+  }
+
+  ok.textContent = '✅ הסיסמה עודכנה בהצלחה! מעביר לדף הכניסה...';
+  ok.classList.add('show');
+  btn.style.display = 'none';
+  setTimeout(function() { window.location.href = 'login.html'; }, 2500);
+}
+
+function showErr(msg) {
+  var el = document.getElementById('err-msg');
+  el.textContent = msg; el.classList.add('show');
+}
+</script>
+</body>
+</html>
