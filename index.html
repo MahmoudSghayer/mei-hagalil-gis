@@ -428,7 +428,8 @@ function closeSettingsBg(e) { if(e.target.id==='settings-modal-bg') closeSetting
 async function saveSettings() {
   var name  = document.getElementById('s-name').value.trim();
   var phone = document.getElementById('s-phone').value.trim();
-  await gSb.from('profiles').update({full_name:name, phone:phone}).eq('id', gUser.id);
+  var res = await gSb.from('profiles').update({full_name:name, phone:phone}).eq('id', gUser.id);
+  if (res.error) { showToast('שגיאה: ' + res.error.message); return; }
   if (gProfile) { gProfile.full_name=name; gProfile.phone=phone; }
   setUserUI(gProfile);
   closeSettings();
