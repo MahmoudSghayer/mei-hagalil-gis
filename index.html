@@ -44,8 +44,6 @@
     #main{display:flex;flex:1;overflow:hidden}
     #map-wrap{flex:1;position:relative;z-index:1}
     #map{width:100%;height:100%;z-index:1}
-
-    /* BASEMAP SWITCHER */
     #basemap-switcher{position:absolute;top:14px;left:14px;background:#fff;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,0.18);overflow:hidden;z-index:400;display:flex;border:1px solid rgba(0,0,0,0.08)}
     .basemap-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 12px;cursor:pointer;background:#fff;border:none;border-right:1px solid var(--border);font-family:inherit;transition:background 0.15s;min-width:78px;direction:rtl}
     .basemap-btn:last-child{border-right:none}
@@ -54,20 +52,26 @@
     .basemap-btn.active .basemap-label{color:rgba(255,255,255,0.9)}
     .basemap-icon{font-size:18px;margin-bottom:2px}
     .basemap-label{font-size:10px;font-weight:600;color:var(--text);white-space:nowrap}
-
-    #sidebar{width:280px;flex-shrink:0;background:#fff;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
-    .panel{padding:12px 14px;border-bottom:1px solid var(--border)}
-    .panel-title{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+    
+    /* SIDEBAR with proper scrolling */
+    #sidebar{width:280px;flex-shrink:0;background:#fff;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;height:100%}
+    /* sticky panel — does NOT scroll */
+    .panel-sticky{flex-shrink:0;border-bottom:1px solid var(--border);background:#fff}
+    /* scrollable area for villages */
+    #layers-scroll-area{flex:1;overflow-y:auto;border-bottom:1px solid var(--border);min-height:80px}
+    .panel{padding:12px 14px}
+    .panel-title{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#fff;padding:6px 0;z-index:5}
     .panel-title .count-pill{background:var(--blue-mid);color:#fff;border-radius:10px;padding:1px 8px;font-size:10px;font-weight:700;letter-spacing:0}
+
     .village-group{margin-bottom:8px;border:1px solid var(--border);border-radius:8px;overflow:hidden}
     .village-header{display:flex;align-items:center;gap:8px;padding:8px 11px;cursor:pointer;background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);user-select:none}
     .village-header:hover{background:linear-gradient(135deg,#dbeafe 0%,#bfdbfe 100%)}
     .village-icon{font-size:14px}
     .village-name{flex:1;font-size:13px;font-weight:700;color:#1e3a8a}
     .village-arrow{font-size:10px;color:#1e40af;transition:transform 0.2s}
-    .village-group.open .village-arrow{transform:rotate(180deg)}
-    .village-content{display:none;padding:8px 11px 10px;background:#fff}
-    .village-group.open .village-content{display:block}
+    .village-group.collapsed .village-arrow{transform:rotate(-90deg)}
+    .village-content{padding:8px 11px 10px;background:#fff;max-height:1000px;overflow:hidden;transition:max-height 0.3s ease, padding 0.3s ease}
+    .village-group.collapsed .village-content{max-height:0;padding-top:0;padding-bottom:0}
     .sub-layer{display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;font-size:12px}
     .sub-layer:hover{opacity:0.8}
     .sub-swatch{width:14px;height:14px;border-radius:3px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px}
@@ -83,9 +87,12 @@
     .toggle.on{background:var(--blue-mid)}
     .toggle::after{content:'';position:absolute;width:14px;height:14px;background:#fff;border-radius:50%;top:2px;right:2px;transition:transform 0.2s;box-shadow:0 1px 3px rgba(0,0,0,0.2)}
     .toggle.on::after{transform:translateX(-14px)}
+    .collapse-all-btn{font-size:10px;color:var(--blue-mid);cursor:pointer;background:none;border:none;font-family:inherit;padding:2px 6px;border-radius:4px}
+    .collapse-all-btn:hover{background:#eff6ff}
+
     #village-filter{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;color:var(--text);background:var(--surface);direction:rtl;appearance:none}
-    .my-incidents-panel{background:linear-gradient(135deg,#dbeafe 0%,#bfdbfe 100%);border-bottom:1px solid var(--border)}
-    .my-incidents-panel .panel-title{color:#1e40af}
+    .my-incidents-panel{background:linear-gradient(135deg,#dbeafe 0%,#bfdbfe 100%)}
+    .my-incidents-panel .panel-title{color:#1e40af;background:transparent;position:static;padding:0;margin-bottom:8px}
     .my-incidents-panel .count-pill{background:#1e40af}
     .incidents-list{padding:10px 14px}
     .inc-item{background:#fff;border:1px solid var(--border);border-radius:8px;padding:9px 11px;margin-bottom:7px;cursor:pointer;transition:box-shadow 0.15s,border-color 0.15s}
@@ -97,9 +104,11 @@
     .badge-high{background:#fee2e2;color:#991b1b}.badge-medium{background:#fef3c7;color:#92400e}.badge-low{background:#dcfce7;color:#166534}
     .inc-meta{font-size:11px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap}
     .inc-village{color:var(--blue-mid);font-weight:500}
-    #incidents-scroll{flex:1;overflow-y:auto}
+
+    /* Scrollable incidents area */
+    #incidents-scroll{flex:1;overflow-y:auto;min-height:120px}
     .empty-msg{color:var(--muted);font-size:12px;text-align:center;padding:20px 0}
-    #add-btn{margin:12px 14px;padding:9px;border-radius:8px;cursor:pointer;background:var(--blue-dark);color:#fff;font-size:13px;font-weight:600;border:none;width:calc(100% - 28px)}
+    #add-btn{margin:12px 14px;padding:9px;border-radius:8px;cursor:pointer;background:var(--blue-dark);color:#fff;font-size:13px;font-weight:600;border:none;width:calc(100% - 28px);flex-shrink:0}
     #add-btn:hover{background:var(--blue-mid)}
     #statusbar{height:26px;background:var(--blue-dark);display:flex;align-items:center;padding:0 14px;gap:12px;flex-shrink:0}
     #statusbar span{font-size:11px;color:rgba(255,255,255,0.6)}
@@ -134,11 +143,11 @@
     .popup-btn.success{background:var(--green);color:#fff;border-color:var(--green)}
     .popup-mine-tag{background:#1e40af;color:#fff;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;display:inline-block;margin-bottom:5px}
     .map-label{background:transparent;border:none;font-size:9px;font-weight:700;color:#0d3b5e;text-shadow:1px 1px 0 rgba(255,255,255,0.95),-1px -1px 0 rgba(255,255,255,0.95),1px -1px 0 rgba(255,255,255,0.95),-1px 1px 0 rgba(255,255,255,0.95);white-space:nowrap;pointer-events:none;font-family:Arial,sans-serif}
-    /* When using satellite, change label colors for visibility */
     body.dark-basemap .map-label{color:#fff;text-shadow:1px 1px 0 rgba(0,0,0,0.95),-1px -1px 0 rgba(0,0,0,0.95),1px -1px 0 rgba(0,0,0,0.95),-1px 1px 0 rgba(0,0,0,0.95)}
     #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--blue-dark);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:2000;transition:transform 0.3s;white-space:nowrap}
     #toast.show{transform:translateX(-50%) translateY(0)}
     ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+    ::-webkit-scrollbar-thumb:hover{background:#94a3b8}
   </style>
 </head>
 <body>
@@ -184,7 +193,6 @@
   <div id="main">
     <div id="map-wrap">
       <div id="map"></div>
-      <!-- Basemap switcher -->
       <div id="basemap-switcher">
         <button class="basemap-btn active" data-basemap="satellite" onclick="switchBasemap('satellite')">
           <div class="basemap-icon">🛰️</div>
@@ -204,18 +212,33 @@
         </button>
       </div>
     </div>
+
     <div id="sidebar">
-      <div class="panel my-incidents-panel" id="my-panel" style="display:none">
+      <!-- Sticky my-incidents at top -->
+      <div class="panel panel-sticky my-incidents-panel" id="my-panel" style="display:none">
         <div class="panel-title">🛠️ תקלות בטיפול שלי <span class="count-pill" id="my-count">0</span></div>
         <div id="my-list"></div>
       </div>
-      <div class="panel">
-        <div class="panel-title">🗺️ שכבות תשתית <span class="count-pill" id="layer-count">0</span></div>
-        <div id="dwg-layers-list">
-          <div class="empty-msg" style="font-size:11px;padding:8px 0">טוען שכבות...</div>
+
+      <!-- SCROLLABLE LAYERS AREA -->
+      <div id="layers-scroll-area">
+        <div class="panel">
+          <div class="panel-title">
+            🗺️ שכבות תשתית
+            <span style="display:flex;align-items:center;gap:6px">
+              <button class="collapse-all-btn" onclick="collapseAll()" title="קפל הכל">⊟ הכל</button>
+              <button class="collapse-all-btn" onclick="expandAll()" title="פרוש הכל">⊞ הכל</button>
+              <span class="count-pill" id="layer-count">0</span>
+            </span>
+          </div>
+          <div id="dwg-layers-list">
+            <div class="empty-msg" style="font-size:11px;padding:8px 0">טוען שכבות...</div>
+          </div>
         </div>
       </div>
-      <div class="panel">
+
+      <!-- Sticky filter -->
+      <div class="panel panel-sticky">
         <div class="panel-title">סינון תקלות לפי ישוב</div>
         <select id="village-filter" onchange="filterByVillage(this.value)">
           <option value="">כל הישובים</option>
@@ -223,17 +246,23 @@
           <option>נחף</option><option>סחנין</option><option>דיר חנא</option><option>ערבה</option>
         </select>
       </div>
-      <div style="padding:10px 14px 4px;border-bottom:1px solid var(--border)">
-        <div class="panel-title" style="margin-bottom:0">🚨 תקלות פתוחות <span class="count-pill" id="open-count">0</span></div>
+
+      <!-- Sticky incidents header -->
+      <div class="panel-sticky" style="padding:10px 14px 4px">
+        <div class="panel-title" style="margin-bottom:0;position:static">🚨 תקלות פתוחות <span class="count-pill" id="open-count">0</span></div>
       </div>
+
+      <!-- Scrollable incidents -->
       <div id="incidents-scroll">
         <div class="incidents-list" id="incidents-panel">
           <div class="empty-msg">טוען...</div>
         </div>
       </div>
+
       <button id="add-btn" onclick="openIncModal()">+ פתח תקלה חדשה</button>
     </div>
   </div>
+
   <div id="statusbar">
     <span id="coords">לחץ על המפה</span><span>|</span>
     <span>זום: <span id="zoom-level">11</span></span><span>|</span>
@@ -297,54 +326,6 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
-// ════════════════════════════════════════════════════════════
-//  BASEMAP DEFINITIONS
-// ════════════════════════════════════════════════════════════
-var BASEMAPS = {
-  satellite: {
-    name: 'Esri לוויין',
-    isDark: true,
-    layers: [
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 19, attribution: 'Esri'
-      })
-    ]
-  },
-  hybrid: {
-    name: 'לוויין + שמות',
-    isDark: true,
-    layers: [
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 19, attribution: 'Esri'
-      }),
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 19, opacity: 0.9
-      }),
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 19, opacity: 0.85
-      })
-    ]
-  },
-  streets: {
-    name: 'רחובות מפורטים',
-    isDark: false,
-    layers: [
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19, attribution: 'OSM'
-      })
-    ]
-  },
-  light: {
-    name: 'בהיר נקי',
-    isDark: false,
-    layers: [
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        maxZoom: 19, attribution: 'CartoDB'
-      })
-    ]
-  }
-};
-
 var SUB_LAYERS = {
   sewage_pipe:      { label:'קווי ביוב', icon:'─', color:'#fbbf24', type:'line', weight:3, dashArray:'7,4', defaultOn:true },
   manhole:          { label:'שוחות ביוב', icon:'⭕', color:'#06b6d4', type:'point', radius:5, defaultOn:true },
@@ -413,11 +394,9 @@ function closePassModal() { document.getElementById('pass-bg').classList.remove(
 function checkStr(val){var fill=document.getElementById('p-fill'),score=0;if(val.length>=8)score++;if(val.length>=12)score++;if(/[A-Z]/.test(val))score++;if(/[0-9]/.test(val))score++;if(/[^A-Za-z0-9]/.test(val))score++;var map=[{w:'20%',bg:'#dc2626'},{w:'40%',bg:'#f97316'},{w:'60%',bg:'#eab308'},{w:'80%',bg:'#22c55e'},{w:'100%',bg:'#16a34a'}];var s=map[Math.min(score-1,4)]||map[0];fill.style.width=s.w;fill.style.background=s.bg;}
 async function changePass(){var p=document.getElementById('p-new').value,c=document.getElementById('p-confirm').value;if(p.length<8){showToast('לפחות 8 תווים');return;}if(p!==c){showToast('הסיסמאות לא תואמות');return;}var res=await gSb.auth.updateUser({password:p});if(res.error){showToast('שגיאה');return;}closePassModal();showToast('✅ עודכן');}
 
-// ════════════════════════════════════════════════════════════
-//  MAP INIT WITH BASEMAP SWITCHER
-// ════════════════════════════════════════════════════════════
 function initMap() {
-  gMap = L.map('map', { zoomControl:true, attributionControl:false }).setView([32.91,35.22],11);
+  // maxZoom 21 for high-zoom support; layers handle their own caps
+  gMap = L.map('map', { zoomControl:true, attributionControl:false, maxZoom:21 }).setView([32.91,35.22],11);
   applyBasemap(gCurrentBasemap);
   gMap.on('mousemove', function(e) {
     var txt = e.latlng.lat.toFixed(5) + '° N,  ' + e.latlng.lng.toFixed(5) + '° E';
@@ -433,56 +412,61 @@ function initMap() {
 }
 
 function applyBasemap(key) {
-  var def = BASEMAPS[key];
-  if (!def) return;
-
   // Remove old basemap layers
   gActiveBasemapLayers.forEach(function(l) { gMap.removeLayer(l); });
   gActiveBasemapLayers = [];
 
-  // Add new basemap layers (recreate fresh because Leaflet caches them)
+  var isDark = false;
+  var name = '';
+
   if (key === 'satellite') {
+    name = 'Google לוויין HD';
+    isDark = true;
+    // Google satellite — supports up to zoom 21+ with high detail
     gActiveBasemapLayers = [
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom:19, attribution:'Esri' })
+      L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+        maxZoom: 21, maxNativeZoom: 21, subdomains: ['0','1','2','3'], attribution: 'Google'
+      })
     ];
   } else if (key === 'hybrid') {
+    name = 'Google היברידי';
+    isDark = true;
+    // Google hybrid (satellite + roads/labels) — supports up to zoom 21
     gActiveBasemapLayers = [
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom:19 }),
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', { maxZoom:19, opacity:0.85 }),
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom:19, opacity:0.9 })
+      L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
+        maxZoom: 21, maxNativeZoom: 21, subdomains: ['0','1','2','3'], attribution: 'Google'
+      })
     ];
   } else if (key === 'streets') {
+    name = 'Google רחובות';
+    isDark = false;
     gActiveBasemapLayers = [
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'OSM' })
+      L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        maxZoom: 21, maxNativeZoom: 21, subdomains: ['0','1','2','3'], attribution: 'Google'
+      })
     ];
   } else if (key === 'light') {
+    name = 'CartoDB בהיר';
+    isDark = false;
     gActiveBasemapLayers = [
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom:19, attribution:'CartoDB' })
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 20, maxNativeZoom: 19, attribution: 'CartoDB'
+      })
     ];
   }
 
   gActiveBasemapLayers.forEach(function(l) { l.addTo(gMap); l.bringToBack(); });
-
-  // Update body class for label visibility
-  document.body.classList.toggle('dark-basemap', !!def.isDark);
-
-  // Update statusbar
-  document.getElementById('basemap-name').textContent = def.name;
-
-  // Update active button
+  document.body.classList.toggle('dark-basemap', !!isDark);
+  document.getElementById('basemap-name').textContent = name;
   document.querySelectorAll('.basemap-btn').forEach(function(btn) {
     btn.classList.toggle('active', btn.getAttribute('data-basemap') === key);
   });
-
   gCurrentBasemap = key;
 }
 
 function switchBasemap(key) { applyBasemap(key); }
 window.switchBasemap = switchBasemap;
 
-// ════════════════════════════════════════════════════════════
-//  LOAD VILLAGES FROM SUPABASE
-// ════════════════════════════════════════════════════════════
 async function loadAllVillages() {
   var listRes = await gSb.from('village_layers').select('*').eq('is_active', true).order('uploaded_at', {ascending: true});
   if (listRes.error || !listRes.data || !listRes.data.length) {
@@ -515,7 +499,7 @@ async function loadVillageData(village) {
     });
     gVillageBounds[village.village_id] = bounds;
     gVillageLayers[village.village_id] = {};
-    gVillageState[village.village_id] = { masterOn: true, cats: {}, counts: {} };
+    gVillageState[village.village_id] = { masterOn: true, cats: {}, counts: {}, collapsed: false };
     Object.keys(categories).forEach(function(catId) {
       var def = SUB_LAYERS[catId] || SUB_LAYERS.other;
       var group = L.layerGroup();
@@ -583,20 +567,46 @@ function renderVillagesList() {
         '<div class="mini-toggle '+(on?'on':'')+'" id="sub-tog-'+v.village_id+'-'+catId+'"></div>'+
         '</div>';
     }).join('');
-    return '<div class="village-group open" id="vg-'+v.village_id+'">'+
-      '<div class="village-header">'+
+    var collapsedClass = state.collapsed ? ' collapsed' : '';
+    return '<div class="village-group'+collapsedClass+'" id="vg-'+v.village_id+'">'+
+      '<div class="village-header" onclick="toggleVillageCollapse(\''+v.village_id+'\')">'+
         '<span class="village-icon">'+v.icon+'</span>'+
         '<span class="village-name">'+v.village_name+'</span>'+
         '<span class="zoom-link" onclick="event.stopPropagation();zoomToVillage(\''+v.village_id+'\')">🎯</span>'+
         '<div class="toggle on" id="master-tog-'+v.village_id+'" onclick="event.stopPropagation();toggleVillage(\''+v.village_id+'\')"></div>'+
-        '<span class="village-arrow" onclick="event.stopPropagation();toggleVillageOpen(\''+v.village_id+'\')">▾</span>'+
+        '<span class="village-arrow">▾</span>'+
       '</div>'+
       '<div class="village-content">' + subsHtml + '</div>'+
     '</div>';
   }).join('');
 }
 
-function toggleVillageOpen(villageId) { document.getElementById('vg-'+villageId).classList.toggle('open'); }
+function toggleVillageCollapse(villageId) {
+  var state = gVillageState[villageId];
+  state.collapsed = !state.collapsed;
+  document.getElementById('vg-'+villageId).classList.toggle('collapsed', state.collapsed);
+}
+
+function collapseAll() {
+  gVillages.forEach(function(v) {
+    if (gVillageState[v.village_id]) {
+      gVillageState[v.village_id].collapsed = true;
+      var el = document.getElementById('vg-'+v.village_id);
+      if (el) el.classList.add('collapsed');
+    }
+  });
+}
+
+function expandAll() {
+  gVillages.forEach(function(v) {
+    if (gVillageState[v.village_id]) {
+      gVillageState[v.village_id].collapsed = false;
+      var el = document.getElementById('vg-'+v.village_id);
+      if (el) el.classList.remove('collapsed');
+    }
+  });
+}
+
 function toggleVillage(villageId) {
   var state = gVillageState[villageId];
   state.masterOn = !state.masterOn;
@@ -617,7 +627,7 @@ function toggleSubLayer(villageId, catId) {
 }
 function zoomToVillage(villageId) {
   var bounds = gVillageBounds[villageId];
-  if (bounds && bounds.isValid()) gMap.flyToBounds(bounds, {padding:[50,50], duration:1.2});
+  if (bounds && bounds.isValid()) gMap.flyToBounds(bounds, {padding:[50,50], duration:1.2, maxZoom:18});
 }
 
 function initSB(){loadIncidents();subscribeRT();}
@@ -670,7 +680,7 @@ function updateStats() {
   document.getElementById('stat-mine').textContent = gIncidents.filter(isMine).length;
 }
 
-function zoomTo(lat,lng,id){gMap.setView([lat,lng],16);if(gMarkers[id])setTimeout(function(){gMarkers[id].openPopup();},300);}
+function zoomTo(lat,lng,id){gMap.setView([lat,lng],18);if(gMarkers[id])setTimeout(function(){gMarkers[id].openPopup();},300);}
 function filterByVillage(val){gFilter=val;renderOpenIncidents();}
 
 async function takeIncident(id){var now=new Date().toISOString();var res=await gSb.from('incidents').update({status:'in_progress',assigned_to:gUser.id,taken_at:now}).eq('id',id);if(res.error){showToast('שגיאה');return;}var inc=gIncidents.find(function(i){return i.id===id;});await logAction(id,'taken',null,inc);showToast('📋 הועברה לטיפולך');gMap.closePopup();if(inc){inc.status='in_progress';inc.assigned_to=gUser.id;inc.taken_at=now;}renderAll();}
@@ -696,7 +706,9 @@ window.openCloseModal=openCloseModal;
 window.zoomTo=zoomTo;
 window.toggleVillage=toggleVillage;
 window.toggleSubLayer=toggleSubLayer;
-window.toggleVillageOpen=toggleVillageOpen;
+window.toggleVillageCollapse=toggleVillageCollapse;
+window.collapseAll=collapseAll;
+window.expandAll=expandAll;
 window.zoomToVillage=zoomToVillage;
 </script>
 </body>
