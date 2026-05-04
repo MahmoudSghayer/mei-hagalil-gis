@@ -1,140 +1,230 @@
-# מי הגליל | מערכת GIS
-## מדריך הפעלה ו-Deploy — מ-0 לאוויר ב-20 דקות
+# 💧 Mei HaGalil GIS
 
----
+> מערכת ניהול תשתית מים וביוב לאיגוד מי הגליל — 7 ישובים בצפון הארץ
 
-## מה יש כאן
+[!\[Live Demo](https://img.shields.io/badge/Live-Demo-success)](https://mei-hagalil-gis.vercel.app)
+\[!\[Stack](https://img.shields.io/badge/Stack-Supabase%20%2B%20Vercel-blue)]()
+\[!\[License](https://img.shields.io/badge/License-Proprietary-red)]()
 
-| קובץ | תיאור |
-|------|-------|
-| `index.html` | כל האפליקציה — מפה, שכבות, תקלות, real-time |
-| `schema.sql` | מסד הנתונים ב-Supabase |
-| `README.md` | המדריך הזה |
+מערכת GIS מבוססת web לניהול ושיתוף מפות תשתית של רשת המים והביוב. מאפשרת למפעילי המערכת לנהל בזמן אמת תקלות, להציג שכבות תשתית מקבצי DWG/GeoJSON, ולייצא נתונים לפורמטים סטנדרטיים בענף (DXF, GeoJSON, CSV).
 
----
+\---
 
-## שלב 1 — הקמת Supabase (מסד הנתונים + Real-time)
+## ✨ פיצ'רים עיקריים
 
-### 1.1 צור חשבון
-1. כנס ל-**https://supabase.com** → "Start your project"
-2. הירשם עם Google או GitHub (חינמי)
-3. לחץ **"New project"**
-   - Name: `mei-hagalil-gis`
-   - Database Password: שמור בצד!
-   - Region: **West EU (Frankfurt)** — הכי קרוב לישראל
-4. המתן ~2 דקות לייצור הפרויקט
+### 🗺️ מפה אינטראקטיבית
 
-### 1.2 הפעל את הסכמה (טבלות)
-1. בתפריט שמאלי → **SQL Editor**
-2. לחץ **"New query"**
-3. הדבק את כל תוכן קובץ `schema.sql`
-4. לחץ **RUN** (Ctrl+Enter)
-5. תראה: `Success. No rows returned`
+* **4 בוררי רקע**: Google לוויין HD, Google היברידי, Google רחובות, CartoDB בהיר
+* תמיכה בזום עד רמה 20
+* תצוגת קואורדינטות חיה
+* 24 קטגוריות שכבות מוגדרות מראש (מים, ביוב, מבנים, מתקנים)
 
-### 1.3 הפעל Real-time
-1. תפריט שמאלי → **Database → Replication**
-2. ב-"Source" → לחץ על **0 tables** ליד `supabase_realtime`
-3. הפעל את **`incidents`** ← חובה!
-4. שמור
+### 👥 ניהול משתמשים
 
-### 1.4 קבל את המפתחות
-1. תפריט שמאלי → **Project Settings → API**
-2. העתק:
-   - **Project URL** (נראה כך: `https://abcdefgh.supabase.co`)
-   - **anon / public** key (מחרוזת ארוכה)
+* 2 רולים: **מנהל מערכת** ו-**משתמש**
+* יצירה, עריכה, השהיה ומחיקה של משתמשים
+* איפוס סיסמה דרך אימייל
+* התנתקות אוטומטית לאחר 25 דקות של חוסר פעילות
 
----
+### 🚨 ניהול תקלות
 
-## שלב 2 — חבר את הקוד למסד הנתונים
+* פתיחת תקלות עם מיקום geographically-tagged
+* 3 רמות עדיפות (גבוהה / בינונית / נמוכה)
+* workflow מלא: פתוחה → בטיפול → סגורה
+* שיוך תקלות למטפלים ספציפיים
+* עדכונים בזמן אמת (Realtime) — כל מי שמחובר רואה תקלות חדשות מיד
+* יומן פעולות מפורט
 
-פתח את `index.html` ומצא את השורות האלה (בתחילת הסקריפט):
+### 📤 העלאת שכבות
 
-```javascript
-const SUPABASE_URL  = 'https://YOUR_PROJECT_ID.supabase.co';
-const SUPABASE_ANON = 'YOUR_ANON_KEY';
+* העלאת קבצי GeoJSON ישירות מהדפדפן
+* תיוג קטגוריה ראשית בעת ההעלאה
+* ניהול גרסאות (העלאה מחדש מחליפה את הישנה)
+* ויזואליזציה אוטומטית במפה לכל המשתמשים
+
+### 📥 יצוא נתונים
+
+* בחירת אזור על המפה (rectangle drawing)
+* סינון לפי קטגוריות
+* 3 פורמטים: **GeoJSON** (סטנדרט GIS), **DXF** (AutoCAD), **CSV** (Excel)
+* שליחה ישירה במייל
+* תמיכה מלאה בעברית (BOM ב-CSV)
+
+\---
+
+## 🛠️ Tech Stack
+
+|רכיב|טכנולוגיה|
+|-|-|
+|Frontend|Vanilla JavaScript + HTML/CSS|
+|Map Engine|[Leaflet 1.9.4](https://leafletjs.com/)|
+|Database|[Supabase Postgres](https://supabase.com/)|
+|Authentication|Supabase Auth (JWT)|
+|Storage|Supabase Storage (S3-compatible)|
+|Realtime|Supabase Realtime (WebSocket)|
+|Hosting|[Vercel](https://vercel.com/)|
+|Source Control|GitHub|
+
+**Zero build step** — קוד גולמי שרץ ישירות בדפדפן. אין webpack, אין npm install, אין compilation.
+
+\---
+
+## 📂 מבנה הפרויקט
+
+```
+mei-hagalil-gis/
+├── index.html              # מפה ראשית — דף הבית
+├── login.html              # דף כניסה
+├── reset.html              # איפוס סיסמה
+├── admin.html              # ניהול משתמשים (admin only)
+├── upload.html             # העלאת שכבות (admin only)
+├── logs.html               # יומן פעולות (admin only)
+├── auth.js                 # מודול משותף: Supabase client + idle timeout
+├── export-feature.js       # מודול נפרד ליצוא נתונים
+├── schema\_admin\_fix.sql    # SQL migration ל-RLS policies
+├── README.md               # קובץ זה
+└── DOCUMENTATION.md        # תיעוד מלא
 ```
 
-החלף:
-```javascript
-const SUPABASE_URL  = 'https://abcdefgh.supabase.co';   // ← Project URL שלך
-const SUPABASE_ANON = 'eyJhbGciOiJIUzI1Ni...';          // ← anon key שלך
+\---
+
+## 🚀 התחלה מהירה
+
+### דרישות מקדימות
+
+* חשבון [Supabase](https://supabase.com/) (חינמי)
+* חשבון [Vercel](https://vercel.com/) (חינמי)
+* חשבון [GitHub](https://github.com/) (חינמי)
+
+### התקנה מ-0
+
+1. **Clone הריפו**:
+
+```bash
+git clone https://github.com/YOUR\_USERNAME/mei-hagalil-gis.git
+cd mei-hagalil-gis
 ```
 
-שמור את הקובץ.
+2. **צור פרויקט חדש ב-Supabase**:
 
----
+   * לך ל-https://supabase.com/dashboard
+   * New Project → תן שם וסיסמה
+   * שמור את ה-`Project URL` וה-`anon key` מ-Settings → API
+3. **הרץ את ה-SQL Schema**:
 
-## שלב 3 — העלה ל-GitHub
+   * Supabase → SQL Editor
+   * פתח את `schema\_admin\_fix.sql` והרץ הכל
+4. **ב-Supabase, בטל אימות אימייל**:
 
-### אם אין לך Git מותקן:
-1. כנס ל-**https://github.com** → צור חשבון חינמי
-2. לחץ **"New repository"**
-   - Repository name: `mei-hagalil-gis`
-   - Private ✓ (מומלץ)
-3. לחץ **"uploading an existing file"**
-4. גרור את 3 הקבצים (`index.html`, `schema.sql`, `README.md`)
-5. לחץ **"Commit changes"**
+   * Authentication → Providers → Email
+   * בטל "Confirm email"
+5. **עדכן את `auth.js`**:
 
----
+```javascript
+var SUPABASE\_URL  = 'https://your-project-id.supabase.co';
+var SUPABASE\_ANON = 'your-anon-key-here';
+```
 
-## שלב 4 — Deploy ב-Vercel (פומבי + HTTPS)
+6. **צור bucket לאחסון**:
 
-1. כנס ל-**https://vercel.com** → התחבר עם GitHub
-2. לחץ **"Add New Project"**
-3. בחר את ה-repo `mei-hagalil-gis`
-4. הגדרות:
-   - Framework Preset: **Other**
-   - Root Directory: `./`
-   - Build Command: *(ריק)*
-   - Output Directory: *(ריק)*
-5. לחץ **Deploy**
-6. תוך 30 שניות תקבל URL כמו:
-   `https://mei-hagalil-gis.vercel.app`
+   * Supabase → Storage → New bucket
+   * שם: `village-layers`
+   * **Public bucket** ✅
+7. **צור משתמש Admin ראשון**:
 
-✅ **האתר עולה ב-Deploy אוטומטי כל פעם שמשנים קוד ב-GitHub.**
+   * Authentication → Users → Add user
+   * אחרי היצירה, ב-SQL Editor:
 
----
+```sql
+UPDATE profiles SET role = 'admin' WHERE email = 'your@email.com';
+```
 
-## בדיקה — Real-time עובד?
+8. **Deploy ל-Vercel**:
 
-1. פתח את האתר בשני טאבים (או שני מחשבים)
-2. באחד לחץ **"+ פתח תקלה חדשה"** ומלא פרטים
-3. בטאב השני תראה את התקלה מופיעה אוטומטית תוך שנייה
-4. על המפה תופיע סיכה אדומה
+   * Vercel → New Project → Import את ה-GitHub repo
+   * ✨ זהו, האתר חי!
 
----
+\---
 
-## עלויות חודשיות
+## 📚 תיעוד מלא
 
-| שירות | תוכנית | עלות |
-|-------|--------|------|
-| Supabase | Free (500MB, 50K req/day) | $0 |
-| Vercel | Hobby (100GB bandwidth) | $0 |
-| GitHub | Free | $0 |
-| OpenStreetMap | ציבורי | $0 |
-| **סה"כ** | | **$0** |
+ראה [DOCUMENTATION.md](./DOCUMENTATION.md) לתיעוד מפורט של:
 
-> **כשהמערכת גדלה:** Supabase Pro עולה $25/חודש ומאפשר 8GB ו-5M req/day.
-> Vercel Pro עולה $20/חודש למספר בלתי מוגבל של deploys.
+* מבנה הקוד של כל קובץ
+* DB schema (טבלאות + RLS policies)
+* API ופרוטוקולי Realtime
+* workflow של תקלות
+* מודל ההרשאות
+* הוראות תפעול שוטפות
 
----
+\---
 
-## שאלות נפוצות
+## 🌍 הישובים הנתמכים
 
-**ש: האם הנתונים מאובטחים?**
-ת: כן. Supabase מגיע עם SSL, Row Level Security, ואפשרות הוספת אימות משתמשים (Auth) בהמשך.
+המערכת מותאמת ל-7 הישובים שבאחריות איגוד מי הגליל:
 
-**ש: איך מוסיפים כניסה עם סיסמה לאתר?**
-ת: Supabase Auth תומך ב-Email/Password, Google, Microsoft ועוד. ניתן להוסיף בשלב מאוחר יותר.
+1. **מגד אל-כרום** (Majd al-Krum)
+2. **בענה** (Bi'ina)
+3. **דיר אל-אסד** (Deir al-Asad)
+4. **נחף** (Nahf)
+5. **סחנין** (Sakhnin)
+6. **דיר חנא** (Deir Hanna)
+7. **עראבה** (Arrabeh)
 
-**ש: איך מחברים GeoJSON אמיתי (גבולות ישובים)?**
-ת: פשוט להחליף את ה-`L.circle()` ב-`L.geoJSON()` עם קובץ מ-govmap.gov.il.
+\---
 
-**ש: האם עובד על מובייל?**
-ת: כן, המפה רספונסיבית. לחוויה מיטבית ניתן להוסיף PWA manifest.
+## 🔐 אבטחה
 
----
+* אימות מבוסס JWT דרך Supabase Auth
+* Row Level Security (RLS) על כל הטבלאות
+* אדמין יכול לראות הכל דרך פונקציית `is\_admin()` SECURITY DEFINER
+* HTTPS בלבד (Vercel TLS)
+* Idle timeout: 25 דקות
+* אין אחסון של סיסמאות בצד הלקוח
 
-## קשר
+\---
 
-מי הגליל — מחלקת GIS
+## 📊 סטטיסטיקות הפרויקט
+
+* **שורות קוד**: \~3,500 (HTML/CSS/JS)
+* **טבלאות DB**: 4 (profiles, incidents, incident\_logs, village\_layers)
+* **קטגוריות שכבות נתמכות**: 24
+* **זמן פיתוח**: \~6 ימים
+* **גודל אחסון**: < 100MB ל-7 כפרים מלאים
+
+\---
+
+## 🗺️ מפת דרכים (Roadmap)
+
+### בפיתוח
+
+* \[ ] תמיכה באורטופוטו מפ"י (גרסה 23)
+* \[ ] דוחות PDF מודפסים
+* \[ ] גרפים סטטיסטיים (תקלות לפי חודש/כפר)
+
+### בתכנון
+
+* \[ ] אפליקציה ניידת (PWA)
+* \[ ] התראות SMS לתקלות גבוהות
+* \[ ] שילוב עם מערכות SCADA קיימות
+* \[ ] תמיכה בשכבות WMS חיצוניות
+
+\---
+
+## 👨‍💻 פיתוח
+
+פותח על ידי **מחמוד סגייר** (Mahmoud Sghayer) עבור **איגוד מי הגליל**.
+
+תוכן הפרויקט הוא קניין רוחני של איגוד מי הגליל. אין להעתיק, להפיץ או לעשות שימוש מסחרי ללא אישור מפורש.
+
+\---
+
+## 📞 תמיכה
+
+* **באגים / הצעות**: פתח issue ב-GitHub
+* **תמיכה תפעולית**: פנה למנהל המערכת באיגוד
+
+\---
+
+**Built with ☕ in Northern Israel** 🇮🇱
+
