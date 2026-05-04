@@ -377,8 +377,19 @@ async function deleteLayer(villageId, filePath) {
 
 // ── HELPERS ──
 function slugify(text) {
-  // Hebrew/Arabic safe slug — keeps letters, replaces spaces and dashes
-  return text.replace(/[\s\-_]+/g, '_').toLowerCase().replace(/[^\u0590-\u05FF\u0600-\u06FFa-z0-9_]/gi, '');
+  // Map Hebrew village names to English IDs
+  var map = {
+    'מגד אל-כרום': 'majd',
+    'בענה': 'biina',
+    'דיר אל-אסד': 'deir_al_asad',
+    'נחף': 'nahf',
+    'סחנין': 'sakhnin',
+    'דיר חנא': 'deir_hanna',
+    'ערבה': 'arrabeh'
+  };
+  if (map[text]) return map[text];
+  // Fallback: keep only ASCII letters/numbers/underscore
+  return text.replace(/[\s\-]+/g, '_').toLowerCase().replace(/[^a-z0-9_]/gi, '') || 'village_' + Date.now();
 }
 
 function formatSize(bytes) {
