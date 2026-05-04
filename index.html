@@ -9,7 +9,7 @@
   <script src="auth.js"></script>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    :root{--blue-dark:#0d3b5e;--blue-mid:#1a7fc1;--blue-light:#5ab8e8;--surface:#f8fafc;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--red:#dc2626;--green:#16a34a;--amber:#d97706;--purple:#7c3aed;--brown:#a16207}
+    :root{--blue-dark:#0d3b5e;--blue-mid:#1a7fc1;--blue-light:#5ab8e8;--surface:#f8fafc;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--red:#dc2626;--green:#16a34a;--amber:#d97706}
     html,body{height:100%;font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--surface);color:var(--text)}
     #app{display:flex;flex-direction:column;height:100vh;visibility:hidden}
     #app.ready{visibility:visible}
@@ -45,24 +45,19 @@
     #map-wrap{flex:1;position:relative;z-index:1}
     #map{width:100%;height:100%;z-index:1}
     #basemap-switcher{position:absolute;top:14px;left:14px;background:#fff;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,0.18);overflow:hidden;z-index:400;display:flex;border:1px solid rgba(0,0,0,0.08)}
-    .basemap-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 12px;cursor:pointer;background:#fff;border:none;border-right:1px solid var(--border);font-family:inherit;transition:background 0.15s;min-width:78px;direction:rtl}
+    .basemap-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 12px;cursor:pointer;background:#fff;border:none;border-right:1px solid var(--border);font-family:inherit;min-width:78px;direction:rtl}
     .basemap-btn:last-child{border-right:none}
     .basemap-btn:hover{background:#f1f5f9}
     .basemap-btn.active{background:var(--blue-dark);color:#fff}
     .basemap-btn.active .basemap-label{color:rgba(255,255,255,0.9)}
     .basemap-icon{font-size:18px;margin-bottom:2px}
     .basemap-label{font-size:10px;font-weight:600;color:var(--text);white-space:nowrap}
-    
-    /* SIDEBAR with proper scrolling */
     #sidebar{width:280px;flex-shrink:0;background:#fff;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;height:100%}
-    /* sticky panel — does NOT scroll */
     .panel-sticky{flex-shrink:0;border-bottom:1px solid var(--border);background:#fff}
-    /* scrollable area for villages */
     #layers-scroll-area{flex:1;overflow-y:auto;border-bottom:1px solid var(--border);min-height:80px}
     .panel{padding:12px 14px}
-    .panel-title{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#fff;padding:6px 0;z-index:5}
+    .panel-title{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;background:#fff;padding:6px 0}
     .panel-title .count-pill{background:var(--blue-mid);color:#fff;border-radius:10px;padding:1px 8px;font-size:10px;font-weight:700;letter-spacing:0}
-
     .village-group{margin-bottom:8px;border:1px solid var(--border);border-radius:8px;overflow:hidden}
     .village-header{display:flex;align-items:center;gap:8px;padding:8px 11px;cursor:pointer;background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);user-select:none}
     .village-header:hover{background:linear-gradient(135deg,#dbeafe 0%,#bfdbfe 100%)}
@@ -70,7 +65,7 @@
     .village-name{flex:1;font-size:13px;font-weight:700;color:#1e3a8a}
     .village-arrow{font-size:10px;color:#1e40af;transition:transform 0.2s}
     .village-group.collapsed .village-arrow{transform:rotate(-90deg)}
-    .village-content{padding:8px 11px 10px;background:#fff;max-height:1000px;overflow:hidden;transition:max-height 0.3s ease, padding 0.3s ease}
+    .village-content{padding:8px 11px 10px;background:#fff;max-height:1200px;overflow:hidden;transition:max-height 0.3s ease,padding 0.3s ease}
     .village-group.collapsed .village-content{max-height:0;padding-top:0;padding-bottom:0}
     .sub-layer{display:flex;align-items:center;gap:8px;padding:5px 0;cursor:pointer;font-size:12px}
     .sub-layer:hover{opacity:0.8}
@@ -89,23 +84,20 @@
     .toggle.on::after{transform:translateX(-14px)}
     .collapse-all-btn{font-size:10px;color:var(--blue-mid);cursor:pointer;background:none;border:none;font-family:inherit;padding:2px 6px;border-radius:4px}
     .collapse-all-btn:hover{background:#eff6ff}
-
     #village-filter{width:100%;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px;color:var(--text);background:var(--surface);direction:rtl;appearance:none}
     .my-incidents-panel{background:linear-gradient(135deg,#dbeafe 0%,#bfdbfe 100%)}
-    .my-incidents-panel .panel-title{color:#1e40af;background:transparent;position:static;padding:0;margin-bottom:8px}
+    .my-incidents-panel .panel-title{color:#1e40af;background:transparent;padding:0;margin-bottom:8px}
     .my-incidents-panel .count-pill{background:#1e40af}
     .incidents-list{padding:10px 14px}
-    .inc-item{background:#fff;border:1px solid var(--border);border-radius:8px;padding:9px 11px;margin-bottom:7px;cursor:pointer;transition:box-shadow 0.15s,border-color 0.15s}
+    .inc-item{background:#fff;border:1px solid var(--border);border-radius:8px;padding:9px 11px;margin-bottom:7px;cursor:pointer}
     .inc-item:hover{border-color:var(--blue-mid);box-shadow:0 2px 8px rgba(26,127,193,0.12)}
-    .inc-item.mine{border-color:#1e40af;background:#fff;border-width:1.5px}
+    .inc-item.mine{border-color:#1e40af;border-width:1.5px}
     .inc-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:3px;gap:6px}
     .inc-title{font-size:13px;font-weight:600;color:var(--text);line-height:1.3}
-    .badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;white-space:nowrap;flex-shrink:0}
+    .badge{font-size:10px;font-weight:600;padding:2px 7px;border-radius:4px;white-space:nowrap}
     .badge-high{background:#fee2e2;color:#991b1b}.badge-medium{background:#fef3c7;color:#92400e}.badge-low{background:#dcfce7;color:#166534}
     .inc-meta{font-size:11px;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap}
     .inc-village{color:var(--blue-mid);font-weight:500}
-
-    /* Scrollable incidents area */
     #incidents-scroll{flex:1;overflow-y:auto;min-height:120px}
     .empty-msg{color:var(--muted);font-size:12px;text-align:center;padding:20px 0}
     #add-btn{margin:12px 14px;padding:9px;border-radius:8px;cursor:pointer;background:var(--blue-dark);color:#fff;font-size:13px;font-weight:600;border:none;width:calc(100% - 28px);flex-shrink:0}
@@ -144,10 +136,9 @@
     .popup-mine-tag{background:#1e40af;color:#fff;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;display:inline-block;margin-bottom:5px}
     .map-label{background:transparent;border:none;font-size:9px;font-weight:700;color:#0d3b5e;text-shadow:1px 1px 0 rgba(255,255,255,0.95),-1px -1px 0 rgba(255,255,255,0.95),1px -1px 0 rgba(255,255,255,0.95),-1px 1px 0 rgba(255,255,255,0.95);white-space:nowrap;pointer-events:none;font-family:Arial,sans-serif}
     body.dark-basemap .map-label{color:#fff;text-shadow:1px 1px 0 rgba(0,0,0,0.95),-1px -1px 0 rgba(0,0,0,0.95),1px -1px 0 rgba(0,0,0,0.95),-1px 1px 0 rgba(0,0,0,0.95)}
-    #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--blue-dark);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:2000;transition:transform 0.3s;white-space:nowrap}
+    #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--blue-dark);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:2000;transition:transform 0.3s;white-space:nowrap}
     #toast.show{transform:translateX(-50%) translateY(0)}
     ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-    ::-webkit-scrollbar-thumb:hover{background:#94a3b8}
   </style>
 </head>
 <body>
@@ -195,39 +186,33 @@
       <div id="map"></div>
       <div id="basemap-switcher">
         <button class="basemap-btn active" data-basemap="satellite" onclick="switchBasemap('satellite')">
-          <div class="basemap-icon">🛰️</div>
-          <div class="basemap-label">לוויין HD</div>
+          <div class="basemap-icon">🛰️</div><div class="basemap-label">לוויין HD</div>
         </button>
         <button class="basemap-btn" data-basemap="hybrid" onclick="switchBasemap('hybrid')">
-          <div class="basemap-icon">🌍</div>
-          <div class="basemap-label">היברידי</div>
+          <div class="basemap-icon">🌍</div><div class="basemap-label">היברידי</div>
         </button>
         <button class="basemap-btn" data-basemap="streets" onclick="switchBasemap('streets')">
-          <div class="basemap-icon">🛣️</div>
-          <div class="basemap-label">רחובות</div>
+          <div class="basemap-icon">🛣️</div><div class="basemap-label">רחובות</div>
         </button>
         <button class="basemap-btn" data-basemap="light" onclick="switchBasemap('light')">
-          <div class="basemap-icon">🗺️</div>
-          <div class="basemap-label">בהיר</div>
+          <div class="basemap-icon">🗺️</div><div class="basemap-label">בהיר</div>
         </button>
       </div>
     </div>
 
     <div id="sidebar">
-      <!-- Sticky my-incidents at top -->
       <div class="panel panel-sticky my-incidents-panel" id="my-panel" style="display:none">
         <div class="panel-title">🛠️ תקלות בטיפול שלי <span class="count-pill" id="my-count">0</span></div>
         <div id="my-list"></div>
       </div>
 
-      <!-- SCROLLABLE LAYERS AREA -->
       <div id="layers-scroll-area">
         <div class="panel">
           <div class="panel-title">
             🗺️ שכבות תשתית
             <span style="display:flex;align-items:center;gap:6px">
-              <button class="collapse-all-btn" onclick="collapseAll()" title="קפל הכל">⊟ הכל</button>
-              <button class="collapse-all-btn" onclick="expandAll()" title="פרוש הכל">⊞ הכל</button>
+              <button class="collapse-all-btn" onclick="collapseAll()">⊟ הכל</button>
+              <button class="collapse-all-btn" onclick="expandAll()">⊞ הכל</button>
               <span class="count-pill" id="layer-count">0</span>
             </span>
           </div>
@@ -237,22 +222,19 @@
         </div>
       </div>
 
-      <!-- Sticky filter -->
       <div class="panel panel-sticky">
         <div class="panel-title">סינון תקלות לפי ישוב</div>
         <select id="village-filter" onchange="filterByVillage(this.value)">
           <option value="">כל הישובים</option>
           <option>מגד אל-כרום</option><option>בענה</option><option>דיר אל-אסד</option>
-          <option>נחף</option><option>סחנין</option><option>דיר חנא</option><option>ערבה</option>
+          <option>נחף</option><option>סחנין</option><option>דיר חנא</option><option>עראבה</option>
         </select>
       </div>
 
-      <!-- Sticky incidents header -->
       <div class="panel-sticky" style="padding:10px 14px 4px">
-        <div class="panel-title" style="margin-bottom:0;position:static">🚨 תקלות פתוחות <span class="count-pill" id="open-count">0</span></div>
+        <div class="panel-title" style="margin-bottom:0">🚨 תקלות פתוחות <span class="count-pill" id="open-count">0</span></div>
       </div>
 
-      <!-- Scrollable incidents -->
       <div id="incidents-scroll">
         <div class="incidents-list" id="incidents-panel">
           <div class="empty-msg">טוען...</div>
@@ -266,7 +248,7 @@
   <div id="statusbar">
     <span id="coords">לחץ על המפה</span><span>|</span>
     <span>זום: <span id="zoom-level">11</span></span><span>|</span>
-    <span id="basemap-name">Esri Satellite</span><span>|</span><span>מי הגליל © 2025</span>
+    <span id="basemap-name">Google לוויין HD</span><span>|</span><span>מי הגליל © 2025</span>
   </div>
 </div>
 
@@ -275,7 +257,7 @@
     <div class="modal-title">פתיחת תקלה חדשה</div>
     <div class="form-row"><label class="form-label">כותרת *</label><input class="form-input" id="f-title" type="text" placeholder="נזילה בצנרת ראשית"/></div>
     <div class="form-row-2">
-      <div><label class="form-label">ישוב *</label><select class="form-select" id="f-village"><option value="">בחר</option><option>מגד אל-כרום</option><option>בענה</option><option>דיר אל-אסד</option><option>נחף</option><option>סחנין</option><option>דיר חנא</option><option>ערבה</option></select></div>
+      <div><label class="form-label">ישוב *</label><select class="form-select" id="f-village"><option value="">בחר</option><option>מגד אל-כרום</option><option>בענה</option><option>דיר אל-אסד</option><option>נחף</option><option>סחנין</option><option>דיר חנא</option><option>עראבה</option></select></div>
       <div><label class="form-label">עדיפות</label><select class="form-select" id="f-priority"><option value="high">🔴 גבוהה</option><option value="medium" selected>🟡 בינונית</option><option value="low">🟢 נמוכה</option></select></div>
     </div>
     <div class="form-row"><label class="form-label">תיאור</label><textarea class="form-textarea" id="f-desc" placeholder="פרטים נוספים..."></textarea></div>
@@ -326,9 +308,22 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
+// ── VILLAGE COORDINATES (for filter zoom) ──
+var VILLAGES = [
+  { name: 'מגד אל-כרום', lat: 32.9189, lng: 35.2456 },
+  { name: 'בענה',         lat: 32.9485, lng: 35.2617 },
+  { name: 'דיר אל-אסד',   lat: 32.9356, lng: 35.2697 },
+  { name: 'נחף',           lat: 32.9344, lng: 35.3025 },
+  { name: 'סחנין',         lat: 32.8650, lng: 35.2978 },
+  { name: 'דיר חנא',       lat: 32.8631, lng: 35.3589 },
+  { name: 'עראבה',         lat: 32.8514, lng: 35.3339 }
+];
+
+// ── ALL LAYER CATEGORIES (existing + 13 new) ──
 var SUB_LAYERS = {
-  sewage_pipe:      { label:'קווי ביוב', icon:'─', color:'#fbbf24', type:'line', weight:3, dashArray:'7,4', defaultOn:true },
-  manhole:          { label:'שוחות ביוב', icon:'⭕', color:'#06b6d4', type:'point', radius:5, defaultOn:true },
+  // Existing (DWG-derived)
+  sewage_pipe:      { label:'קווי ביוב (DWG)', icon:'─', color:'#fbbf24', type:'line', weight:3, dashArray:'7,4', defaultOn:true },
+  manhole:          { label:'שוחות ביוב (DWG)', icon:'⭕', color:'#06b6d4', type:'point', radius:5, defaultOn:true },
   sleeve:           { label:'שרוולים', icon:'⊟', color:'#a855f7', type:'line', weight:2, defaultOn:true },
   control_point:    { label:'נקודות בקרה', icon:'◉', color:'#ef4444', type:'point', radius:6, defaultOn:true },
   pipe_label:       { label:'תוויות צנרת', icon:'🏷️', color:'#fbbf24', type:'label', defaultOn:false },
@@ -337,7 +332,21 @@ var SUB_LAYERS = {
   distance_label:   { label:'מרחקים', icon:'↔', color:'#c4b5fd', type:'label', defaultOn:false },
   dimension_line:   { label:'קווי מידה', icon:'┄', color:'#cbd5e1', type:'line', weight:1, dashArray:'2,3', defaultOn:false },
   manhole_drawing:  { label:'שרטוטי שוחות', icon:'◇', color:'#94a3b8', type:'line', weight:1, defaultOn:false },
-  other:            { label:'אחר', icon:'·', color:'#94a3b8', type:'mixed', defaultOn:false },
+  // 13 NEW categories
+  buildings:        { label:'🏢 בניינים', icon:'■', color:'#92400e', type:'mixed', defaultOn:true },
+  parcels:          { label:'📐 חלקות', icon:'◇', color:'#ca8a04', type:'line', weight:1.5, defaultOn:false },
+  water_meters:     { label:'🔢 מדי מים', icon:'■', color:'#0ea5e9', type:'point', radius:4, defaultOn:true },
+  water_pipes:      { label:'💧 קווי מים', icon:'─', color:'#0284c7', type:'line', weight:3, defaultOn:true },
+  sewage_pipes:     { label:'🟤 קווי ביוב', icon:'─', color:'#a16207', type:'line', weight:3, dashArray:'7,4', defaultOn:true },
+  sewage_manholes:  { label:'⭕ שוחות ביוב', icon:'●', color:'#854d0e', type:'point', radius:5, defaultOn:true },
+  hydrants:         { label:'🚒 הידרנטים', icon:'★', color:'#dc2626', type:'point', radius:6, defaultOn:true },
+  valves:           { label:'🔧 מגופים', icon:'◆', color:'#7c3aed', type:'point', radius:5, defaultOn:true },
+  control_valves:   { label:'⚙️ מגופים שולטים', icon:'◈', color:'#5b21b6', type:'point', radius:6, defaultOn:true },
+  connection_points:{ label:'🔌 נקודות חיבור מקורות', icon:'⬢', color:'#0891b2', type:'point', radius:6, defaultOn:true },
+  reservoirs:       { label:'🏗️ מאגרי מים', icon:'▣', color:'#0d9488', type:'mixed', defaultOn:true },
+  pump_stations:    { label:'⛽ תחנות שאיבה', icon:'▲', color:'#15803d', type:'point', radius:7, defaultOn:true },
+  sampling_points:  { label:'🧪 נקודות דיגום', icon:'•', color:'#be185d', type:'point', radius:5, defaultOn:false },
+  other:            { label:'אחר', icon:'·', color:'#94a3b8', type:'mixed', defaultOn:false }
 };
 
 var gMap, gIncidentsLayer, gIncidents=[], gMarkers={};
@@ -394,9 +403,11 @@ function closePassModal() { document.getElementById('pass-bg').classList.remove(
 function checkStr(val){var fill=document.getElementById('p-fill'),score=0;if(val.length>=8)score++;if(val.length>=12)score++;if(/[A-Z]/.test(val))score++;if(/[0-9]/.test(val))score++;if(/[^A-Za-z0-9]/.test(val))score++;var map=[{w:'20%',bg:'#dc2626'},{w:'40%',bg:'#f97316'},{w:'60%',bg:'#eab308'},{w:'80%',bg:'#22c55e'},{w:'100%',bg:'#16a34a'}];var s=map[Math.min(score-1,4)]||map[0];fill.style.width=s.w;fill.style.background=s.bg;}
 async function changePass(){var p=document.getElementById('p-new').value,c=document.getElementById('p-confirm').value;if(p.length<8){showToast('לפחות 8 תווים');return;}if(p!==c){showToast('הסיסמאות לא תואמות');return;}var res=await gSb.auth.updateUser({password:p});if(res.error){showToast('שגיאה');return;}closePassModal();showToast('✅ עודכן');}
 
+// ════════════════════════════════════════════════════════════
+//  MAP (FIXED ZOOM: 20 max, 19 native)
+// ════════════════════════════════════════════════════════════
 function initMap() {
-  // maxZoom 21 for high-zoom support; layers handle their own caps
-  gMap = L.map('map', { zoomControl:true, attributionControl:false, maxZoom:21 }).setView([32.91,35.22],11);
+  gMap = L.map('map', { zoomControl:true, attributionControl:false, maxZoom:20 }).setView([32.91,35.30],11);
   applyBasemap(gCurrentBasemap);
   gMap.on('mousemove', function(e) {
     var txt = e.latlng.lat.toFixed(5) + '° N,  ' + e.latlng.lng.toFixed(5) + '° E';
@@ -412,49 +423,30 @@ function initMap() {
 }
 
 function applyBasemap(key) {
-  // Remove old basemap layers
   gActiveBasemapLayers.forEach(function(l) { gMap.removeLayer(l); });
   gActiveBasemapLayers = [];
-
-  var isDark = false;
-  var name = '';
-
+  var isDark = false, name = '';
   if (key === 'satellite') {
-    name = 'Google לוויין HD';
-    isDark = true;
-    // Google satellite — supports up to zoom 21+ with high detail
+    name = 'Google לוויין HD'; isDark = true;
     gActiveBasemapLayers = [
-      L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-        maxZoom: 21, maxNativeZoom: 21, subdomains: ['0','1','2','3'], attribution: 'Google'
-      })
+      L.tileLayer('https://mt{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', { maxZoom:20, maxNativeZoom:19, subdomains:['0','1','2','3'], attribution:'Google' })
     ];
   } else if (key === 'hybrid') {
-    name = 'Google היברידי';
-    isDark = true;
-    // Google hybrid (satellite + roads/labels) — supports up to zoom 21
+    name = 'Google היברידי'; isDark = true;
     gActiveBasemapLayers = [
-      L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-        maxZoom: 21, maxNativeZoom: 21, subdomains: ['0','1','2','3'], attribution: 'Google'
-      })
+      L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom:20, maxNativeZoom:19, subdomains:['0','1','2','3'], attribution:'Google' })
     ];
   } else if (key === 'streets') {
-    name = 'Google רחובות';
-    isDark = false;
+    name = 'Google רחובות'; isDark = false;
     gActiveBasemapLayers = [
-      L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-        maxZoom: 21, maxNativeZoom: 21, subdomains: ['0','1','2','3'], attribution: 'Google'
-      })
+      L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom:20, maxNativeZoom:19, subdomains:['0','1','2','3'], attribution:'Google' })
     ];
   } else if (key === 'light') {
-    name = 'CartoDB בהיר';
-    isDark = false;
+    name = 'CartoDB בהיר'; isDark = false;
     gActiveBasemapLayers = [
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-        maxZoom: 20, maxNativeZoom: 19, attribution: 'CartoDB'
-      })
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom:20, maxNativeZoom:19, attribution:'CartoDB' })
     ];
   }
-
   gActiveBasemapLayers.forEach(function(l) { l.addTo(gMap); l.bringToBack(); });
   document.body.classList.toggle('dark-basemap', !!isDark);
   document.getElementById('basemap-name').textContent = name;
@@ -467,6 +459,9 @@ function applyBasemap(key) {
 function switchBasemap(key) { applyBasemap(key); }
 window.switchBasemap = switchBasemap;
 
+// ════════════════════════════════════════════════════════════
+//  LOAD VILLAGES
+// ════════════════════════════════════════════════════════════
 async function loadAllVillages() {
   var listRes = await gSb.from('village_layers').select('*').eq('is_active', true).order('uploaded_at', {ascending: true});
   if (listRes.error || !listRes.data || !listRes.data.length) {
@@ -484,7 +479,7 @@ async function loadVillageData(village) {
     var urlRes = gSb.storage.from('village-layers').getPublicUrl(village.file_path);
     var publicUrl = urlRes.data.publicUrl;
     var res = await fetch(publicUrl);
-    if (!res.ok) throw new Error('Failed to fetch ' + village.file_path);
+    if (!res.ok) throw new Error('Failed: ' + village.file_path);
     var data = await res.json();
     var categories = {};
     var bounds = L.latLngBounds([]);
@@ -493,9 +488,11 @@ async function loadVillageData(village) {
       if (!categories[cat]) categories[cat] = [];
       categories[cat].push(f);
       var g = f.geometry;
+      if (!g) return;
       if (g.type === 'Point') bounds.extend([g.coordinates[1], g.coordinates[0]]);
       else if (g.type === 'LineString') g.coordinates.forEach(function(c){bounds.extend([c[1],c[0]]);});
       else if (g.type === 'MultiLineString') g.coordinates.forEach(function(line){line.forEach(function(c){bounds.extend([c[1],c[0]]);});});
+      else if (g.type === 'Polygon') g.coordinates[0].forEach(function(c){bounds.extend([c[1],c[0]]);});
     });
     gVillageBounds[village.village_id] = bounds;
     gVillageLayers[village.village_id] = {};
@@ -506,25 +503,31 @@ async function loadVillageData(village) {
       categories[catId].forEach(function(feat) {
         var p = feat.properties || {};
         var g = feat.geometry;
+        if (!g) return;
         if (def.type === 'label' && g.type === 'Point' && p.Text) {
-          var icon = L.divIcon({ className: 'map-label', html: '<span style="color:'+def.color+'">'+p.Text+'</span>', iconSize: null, iconAnchor:[0,0] });
-          L.marker([g.coordinates[1], g.coordinates[0]], { icon: icon }).addTo(group);
+          var icon = L.divIcon({ className:'map-label', html:'<span style="color:'+def.color+'">'+p.Text+'</span>', iconSize:null, iconAnchor:[0,0] });
+          L.marker([g.coordinates[1], g.coordinates[0]], { icon:icon }).addTo(group);
         } else if (g.type === 'Point') {
-          var marker = L.circleMarker([g.coordinates[1], g.coordinates[0]], { radius: def.radius || 4, color: '#fff', weight: 1.5, fillColor: def.color, fillOpacity: 0.9 });
+          var marker = L.circleMarker([g.coordinates[1], g.coordinates[0]], { radius:def.radius||4, color:'#fff', weight:1.5, fillColor:def.color, fillOpacity:0.9 });
           marker.bindPopup(buildPopup(p, def, village));
           marker.addTo(group);
         } else if (g.type === 'LineString') {
           var coords = g.coordinates.map(function(c){return [c[1],c[0]];});
-          var line = L.polyline(coords, { color: def.color, weight: def.weight || 2, opacity: 0.95, dashArray: def.dashArray });
+          var line = L.polyline(coords, { color:def.color, weight:def.weight||2, opacity:0.95, dashArray:def.dashArray });
           line.bindPopup(buildPopup(p, def, village));
           line.addTo(group);
         } else if (g.type === 'MultiLineString') {
           g.coordinates.forEach(function(line) {
-            var coords = line.map(function(c){return [c[1],c[0]];});
-            var pl = L.polyline(coords, { color: def.color, weight: def.weight || 2, opacity: 0.95, dashArray: def.dashArray });
+            var c = line.map(function(c){return [c[1],c[0]];});
+            var pl = L.polyline(c, { color:def.color, weight:def.weight||2, opacity:0.95, dashArray:def.dashArray });
             pl.bindPopup(buildPopup(p, def, village));
             pl.addTo(group);
           });
+        } else if (g.type === 'Polygon') {
+          var coords = g.coordinates[0].map(function(c){return [c[1],c[0]];});
+          var poly = L.polygon(coords, { color:def.color, weight:def.weight||1.5, opacity:0.85, fillOpacity:0.25, fillColor:def.color });
+          poly.bindPopup(buildPopup(p, def, village));
+          poly.addTo(group);
         }
       });
       gVillageLayers[village.village_id][catId] = group;
@@ -541,8 +544,7 @@ function buildPopup(props, catDef, village) {
   html += '<div class="popup-row"><span class="popup-key">סוג</span><span class="popup-val">'+catDef.label+'</span></div>';
   if (props.Layer) html += '<div class="popup-row"><span class="popup-key">שכבה</span><span class="popup-val">'+props.Layer+'</span></div>';
   if (props.EntityHand) html += '<div class="popup-row"><span class="popup-key">מזהה</span><span class="popup-val">'+props.EntityHand+'</span></div>';
-  html += '<div style="margin-top:6px;padding-top:5px;border-top:1px solid #e2e8f0;font-size:10px;color:#64748b">'+village.icon+' '+village.village_name+'</div>';
-  html += '</div>';
+  html += '<div style="margin-top:6px;padding-top:5px;border-top:1px solid #e2e8f0;font-size:10px;color:#64748b">'+village.icon+' '+village.village_name+'</div></div>';
   return html;
 }
 
@@ -564,8 +566,7 @@ function renderVillagesList() {
         '<div class="sub-swatch" style="'+swatchStyle+'">'+(def.type==='label'?def.icon:'')+'</div>'+
         '<span class="sub-label">'+def.label+'</span>'+
         '<span class="sub-count">'+count+'</span>'+
-        '<div class="mini-toggle '+(on?'on':'')+'" id="sub-tog-'+v.village_id+'-'+catId+'"></div>'+
-        '</div>';
+        '<div class="mini-toggle '+(on?'on':'')+'" id="sub-tog-'+v.village_id+'-'+catId+'"></div></div>';
     }).join('');
     var collapsedClass = state.collapsed ? ' collapsed' : '';
     return '<div class="village-group'+collapsedClass+'" id="vg-'+v.village_id+'">'+
@@ -574,10 +575,8 @@ function renderVillagesList() {
         '<span class="village-name">'+v.village_name+'</span>'+
         '<span class="zoom-link" onclick="event.stopPropagation();zoomToVillage(\''+v.village_id+'\')">🎯</span>'+
         '<div class="toggle on" id="master-tog-'+v.village_id+'" onclick="event.stopPropagation();toggleVillage(\''+v.village_id+'\')"></div>'+
-        '<span class="village-arrow">▾</span>'+
-      '</div>'+
-      '<div class="village-content">' + subsHtml + '</div>'+
-    '</div>';
+        '<span class="village-arrow">▾</span></div>'+
+      '<div class="village-content">' + subsHtml + '</div></div>';
   }).join('');
 }
 
@@ -617,6 +616,7 @@ function toggleVillage(villageId) {
     else if (!state.masterOn) gMap.removeLayer(layer);
   });
 }
+
 function toggleSubLayer(villageId, catId) {
   var state = gVillageState[villageId];
   var layer = gVillageLayers[villageId][catId];
@@ -625,11 +625,15 @@ function toggleSubLayer(villageId, catId) {
   if (state.cats[catId] && state.masterOn) gMap.addLayer(layer);
   else gMap.removeLayer(layer);
 }
+
 function zoomToVillage(villageId) {
   var bounds = gVillageBounds[villageId];
   if (bounds && bounds.isValid()) gMap.flyToBounds(bounds, {padding:[50,50], duration:1.2, maxZoom:18});
 }
 
+// ════════════════════════════════════════════════════════════
+//  INCIDENTS
+// ════════════════════════════════════════════════════════════
 function initSB(){loadIncidents();subscribeRT();}
 function loadIncidents(){gSb.from('incidents').select('*').in('status',['open','in_progress']).order('created_at',{ascending:false}).then(function(res){if(res.error){console.error(res.error);return;}gIncidents=res.data||[];renderAll();document.getElementById('realtime-dot').style.background='#22c55e';});}
 function subscribeRT(){gSb.channel('inc-rt').on('postgres_changes',{event:'*',schema:'public',table:'incidents'},function(p){if(p.eventType==='INSERT'){gIncidents.unshift(p.new);showToast('תקלה חדשה: '+p.new.title);}else if(p.eventType==='UPDATE'){var i=gIncidents.findIndex(function(x){return x.id===p.new.id;});if(i>=0)gIncidents[i]=p.new;else gIncidents.unshift(p.new);if(p.new.status==='closed')gIncidents=gIncidents.filter(function(x){return x.id!==p.new.id;});}else if(p.eventType==='DELETE')gIncidents=gIncidents.filter(function(x){return x.id!==p.old.id;});renderAll();}).subscribe();}
@@ -655,7 +659,7 @@ function addMarker(inc, flyTo) {
   else if (inc.status==='in_progress' && mine) actions = '<div class="popup-actions"><button class="popup-btn success" onclick="openCloseModal('+inc.id+')">✔ סיים וסגור</button></div>';
   var m = L.marker([inc.lat,inc.lng],{icon:ic}).bindPopup(mineTag+'<div class="popup-title">'+inc.title+'</div><div class="popup-row"><span class="popup-key">ישוב</span><span class="popup-val">'+inc.village+'</span></div><div class="popup-row"><span class="popup-key">עדיפות</span><span class="popup-val" style="color:'+color+'">'+(PRIORITY_HE[inc.priority]||inc.priority)+'</span></div><div class="popup-row"><span class="popup-key">סטטוס</span><span class="popup-val">'+(STATUS_HE[inc.status]||inc.status)+'</span></div><div class="popup-row"><span class="popup-key">נפתח</span><span class="popup-val">'+timeAgo(inc.created_at)+'</span></div>'+(inc.description?'<div style="font-size:12px;color:#64748b;margin-top:6px;padding-top:5px;border-top:1px solid #e2e8f0">'+inc.description+'</div>':'')+actions);
   m.addTo(gIncidentsLayer); gMarkers[inc.id]=m;
-  if (flyTo) { gMap.flyTo([inc.lat,inc.lng],15,{duration:1.5}); setTimeout(function(){m.openPopup();},1600); }
+  if (flyTo) { gMap.flyTo([inc.lat,inc.lng],17,{duration:1.5}); setTimeout(function(){m.openPopup();},1600); }
 }
 
 function renderMyIncidents() {
@@ -681,7 +685,18 @@ function updateStats() {
 }
 
 function zoomTo(lat,lng,id){gMap.setView([lat,lng],18);if(gMarkers[id])setTimeout(function(){gMarkers[id].openPopup();},300);}
-function filterByVillage(val){gFilter=val;renderOpenIncidents();}
+
+// ── FIXED: village filter zooms to village ──
+function filterByVillage(val) {
+  gFilter = val;
+  renderOpenIncidents();
+  if (val) {
+    var v = VILLAGES.find(function(x){return x.name === val;});
+    if (v) gMap.flyTo([v.lat, v.lng], 15, {duration: 1.2});
+  } else {
+    gMap.flyTo([32.91, 35.30], 11, {duration: 1});
+  }
+}
 
 async function takeIncident(id){var now=new Date().toISOString();var res=await gSb.from('incidents').update({status:'in_progress',assigned_to:gUser.id,taken_at:now}).eq('id',id);if(res.error){showToast('שגיאה');return;}var inc=gIncidents.find(function(i){return i.id===id;});await logAction(id,'taken',null,inc);showToast('📋 הועברה לטיפולך');gMap.closePopup();if(inc){inc.status='in_progress';inc.assigned_to=gUser.id;inc.taken_at=now;}renderAll();}
 
@@ -710,6 +725,7 @@ window.toggleVillageCollapse=toggleVillageCollapse;
 window.collapseAll=collapseAll;
 window.expandAll=expandAll;
 window.zoomToVillage=zoomToVillage;
+window.filterByVillage=filterByVillage;
 </script>
 </body>
 </html>

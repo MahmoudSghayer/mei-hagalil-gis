@@ -11,7 +11,6 @@
     :root{--blue-dark:#0d3b5e;--blue-mid:#1a7fc1;--blue-light:#5ab8e8;--surface:#f8fafc;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;--red:#dc2626;--green:#16a34a;--amber:#d97706}
     body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;direction:rtl;background:var(--surface);color:var(--text);visibility:hidden;min-height:100vh}
     body.ready{visibility:visible}
-
     #topbar{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:52px;background:var(--blue-dark);color:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.3)}
     .logo{font-size:15px;font-weight:600}.logo span{color:var(--blue-light)}
     .topbar-right{display:flex;align-items:center;gap:10px}
@@ -19,24 +18,18 @@
     .topbar-btn{padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-family:inherit;border:1px solid rgba(255,255,255,0.3);color:#fff;background:transparent;text-decoration:none;display:inline-block}
     .topbar-btn:hover{background:rgba(255,255,255,0.1)}
     .topbar-btn.solid{background:var(--blue-mid);border-color:var(--blue-mid)}
-
     #content{max-width:900px;margin:0 auto;padding:28px 20px}
     h1{font-size:22px;font-weight:700;color:var(--blue-dark);margin-bottom:4px}
     .page-sub{font-size:13px;color:var(--muted);margin-bottom:24px}
-
     .card{background:#fff;border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:20px}
     .card-title{font-size:15px;font-weight:600;color:var(--blue-dark);margin-bottom:16px;display:flex;align-items:center;gap:8px}
-
-    /* Upload zone */
     .upload-zone{border:2px dashed #cbd5e1;border-radius:12px;padding:40px 20px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--surface)}
     .upload-zone:hover{border-color:var(--blue-mid);background:#eff6ff}
     .upload-zone.dragover{border-color:var(--blue-mid);background:#dbeafe;transform:scale(1.01)}
     .upload-icon{font-size:48px;margin-bottom:12px;opacity:0.6}
     .upload-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px}
     .upload-sub{font-size:12px;color:var(--muted)}
-    .upload-zone input[type="file"]{display:none}
-
-    /* File preview */
+    .upload-zone input[type=file]{display:none}
     .file-preview{background:#dbeafe;border:1px solid #93c5fd;border-radius:10px;padding:14px 18px;margin-top:14px;display:none;align-items:center;gap:14px}
     .file-preview.show{display:flex}
     .file-icon{font-size:32px}
@@ -44,23 +37,18 @@
     .file-name{font-size:13px;font-weight:600;color:var(--blue-dark);direction:ltr;text-align:right}
     .file-size{font-size:11px;color:var(--muted);margin-top:2px}
     .file-remove{padding:4px 10px;background:#fee2e2;color:var(--red);border:1px solid #fca5a5;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;font-family:inherit}
-
-    /* Form */
     .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
     .form-group{margin-bottom:14px}
     .form-group.full{grid-column:span 2}
     label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px}
     input,select{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;color:var(--text);font-family:inherit;background:#fff}
     input:focus,select:focus{outline:none;border-color:var(--blue-mid)}
-
     .btn{padding:10px 20px;border-radius:7px;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit}
     .btn-primary{background:var(--blue-dark);color:#fff}
     .btn-primary:hover{background:var(--blue-mid)}
     .btn-primary:disabled{background:#94a3b8;cursor:not-allowed}
     .btn-danger{background:#fee2e2;color:var(--red);border:1px solid #fca5a5}
     .btn-danger:hover{background:#fecaca}
-
-    /* Existing layers table */
     table.layers{width:100%;border-collapse:collapse}
     table.layers th{text-align:right;padding:11px 14px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.4px;border-bottom:2px solid var(--border);background:var(--surface)}
     table.layers td{padding:13px 14px;font-size:13px;border-bottom:1px solid var(--border);vertical-align:middle}
@@ -72,21 +60,15 @@
     .feature-count-pill{background:#eff6ff;color:#1e40af;padding:3px 10px;border-radius:5px;font-size:11px;font-weight:600;display:inline-block}
     .empty{text-align:center;padding:50px;color:var(--muted)}
     .empty-icon{font-size:36px;margin-bottom:8px}
-
-    /* Progress */
     .progress-wrap{margin-top:14px;display:none}
     .progress-wrap.show{display:block}
     .progress-bar{height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden}
     .progress-fill{height:100%;background:linear-gradient(90deg,#1a7fc1,#5ab8e8);width:0;transition:width 0.3s;border-radius:3px}
     .progress-text{font-size:12px;color:var(--muted);margin-top:6px;text-align:center}
-
-    /* Toast */
     #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--blue-dark);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;z-index:2000;transition:transform 0.3s;white-space:nowrap}
     #toast.show{transform:translateX(-50%) translateY(0)}
     #toast.error{background:var(--red)}
     #toast.success{background:var(--green)}
-
-    /* Help box */
     .help{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:12px 14px;font-size:12px;color:#1e40af;line-height:1.6;margin-bottom:18px}
     .help strong{color:#1e3a8a}
     .help code{background:#dbeafe;padding:1px 6px;border-radius:3px;font-family:monospace;font-size:11px}
@@ -109,23 +91,17 @@
   <p class="page-sub">העלה קבצי GeoJSON של כפרים. הקבצים יישמרו ב-Supabase Storage ויטענו אוטומטית במפה.</p>
 
   <div class="help">
-    💡 <strong>תהליך העבודה:</strong><br>
-    1. ממיר DWG ל-GeoJSON ב-<code>mygeodata.cloud</code> (פורמט WGS 84)<br>
-    2. מעלה את הקובץ כאן<br>
-    3. הקובץ מופיע אוטומטית במפה לכל המשתמשים
+    💡 <strong>תהליך:</strong> ממיר DWG ל-GeoJSON ב-<code>mygeodata.cloud</code> (פורמט WGS 84) → מעלה כאן → מופיע אוטומטית במפה לכל המשתמשים.
   </div>
 
-  <!-- Upload card -->
   <div class="card">
     <div class="card-title">📁 העלאת קובץ חדש</div>
-
     <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
       <div class="upload-icon">📤</div>
       <div class="upload-title">גרור קובץ GeoJSON לכאן או לחץ לבחירה</div>
       <div class="upload-sub">קבצים נתמכים: .geojson, .json (עד 10 MB)</div>
       <input type="file" id="file-input" accept=".geojson,.json,application/geo+json,application/json"/>
     </div>
-
     <div class="file-preview" id="file-preview">
       <div class="file-icon">📄</div>
       <div class="file-info">
@@ -146,7 +122,7 @@
           <option value="נחף">נחף</option>
           <option value="סחנין">סחנין</option>
           <option value="דיר חנא">דיר חנא</option>
-          <option value="ערבה">ערבה</option>
+          <option value="עראבה">עראבה</option>
         </select>
       </div>
       <div class="form-group">
@@ -160,9 +136,32 @@
         </select>
       </div>
       <div class="form-group full">
-        <button class="btn btn-primary" id="upload-btn" onclick="doUpload()" style="width:100%">
-          📤 העלה קובץ
-        </button>
+        <label>קטגוריה ראשית של השכבה (אופציונלי - תיוג כל ה-features)</label>
+        <select id="category-select">
+          <option value="">— ללא תיוג (השאר את ה-_category המקורי) —</option>
+          <optgroup label="תשתית מים">
+            <option value="water_pipes">💧 קווי מים</option>
+            <option value="water_meters">🔢 מדי מים</option>
+            <option value="hydrants">🚒 הידרנטים</option>
+            <option value="valves">🔧 מגופים</option>
+            <option value="control_valves">⚙️ מגופים שולטים</option>
+            <option value="connection_points">🔌 נקודות חיבור מקורות</option>
+            <option value="reservoirs">🏗️ מאגרי מים</option>
+            <option value="pump_stations">⛽ תחנות שאיבה</option>
+            <option value="sampling_points">🧪 נקודות דיגום</option>
+          </optgroup>
+          <optgroup label="תשתית ביוב">
+            <option value="sewage_pipes">🟤 קווי ביוב</option>
+            <option value="sewage_manholes">⭕ שוחות ביוב</option>
+          </optgroup>
+          <optgroup label="מיפוי">
+            <option value="buildings">🏢 בניינים</option>
+            <option value="parcels">📐 חלקות</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="form-group full">
+        <button class="btn btn-primary" id="upload-btn" onclick="doUpload()" style="width:100%">📤 העלה קובץ</button>
       </div>
     </div>
 
@@ -172,7 +171,6 @@
     </div>
   </div>
 
-  <!-- Existing layers -->
   <div class="card">
     <div class="card-title">🗂️ שכבות קיימות</div>
     <div id="layers-list"><div class="empty"><div class="empty-icon">⏳</div>טוען...</div></div>
@@ -197,15 +195,13 @@ window.addEventListener('load', async function() {
   setupDragDrop();
 });
 
-// ── DRAG & DROP ──
 function setupDragDrop() {
   var zone = document.getElementById('drop-zone');
   var input = document.getElementById('file-input');
-
-  ['dragenter', 'dragover'].forEach(function(ev) {
+  ['dragenter','dragover'].forEach(function(ev) {
     zone.addEventListener(ev, function(e) { e.preventDefault(); zone.classList.add('dragover'); });
   });
-  ['dragleave', 'drop'].forEach(function(ev) {
+  ['dragleave','drop'].forEach(function(ev) {
     zone.addEventListener(ev, function(e) { e.preventDefault(); zone.classList.remove('dragover'); });
   });
   zone.addEventListener('drop', function(e) {
@@ -218,116 +214,110 @@ function setupDragDrop() {
 }
 
 function handleFile(file) {
-  if (!file.name.match(/\.(geojson|json)$/i)) {
-    showToast('רק קבצי GeoJSON או JSON נתמכים', 'error'); return;
-  }
-  if (file.size > 10 * 1024 * 1024) {
-    showToast('גודל קובץ מקסימלי 10MB', 'error'); return;
-  }
-
+  if (!file.name.match(/\.(geojson|json)$/i)) { showToast('רק קבצי GeoJSON או JSON נתמכים', 'error'); return; }
+  if (file.size > 10*1024*1024) { showToast('גודל קובץ מקסימלי 10MB', 'error'); return; }
   gFile = file;
   document.getElementById('fp-name').textContent = file.name;
   document.getElementById('fp-size').textContent = formatSize(file.size);
   document.getElementById('file-preview').classList.add('show');
-
-  // Read and validate
   var reader = new FileReader();
   reader.onload = function(e) {
     try {
       var data = JSON.parse(e.target.result);
       if (data.type !== 'FeatureCollection' || !Array.isArray(data.features)) {
-        showToast('הקובץ אינו GeoJSON תקין', 'error');
-        clearFile();
-        return;
+        showToast('הקובץ אינו GeoJSON תקין', 'error'); clearFile(); return;
       }
       gFileData = data;
       var count = data.features.length;
       document.getElementById('fp-size').textContent = formatSize(file.size) + ' · ' + count + ' אובייקטים';
       document.getElementById('meta-form').style.display = 'grid';
       showToast('✅ קובץ תקין! בחר כפר והעלה');
-    } catch(err) {
-      showToast('שגיאה בקריאת הקובץ: ' + err.message, 'error');
-      clearFile();
-    }
+    } catch(err) { showToast('שגיאה: ' + err.message, 'error'); clearFile(); }
   };
   reader.readAsText(file);
 }
 
 function clearFile() {
-  gFile = null;
-  gFileData = null;
+  gFile = null; gFileData = null;
   document.getElementById('file-input').value = '';
   document.getElementById('file-preview').classList.remove('show');
   document.getElementById('meta-form').style.display = 'none';
   document.getElementById('progress').classList.remove('show');
 }
 
-// ── UPLOAD ──
 async function doUpload() {
   if (!gFile || !gFileData) { showToast('אנא בחר קובץ', 'error'); return; }
   var villageName = document.getElementById('village-select').value;
   var icon = document.getElementById('icon-select').value;
+  var category = document.getElementById('category-select').value;
   if (!villageName) { showToast('אנא בחר כפר', 'error'); return; }
 
   var villageId = slugify(villageName);
-  var fileName = villageId + '.geojson';
+  // Add category suffix if specified
+  var fileName = villageId + (category ? '_' + category : '') + '.geojson';
   var btn = document.getElementById('upload-btn');
-  var progressWrap = document.getElementById('progress');
-  var progressFill = document.getElementById('progress-fill');
-  var progressText = document.getElementById('progress-text');
-
-  btn.disabled = true;
-  btn.textContent = '⏳ מעלה...';
-  progressWrap.classList.add('show');
-  progressFill.style.width = '20%';
-  progressText.textContent = 'מעלה לאחסון...';
+  var pw = document.getElementById('progress');
+  var pf = document.getElementById('progress-fill');
+  var pt = document.getElementById('progress-text');
+  btn.disabled = true; btn.textContent = '⏳ מעלה...';
+  pw.classList.add('show'); pf.style.width = '20%'; pt.textContent = 'מעלה לאחסון...';
 
   try {
-    // Upload to Supabase Storage (upsert - replaces if exists)
-    var fileBlob = new Blob([JSON.stringify(gFileData)], { type: 'application/json' });
-    var uploadRes = await gSb.storage
-      .from('village-layers')
-      .upload(fileName, fileBlob, { upsert: true, contentType: 'application/json' });
+    // If category selected, tag all features with it
+    var dataToUpload = gFileData;
+    if (category) {
+      dataToUpload = JSON.parse(JSON.stringify(gFileData));
+      dataToUpload.features.forEach(function(f) {
+        f.properties = f.properties || {};
+        f.properties._category = category;
+      });
+    }
 
+    var fileBlob = new Blob([JSON.stringify(dataToUpload)], {type:'application/json'});
+    var uploadRes = await gSb.storage.from('village-layers').upload(fileName, fileBlob, {upsert:true, contentType:'application/json'});
     if (uploadRes.error) throw uploadRes.error;
 
-    progressFill.style.width = '70%';
-    progressText.textContent = 'שומר נתונים...';
+    pf.style.width = '70%'; pt.textContent = 'שומר נתונים...';
 
-    // Upsert metadata in village_layers table
+    var metaId = villageId + (category ? '_' + category : '');
     var metaRes = await gSb.from('village_layers').upsert({
-      village_id: villageId,
-      village_name: villageName,
+      village_id: metaId,
+      village_name: villageName + (category ? ' — ' + categoryLabel(category) : ''),
       icon: icon,
       file_path: fileName,
-      feature_count: gFileData.features.length,
+      feature_count: dataToUpload.features.length,
       uploaded_by: gAdminId,
       uploaded_at: new Date().toISOString(),
       is_active: true
-    }, { onConflict: 'village_id' });
+    }, {onConflict:'village_id'});
 
     if (metaRes.error) throw metaRes.error;
 
-    progressFill.style.width = '100%';
-    progressText.textContent = '✅ הועלה בהצלחה!';
-
+    pf.style.width = '100%'; pt.textContent = '✅ הועלה בהצלחה!';
     showToast('✅ ' + villageName + ' הועלה בהצלחה!', 'success');
     setTimeout(function() {
-      clearFile();
-      btn.disabled = false;
-      btn.textContent = '📤 העלה קובץ';
+      clearFile(); btn.disabled = false; btn.textContent = '📤 העלה קובץ';
       loadLayers();
     }, 1500);
   } catch(e) {
     showToast('שגיאה: ' + e.message, 'error');
-    progressWrap.classList.remove('show');
-    btn.disabled = false;
-    btn.textContent = '📤 העלה קובץ';
+    pw.classList.remove('show'); btn.disabled = false; btn.textContent = '📤 העלה קובץ';
     console.error(e);
   }
 }
 
-// ── LIST EXISTING LAYERS ──
+function categoryLabel(c) {
+  var map = {
+    water_pipes:'קווי מים', water_meters:'מדי מים', hydrants:'הידרנטים',
+    valves:'מגופים', control_valves:'מגופים שולטים',
+    connection_points:'נקודות חיבור', reservoirs:'מאגרים', pump_stations:'תחנות שאיבה',
+    sampling_points:'נקודות דיגום',
+    sewage_pipes:'קווי ביוב', sewage_manholes:'שוחות ביוב',
+    buildings:'בניינים', parcels:'חלקות'
+  };
+  return map[c] || c;
+}
+
 async function loadLayers() {
   var res = await gSb.from('village_layers').select('*').order('uploaded_at', {ascending:false});
   if (res.error) { showToast('שגיאה בטעינה', 'error'); return; }
@@ -344,10 +334,7 @@ function renderLayers(layers) {
     '<th>שכבה</th><th>אובייקטים</th><th>הועלה</th><th>סטטוס</th><th>פעולות</th>' +
     '</tr></thead><tbody>' +
     layers.map(function(l) {
-      var date = new Date(l.uploaded_at).toLocaleString('he-IL', {
-        day:'2-digit', month:'2-digit', year:'numeric',
-        hour:'2-digit', minute:'2-digit'
-      });
+      var date = new Date(l.uploaded_at).toLocaleString('he-IL', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
       return '<tr>' +
         '<td><div class="layer-name"><span class="layer-icon">'+(l.icon||'🏘️')+'</span>' +
           '<div><div class="layer-info">'+l.village_name+'</div>' +
@@ -355,41 +342,30 @@ function renderLayers(layers) {
         '<td><span class="feature-count-pill">'+l.feature_count+'</span></td>' +
         '<td><div style="font-size:12px">'+date+'</div></td>' +
         '<td>' + (l.is_active ? '🟢 פעיל' : '⚪ מושהה') + '</td>' +
-        '<td>' +
-          '<button class="btn btn-danger" style="padding:5px 12px;font-size:11px" onclick="deleteLayer(\''+l.village_id+'\',\''+l.file_path+'\')">🗑️ מחק</button>' +
-        '</td></tr>';
+        '<td><button class="btn btn-danger" style="padding:5px 12px;font-size:11px" onclick="deleteLayer(\''+l.village_id+'\',\''+l.file_path+'\')">🗑️ מחק</button></td>' +
+      '</tr>';
     }).join('') +
     '</tbody></table>';
 }
 
 async function deleteLayer(villageId, filePath) {
   if (!confirm('האם למחוק את השכבה? פעולה זו אינה ניתנת לביטול.')) return;
-
   var storageRes = await gSb.storage.from('village-layers').remove([filePath]);
   if (storageRes.error) { showToast('שגיאה במחיקת קובץ', 'error'); return; }
-
   var dbRes = await gSb.from('village_layers').delete().eq('village_id', villageId);
   if (dbRes.error) { showToast('שגיאה במחיקת רשומה', 'error'); return; }
-
   showToast('🗑️ נמחק בהצלחה');
   loadLayers();
 }
 
-// ── HELPERS ──
 function slugify(text) {
-  // Map Hebrew village names to English IDs
   var map = {
-    'מגד אל-כרום': 'majd',
-    'בענה': 'biina',
-    'דיר אל-אסד': 'deir_al_asad',
-    'נחף': 'nahf',
-    'סחנין': 'sakhnin',
-    'דיר חנא': 'deir_hanna',
-    'ערבה': 'arrabeh'
+    'מגד אל-כרום':'majd', 'בענה':'biina', 'דיר אל-אסד':'deir_al_asad',
+    'נחף':'nahf', 'סחנין':'sakhnin', 'דיר חנא':'deir_hanna', 'עראבה':'arrabeh',
+    'ערבה':'arrabeh'  // backwards compat
   };
   if (map[text]) return map[text];
-  // Fallback: keep only ASCII letters/numbers/underscore
-  return text.replace(/[\s\-]+/g, '_').toLowerCase().replace(/[^a-z0-9_]/gi, '') || 'village_' + Date.now();
+  return text.replace(/[\s\-]+/g,'_').toLowerCase().replace(/[^a-z0-9_]/gi,'') || 'village_'+Date.now();
 }
 
 function formatSize(bytes) {
@@ -401,10 +377,10 @@ function formatSize(bytes) {
 function showToast(msg, type) {
   var t = document.getElementById('toast');
   t.textContent = msg;
-  t.classList.remove('error', 'success');
+  t.classList.remove('error','success');
   if (type) t.classList.add(type);
   t.classList.add('show');
-  setTimeout(function() { t.classList.remove('show'); }, 3500);
+  setTimeout(function(){t.classList.remove('show');}, 3500);
 }
 </script>
 </body>
