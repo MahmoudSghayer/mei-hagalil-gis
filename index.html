@@ -42,7 +42,19 @@
     .admin-link{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:4px 10px;color:#fff;text-decoration:none;font-size:12px;font-weight:500}
     .admin-link:hover{background:rgba(255,255,255,0.2)}
     #main{display:flex;flex:1;overflow:hidden}
-    #map{flex:1;z-index:1}
+    #map-wrap{flex:1;position:relative;z-index:1}
+    #map{width:100%;height:100%;z-index:1}
+
+    /* BASEMAP SWITCHER */
+    #basemap-switcher{position:absolute;top:14px;left:14px;background:#fff;border-radius:10px;box-shadow:0 4px 14px rgba(0,0,0,0.18);overflow:hidden;z-index:400;display:flex;border:1px solid rgba(0,0,0,0.08)}
+    .basemap-btn{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 12px;cursor:pointer;background:#fff;border:none;border-right:1px solid var(--border);font-family:inherit;transition:background 0.15s;min-width:78px;direction:rtl}
+    .basemap-btn:last-child{border-right:none}
+    .basemap-btn:hover{background:#f1f5f9}
+    .basemap-btn.active{background:var(--blue-dark);color:#fff}
+    .basemap-btn.active .basemap-label{color:rgba(255,255,255,0.9)}
+    .basemap-icon{font-size:18px;margin-bottom:2px}
+    .basemap-label{font-size:10px;font-weight:600;color:var(--text);white-space:nowrap}
+
     #sidebar{width:280px;flex-shrink:0;background:#fff;border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
     .panel{padding:12px 14px;border-bottom:1px solid var(--border)}
     .panel-title{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
@@ -122,6 +134,8 @@
     .popup-btn.success{background:var(--green);color:#fff;border-color:var(--green)}
     .popup-mine-tag{background:#1e40af;color:#fff;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:600;display:inline-block;margin-bottom:5px}
     .map-label{background:transparent;border:none;font-size:9px;font-weight:700;color:#0d3b5e;text-shadow:1px 1px 0 rgba(255,255,255,0.95),-1px -1px 0 rgba(255,255,255,0.95),1px -1px 0 rgba(255,255,255,0.95),-1px 1px 0 rgba(255,255,255,0.95);white-space:nowrap;pointer-events:none;font-family:Arial,sans-serif}
+    /* When using satellite, change label colors for visibility */
+    body.dark-basemap .map-label{color:#fff;text-shadow:1px 1px 0 rgba(0,0,0,0.95),-1px -1px 0 rgba(0,0,0,0.95),1px -1px 0 rgba(0,0,0,0.95),-1px 1px 0 rgba(0,0,0,0.95)}
     #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--blue-dark);color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:2000;transition:transform 0.3s;white-space:nowrap}
     #toast.show{transform:translateX(-50%) translateY(0)}
     ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
@@ -168,7 +182,28 @@
   </div>
 
   <div id="main">
-    <div id="map"></div>
+    <div id="map-wrap">
+      <div id="map"></div>
+      <!-- Basemap switcher -->
+      <div id="basemap-switcher">
+        <button class="basemap-btn active" data-basemap="satellite" onclick="switchBasemap('satellite')">
+          <div class="basemap-icon">🛰️</div>
+          <div class="basemap-label">לוויין HD</div>
+        </button>
+        <button class="basemap-btn" data-basemap="hybrid" onclick="switchBasemap('hybrid')">
+          <div class="basemap-icon">🌍</div>
+          <div class="basemap-label">היברידי</div>
+        </button>
+        <button class="basemap-btn" data-basemap="streets" onclick="switchBasemap('streets')">
+          <div class="basemap-icon">🛣️</div>
+          <div class="basemap-label">רחובות</div>
+        </button>
+        <button class="basemap-btn" data-basemap="light" onclick="switchBasemap('light')">
+          <div class="basemap-icon">🗺️</div>
+          <div class="basemap-label">בהיר</div>
+        </button>
+      </div>
+    </div>
     <div id="sidebar">
       <div class="panel my-incidents-panel" id="my-panel" style="display:none">
         <div class="panel-title">🛠️ תקלות בטיפול שלי <span class="count-pill" id="my-count">0</span></div>
@@ -202,7 +237,7 @@
   <div id="statusbar">
     <span id="coords">לחץ על המפה</span><span>|</span>
     <span>זום: <span id="zoom-level">11</span></span><span>|</span>
-    <span>OpenStreetMap</span><span>|</span><span>מי הגליל © 2025</span>
+    <span id="basemap-name">Esri Satellite</span><span>|</span><span>מי הגליל © 2025</span>
   </div>
 </div>
 
@@ -262,23 +297,72 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
+// ════════════════════════════════════════════════════════════
+//  BASEMAP DEFINITIONS
+// ════════════════════════════════════════════════════════════
+var BASEMAPS = {
+  satellite: {
+    name: 'Esri לוויין',
+    isDark: true,
+    layers: [
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19, attribution: 'Esri'
+      })
+    ]
+  },
+  hybrid: {
+    name: 'לוויין + שמות',
+    isDark: true,
+    layers: [
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19, attribution: 'Esri'
+      }),
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19, opacity: 0.9
+      }),
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19, opacity: 0.85
+      })
+    ]
+  },
+  streets: {
+    name: 'רחובות מפורטים',
+    isDark: false,
+    layers: [
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, attribution: 'OSM'
+      })
+    ]
+  },
+  light: {
+    name: 'בהיר נקי',
+    isDark: false,
+    layers: [
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19, attribution: 'CartoDB'
+      })
+    ]
+  }
+};
+
 var SUB_LAYERS = {
-  sewage_pipe:      { label:'קווי ביוב', icon:'─', color:'#a16207', type:'line', weight:3, dashArray:'7,4', defaultOn:true },
-  manhole:          { label:'שוחות ביוב', icon:'⭕', color:'#0d9488', type:'point', radius:5, defaultOn:true },
-  sleeve:           { label:'שרוולים', icon:'⊟', color:'#7c3aed', type:'line', weight:2, defaultOn:true },
-  control_point:    { label:'נקודות בקרה', icon:'◉', color:'#dc2626', type:'point', radius:6, defaultOn:true },
-  pipe_label:       { label:'תוויות צנרת', icon:'🏷️', color:'#475569', type:'label', defaultOn:false },
-  elevation_label:  { label:'גבהים (TL/IL)', icon:'📏', color:'#1e40af', type:'label', defaultOn:false },
-  attribute_label:  { label:'תוויות שוחות', icon:'#', color:'#0f766e', type:'label', defaultOn:false },
-  distance_label:   { label:'מרחקים', icon:'↔', color:'#9333ea', type:'label', defaultOn:false },
-  dimension_line:   { label:'קווי מידה', icon:'┄', color:'#9ca3af', type:'line', weight:1, dashArray:'2,3', defaultOn:false },
-  manhole_drawing:  { label:'שרטוטי שוחות', icon:'◇', color:'#64748b', type:'line', weight:1, defaultOn:false },
+  sewage_pipe:      { label:'קווי ביוב', icon:'─', color:'#fbbf24', type:'line', weight:3, dashArray:'7,4', defaultOn:true },
+  manhole:          { label:'שוחות ביוב', icon:'⭕', color:'#06b6d4', type:'point', radius:5, defaultOn:true },
+  sleeve:           { label:'שרוולים', icon:'⊟', color:'#a855f7', type:'line', weight:2, defaultOn:true },
+  control_point:    { label:'נקודות בקרה', icon:'◉', color:'#ef4444', type:'point', radius:6, defaultOn:true },
+  pipe_label:       { label:'תוויות צנרת', icon:'🏷️', color:'#fbbf24', type:'label', defaultOn:false },
+  elevation_label:  { label:'גבהים (TL/IL)', icon:'📏', color:'#fde047', type:'label', defaultOn:false },
+  attribute_label:  { label:'תוויות שוחות', icon:'#', color:'#a7f3d0', type:'label', defaultOn:false },
+  distance_label:   { label:'מרחקים', icon:'↔', color:'#c4b5fd', type:'label', defaultOn:false },
+  dimension_line:   { label:'קווי מידה', icon:'┄', color:'#cbd5e1', type:'line', weight:1, dashArray:'2,3', defaultOn:false },
+  manhole_drawing:  { label:'שרטוטי שוחות', icon:'◇', color:'#94a3b8', type:'line', weight:1, defaultOn:false },
   other:            { label:'אחר', icon:'·', color:'#94a3b8', type:'mixed', defaultOn:false },
 };
 
 var gMap, gIncidentsLayer, gIncidents=[], gMarkers={};
-var gVillages = []; // loaded from village_layers table
-var gVillageLayers = {}, gVillageState = {}, gVillageBounds = {};
+var gCurrentBasemap = 'satellite';
+var gActiveBasemapLayers = [];
+var gVillages = [], gVillageLayers = {}, gVillageState = {}, gVillageBounds = {};
 var gLastLat=null, gLastLng=null, gFilter='';
 var gUser=null, gProfile=null, gClosingId=null;
 
@@ -329,9 +413,12 @@ function closePassModal() { document.getElementById('pass-bg').classList.remove(
 function checkStr(val){var fill=document.getElementById('p-fill'),score=0;if(val.length>=8)score++;if(val.length>=12)score++;if(/[A-Z]/.test(val))score++;if(/[0-9]/.test(val))score++;if(/[^A-Za-z0-9]/.test(val))score++;var map=[{w:'20%',bg:'#dc2626'},{w:'40%',bg:'#f97316'},{w:'60%',bg:'#eab308'},{w:'80%',bg:'#22c55e'},{w:'100%',bg:'#16a34a'}];var s=map[Math.min(score-1,4)]||map[0];fill.style.width=s.w;fill.style.background=s.bg;}
 async function changePass(){var p=document.getElementById('p-new').value,c=document.getElementById('p-confirm').value;if(p.length<8){showToast('לפחות 8 תווים');return;}if(p!==c){showToast('הסיסמאות לא תואמות');return;}var res=await gSb.auth.updateUser({password:p});if(res.error){showToast('שגיאה');return;}closePassModal();showToast('✅ עודכן');}
 
+// ════════════════════════════════════════════════════════════
+//  MAP INIT WITH BASEMAP SWITCHER
+// ════════════════════════════════════════════════════════════
 function initMap() {
-  gMap = L.map('map',{zoomControl:true,attributionControl:false}).setView([32.91,35.22],11);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(gMap);
+  gMap = L.map('map', { zoomControl:true, attributionControl:false }).setView([32.91,35.22],11);
+  applyBasemap(gCurrentBasemap);
   gMap.on('mousemove', function(e) {
     var txt = e.latlng.lat.toFixed(5) + '° N,  ' + e.latlng.lng.toFixed(5) + '° E';
     document.getElementById('coords').textContent = txt;
@@ -345,38 +432,76 @@ function initMap() {
   gIncidentsLayer = L.layerGroup().addTo(gMap);
 }
 
+function applyBasemap(key) {
+  var def = BASEMAPS[key];
+  if (!def) return;
+
+  // Remove old basemap layers
+  gActiveBasemapLayers.forEach(function(l) { gMap.removeLayer(l); });
+  gActiveBasemapLayers = [];
+
+  // Add new basemap layers (recreate fresh because Leaflet caches them)
+  if (key === 'satellite') {
+    gActiveBasemapLayers = [
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom:19, attribution:'Esri' })
+    ];
+  } else if (key === 'hybrid') {
+    gActiveBasemapLayers = [
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom:19 }),
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}', { maxZoom:19, opacity:0.85 }),
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom:19, opacity:0.9 })
+    ];
+  } else if (key === 'streets') {
+    gActiveBasemapLayers = [
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom:19, attribution:'OSM' })
+    ];
+  } else if (key === 'light') {
+    gActiveBasemapLayers = [
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom:19, attribution:'CartoDB' })
+    ];
+  }
+
+  gActiveBasemapLayers.forEach(function(l) { l.addTo(gMap); l.bringToBack(); });
+
+  // Update body class for label visibility
+  document.body.classList.toggle('dark-basemap', !!def.isDark);
+
+  // Update statusbar
+  document.getElementById('basemap-name').textContent = def.name;
+
+  // Update active button
+  document.querySelectorAll('.basemap-btn').forEach(function(btn) {
+    btn.classList.toggle('active', btn.getAttribute('data-basemap') === key);
+  });
+
+  gCurrentBasemap = key;
+}
+
+function switchBasemap(key) { applyBasemap(key); }
+window.switchBasemap = switchBasemap;
+
 // ════════════════════════════════════════════════════════════
 //  LOAD VILLAGES FROM SUPABASE
 // ════════════════════════════════════════════════════════════
 async function loadAllVillages() {
-  // Get list of village layers from database
   var listRes = await gSb.from('village_layers').select('*').eq('is_active', true).order('uploaded_at', {ascending: true});
-
   if (listRes.error || !listRes.data || !listRes.data.length) {
     document.getElementById('dwg-layers-list').innerHTML = '<div class="empty-msg" style="font-size:11px;padding:8px 0">אין שכבות עדיין' + (gProfile.role === 'admin' ? '. <a href="upload.html" style="color:var(--blue-mid)">העלה קובץ ראשון</a>' : '') + '</div>';
     return;
   }
-
   gVillages = listRes.data;
   document.getElementById('layer-count').textContent = gVillages.length;
-
-  // Load each village's GeoJSON from Supabase Storage
-  for (var i = 0; i < gVillages.length; i++) {
-    await loadVillageData(gVillages[i]);
-  }
+  for (var i = 0; i < gVillages.length; i++) await loadVillageData(gVillages[i]);
   renderVillagesList();
 }
 
 async function loadVillageData(village) {
   try {
-    // Get public URL for the file
     var urlRes = gSb.storage.from('village-layers').getPublicUrl(village.file_path);
     var publicUrl = urlRes.data.publicUrl;
-
     var res = await fetch(publicUrl);
     if (!res.ok) throw new Error('Failed to fetch ' + village.file_path);
     var data = await res.json();
-
     var categories = {};
     var bounds = L.latLngBounds([]);
     data.features.forEach(function(f) {
@@ -388,11 +513,9 @@ async function loadVillageData(village) {
       else if (g.type === 'LineString') g.coordinates.forEach(function(c){bounds.extend([c[1],c[0]]);});
       else if (g.type === 'MultiLineString') g.coordinates.forEach(function(line){line.forEach(function(c){bounds.extend([c[1],c[0]]);});});
     });
-
     gVillageBounds[village.village_id] = bounds;
     gVillageLayers[village.village_id] = {};
     gVillageState[village.village_id] = { masterOn: true, cats: {}, counts: {} };
-
     Object.keys(categories).forEach(function(catId) {
       var def = SUB_LAYERS[catId] || SUB_LAYERS.other;
       var group = L.layerGroup();
@@ -408,13 +531,13 @@ async function loadVillageData(village) {
           marker.addTo(group);
         } else if (g.type === 'LineString') {
           var coords = g.coordinates.map(function(c){return [c[1],c[0]];});
-          var line = L.polyline(coords, { color: def.color, weight: def.weight || 2, opacity: 0.85, dashArray: def.dashArray });
+          var line = L.polyline(coords, { color: def.color, weight: def.weight || 2, opacity: 0.95, dashArray: def.dashArray });
           line.bindPopup(buildPopup(p, def, village));
           line.addTo(group);
         } else if (g.type === 'MultiLineString') {
           g.coordinates.forEach(function(line) {
             var coords = line.map(function(c){return [c[1],c[0]];});
-            var pl = L.polyline(coords, { color: def.color, weight: def.weight || 2, opacity: 0.85, dashArray: def.dashArray });
+            var pl = L.polyline(coords, { color: def.color, weight: def.weight || 2, opacity: 0.95, dashArray: def.dashArray });
             pl.bindPopup(buildPopup(p, def, village));
             pl.addTo(group);
           });
@@ -425,9 +548,7 @@ async function loadVillageData(village) {
       gVillageState[village.village_id].counts[catId] = categories[catId].length;
       if (def.defaultOn) group.addTo(gMap);
     });
-  } catch(e) {
-    console.error('Failed to load ' + village.village_id, e);
-  }
+  } catch(e) { console.error('Failed to load ' + village.village_id, e); }
 }
 
 function buildPopup(props, catDef, village) {
