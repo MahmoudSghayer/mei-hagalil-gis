@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>מי הגליל | יומן פעילות</title>
+  <link rel="stylesheet" href="../css/shared.css"/>
+  <link rel="stylesheet" href="../css/pages/logs.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="../js/auth.js"></script>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="logo">💧 מי <span>הגליל</span> | יומן פעילות</div>
+  <div class="topbar-right">
+    <span class="badge-admin">👑 מנהל מערכת</span>
+    <a href="../index.html" class="topbar-btn solid">🗺️ למפה</a>
+    <a href="admin.html" class="topbar-btn">⚙️ ניהול</a>
+    <button class="topbar-btn" onclick="logout()">התנתק</button>
+  </div>
+</div>
+
+<div id="content">
+  <h1>📋 יומן פעילות</h1>
+  <p class="page-sub">היסטוריה של כל הפעולות על תקלות — מי עשה מה ומתי</p>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-num" id="s-total">—</div><div class="stat-label">סה"כ פעולות</div></div>
+    <div class="stat-card green"><div class="stat-num" id="s-closed">—</div><div class="stat-label">תקלות נסגרו</div></div>
+    <div class="stat-card amber"><div class="stat-num" id="s-taken">—</div><div class="stat-label">בטיפול עכשיו</div></div>
+    <div class="stat-card red"><div class="stat-num" id="s-avg">—</div><div class="stat-label">זמן טיפול ממוצע</div></div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters">
+    <div class="filter-group">
+      <label>פעולה</label>
+      <select id="f-action" onchange="applyFilters()">
+        <option value="">הכל</option>
+        <option value="created">נפתח</option>
+        <option value="taken">נלקח לטיפול</option>
+        <option value="closed">נסגר</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>ישוב</label>
+      <select id="f-village" onchange="applyFilters()">
+        <option value="">הכל</option>
+        <option>מגד אל-כרום</option><option>בענה</option><option>דיר אל-אסד</option>
+        <option>נחף</option><option>סחנין</option><option>דיר חנא</option><option>ערבה</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>משתמש</label>
+      <select id="f-user" onchange="applyFilters()"><option value="">הכל</option></select>
+    </div>
+    <div class="filter-group">
+      <label>חיפוש</label>
+      <input type="text" id="f-search" placeholder="כותרת תקלה, הערות..." oninput="applyFilters()"/>
+    </div>
+    <button class="btn-clear" onclick="clearFilters()">🗑️ נקה סינון</button>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">📑 יומן (<span id="filtered-count">0</span> רשומות)</div>
+    </div>
+    <div id="logs-container"><div class="empty"><div class="empty-icon">⏳</div>טוען...</div></div>
+    <div class="pagination" id="pagination" style="display:none">
+      <button class="page-btn" id="prev-btn" onclick="changePage(-1)">‹ הקודם</button>
+      <span class="page-info" id="page-info">—</span>
+      <button class="page-btn" id="next-btn" onclick="changePage(1)">הבא ›</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="../js/motion-utils.js"></script>
+<script src="../js/pages/logs.js"></script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+/* Layer-rules page — page-specific only. Shared styles in ../shared.css */
+body { opacity: 0; }
+
+/* Help / info block */
+.help { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 14px 16px; font-size: 12px; color: #1e40af; line-height: 1.7; margin-bottom: 18px; }
+.help strong { color: #1e3a8a; }
+.help code   { background: #dbeafe; padding: 1px 6px; border-radius: 3px; font-family: monospace; font-size: 11px; }
+
+/* AutoCAD layer name chip */
+.pattern-cell { font-family: monospace; font-weight: 700; color: var(--blue-dark); background: var(--surface-2); padding: 3px 8px; border-radius: 4px; display: inline-block; }
+
+/* Match-type pills */
+.match-pill        { padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; display: inline-block; text-transform: uppercase; }
+.match-contains    { background: #eff6ff;           color: #1e40af; }
+.match-exact       { background: var(--green-pale);  color: #166534; }
+.match-starts_with { background: var(--amber-pale);  color: #92400e; }
+.match-regex       { background: #fce7f3;            color: #9d174d; }
+
+/* Category pills */
+.cat-pill   { padding: 3px 10px; border-radius: 5px; font-size: 11px; font-weight: 600; display: inline-block; }
+.cat-ignore { background: var(--red-pale);  color: var(--red); }
+.cat-active { background: #eff6ff;          color: #1e40af; }
+
+/* Priority number chip */
+.priority-num { font-family: monospace; color: var(--muted); font-size: 12px; }

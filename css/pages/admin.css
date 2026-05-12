@@ -1,0 +1,24 @@
+/* Admin page — page-specific only. Shared styles in ../shared.css */
+body { opacity: 0; }
+
+/* User table cells */
+.user-cell { display: flex; align-items: center; gap: 10px; }
+.avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0; }
+.u-name  { font-weight: 600; }
+.u-email { font-size: 11px; color: var(--muted); direction: ltr; text-align: right; }
+
+.status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-inline-start: 5px; }
+.status-dot.active   { background: #22c55e; }
+.status-dot.inactive { background: var(--muted-2); }
+
+/* Role selector widget in create/edit modal */
+.role-select { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 5px; }
+.role-card { padding: 12px; border: 2px solid var(--border); border-radius: 9px; cursor: pointer; text-align: center; transition: all var(--dur-fast) var(--ease-out); }
+.role-card:hover { border-color: var(--blue-mid); }
+.role-card.selected { border-color: var(--blue-dark); background: #eff6ff; }
+.role-card .icon  { font-size: 24px; margin-bottom: 4px; }
+.role-card .label { font-size: 13px; font-weight: 600; color: var(--text); }
+.role-card .desc  { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+/* Email field direction (LTR inside RTL form) */
+input[type=email] { direction: ltr; text-align: right; }

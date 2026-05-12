@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>מי הגליל | מערכת GIS</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+  <link rel="stylesheet" href="css/shared.css"/>
+  <link rel="stylesheet" href="css/pages/index.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="js/auth.js"></script>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <div class="logo">💧 מי <span>הגליל</span> | GIS</div>
+    <div class="stats">
+      <div class="stat alert"><div class="n" id="stat-incidents">—</div><div class="l">תקלות פתוחות</div></div>
+      <div class="stat mine"><div class="n" id="stat-mine">—</div><div class="l">בטיפולי</div></div>
+      <div class="stat coords">
+        <div class="n" id="tc-coords">— הזז עכבר על המפה —</div>
+        <div class="l">📍 קואורדינטות עכבר</div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div id="realtime-dot"></div>
+      <a href="pages/upload.html" id="upload-link" class="admin-link" style="display:none">📤 העלאה</a>
+      <a href="pages/admin.html" id="admin-link" class="admin-link" style="display:none">⚙️ ניהול</a>
+      <a href="pages/logs.html" id="logs-link" class="admin-link" style="display:none">📋 יומן</a>
+      <div class="user-area">
+        <button class="user-btn" id="user-btn" onclick="toggleDD()">
+          <div class="user-avatar" id="user-avatar">—</div>
+          <div>
+            <div class="user-name" id="user-name">—</div>
+            <div class="user-role-label" id="user-role-label"></div>
+          </div>
+          <span style="font-size:10px;opacity:0.7">▾</span>
+        </button>
+        <div class="dropdown" id="user-dd">
+          <div class="dd-header">
+            <div class="dd-name" id="dd-name">—</div>
+            <div class="dd-email" id="dd-email">—</div>
+          </div>
+          <button class="dd-item" onclick="openSettings()">⚙️ הגדרות חשבון</button>
+          <button class="dd-item" onclick="openChangePass()">🔑 שינוי סיסמה</button>
+          <div class="dd-divider"></div>
+          <button class="dd-item danger" onclick="logout()">🚪 התנתקות</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="main">
+    <div id="map-wrap">
+      <div id="map"></div>
+      <div id="basemap-switcher">
+        <button class="basemap-btn active" data-basemap="satellite" onclick="switchBasemap('satellite')">
+          <div class="basemap-icon">🛰️</div><div class="basemap-label">לוויין HD</div>
+        </button>
+        <button class="basemap-btn" data-basemap="hybrid" onclick="switchBasemap('hybrid')">
+          <div class="basemap-icon">🌍</div><div class="basemap-label">היברידי</div>
+        </button>
+        <button class="basemap-btn" data-basemap="streets" onclick="switchBasemap('streets')">
+          <div class="basemap-icon">🛣️</div><div class="basemap-label">רחובות</div>
+        </button>
+        <button class="basemap-btn" data-basemap="light" onclick="switchBasemap('light')">
+          <div class="basemap-icon">🗺️</div><div class="basemap-label">בהיר</div>
+        </button>
+      </div>
+    </div>
+
+    <div id="sidebar">
+      <div class="panel panel-sticky my-incidents-panel" id="my-panel" style="display:none">
+        <div class="panel-title">🛠️ תקלות בטיפול שלי <span class="count-pill" id="my-count">0</span></div>
+        <div id="my-list"></div>
+      </div>
+
+      <div id="layers-scroll-area">
+        <div class="panel">
+          <div class="panel-title">
+            🗺️ שכבות תשתית
+            <span style="display:flex;align-items:center;gap:6px">
+              <button class="collapse-all-btn" onclick="collapseAll()">⊟ הכל</button>
+              <button class="collapse-all-btn" onclick="expandAll()">⊞ הכל</button>
+              <span class="count-pill" id="layer-count">0</span>
+            </span>
+          </div>
+          <div id="dwg-layers-list">
+            <div class="empty-msg" style="font-size:11px;padding:8px 0">טוען שכבות...</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel panel-sticky">
+        <div class="panel-title">סינון תקלות לפי ישוב</div>
+        <select id="village-filter" onchange="filterByVillage(this.value)">
+          <option value="">כל הישובים</option>
+          <option>מגד אל-כרום</option><option>בענה</option><option>דיר אל-אסד</option>
+          <option>נחף</option><option>סחנין</option><option>דיר חנא</option><option>עראבה</option>
+        </select>
+      </div>
+
+      <div class="panel-sticky" style="padding:10px 14px 4px">
+        <div class="panel-title" style="margin-bottom:0">🚨 תקלות פתוחות <span class="count-pill" id="open-count">0</span></div>
+      </div>
+
+      <div id="incidents-scroll">
+        <div class="incidents-list" id="incidents-panel">
+          <div class="empty-msg">טוען...</div>
+        </div>
+      </div>
+
+      <button id="add-btn" onclick="openIncModal()">+ פתח תקלה חדשה</button>
+    </div>
+  </div>
+
+  <div id="statusbar">
+    <span id="coords">לחץ על המפה</span><span>|</span>
+    <span>זום: <span id="zoom-level">11</span></span><span>|</span>
+    <span id="basemap-name">Google לוויין HD</span><span>|</span><span>מי הגליל © 2025</span>
+  </div>
+</div>
+
+<div class="modal-bg" id="inc-modal-bg" onclick="if(event.target.id==='inc-modal-bg')closeIncModal()">
+  <div class="modal-box">
+    <div class="modal-title">פתיחת תקלה חדשה</div>
+    <div class="form-row"><label class="form-label">כותרת *</label><input class="form-input" id="f-title" type="text" placeholder="נזילה בצנרת ראשית"/></div>
+    <div class="form-row-2">
+      <div><label class="form-label">ישוב *</label><select class="form-select" id="f-village"><option value="">בחר</option><option>מגד אל-כרום</option><option>בענה</option><option>דיר אל-אסד</option><option>נחף</option><option>סחנין</option><option>דיר חנא</option><option>עראבה</option></select></div>
+      <div><label class="form-label">עדיפות</label><select class="form-select" id="f-priority"><option value="high">🔴 גבוהה</option><option value="medium" selected>🟡 בינונית</option><option value="low">🟢 נמוכה</option></select></div>
+    </div>
+    <div class="form-row"><label class="form-label">תיאור</label><textarea class="form-textarea" id="f-desc" placeholder="פרטים נוספים..."></textarea></div>
+    <div class="form-row-2">
+      <div><label class="form-label">Lat</label><input class="form-input" id="f-lat" type="number" step="0.0001"/></div>
+      <div><label class="form-label">Lng</label><input class="form-input" id="f-lng" type="number" step="0.0001"/></div>
+    </div>
+    <div style="font-size:11px;color:var(--muted)">💡 לחץ על המפה לפני פתיחת הטופס למיקום אוטומטי</div>
+    <div class="modal-btns"><button class="btn-primary" onclick="submitIncident()">שמור תקלה</button><button class="btn-secondary" onclick="closeIncModal()">ביטול</button></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="close-modal-bg" onclick="if(event.target.id==='close-modal-bg')closeCloseModal()">
+  <div class="modal-box">
+    <div class="modal-title">✔ סגירת תקלה</div>
+    <div class="modal-sub" id="close-incident-info">—</div>
+    <div class="form-row">
+      <label class="form-label">מה בוצע לתיקון? *</label>
+      <textarea class="form-textarea" id="close-notes" placeholder="הוחלף ברז ראשי..."></textarea>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-success" onclick="confirmClose()">✔ סגור תקלה</button>
+      <button class="btn-secondary" onclick="closeCloseModal()">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="settings-bg" onclick="if(event.target.id==='settings-bg')closeSettings()">
+  <div class="modal-box">
+    <div class="modal-title">⚙️ הגדרות חשבון</div>
+    <div class="form-row"><label class="form-label">שם מלא</label><input class="form-input" id="s-name" type="text"/></div>
+    <div class="form-row"><label class="form-label">טלפון</label><input class="form-input" id="s-phone" type="tel"/></div>
+    <div class="form-row"><label class="form-label">אימייל</label><input class="form-input" id="s-email" type="email" disabled style="background:#f1f5f9;color:#94a3b8"/></div>
+    <div class="modal-btns"><button class="btn-primary" onclick="saveSettings()">💾 שמור</button><button class="btn-secondary" onclick="closeSettings()">ביטול</button></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="pass-bg" onclick="if(event.target.id==='pass-bg')closePassModal()">
+  <div class="modal-box">
+    <div class="modal-title">🔑 שינוי סיסמה</div>
+    <div class="form-row"><label class="form-label">סיסמה חדשה</label><input class="form-input" id="p-new" type="password" oninput="checkStr(this.value)"/><div class="strength-bar"><div class="strength-fill" id="p-fill"></div></div></div>
+    <div class="form-row"><label class="form-label">אימות סיסמה</label><input class="form-input" id="p-confirm" type="password"/></div>
+    <div class="modal-btns"><button class="btn-primary" onclick="changePass()">עדכן סיסמה</button><button class="btn-secondary" onclick="closePassModal()">ביטול</button></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="js/motion-utils.js"></script>
+<script src="js/pages/index.js"></script>
+<script src="js/export-feature.js"></script>
+<script src="js/search-feature.js"></script>
+<script src="js/backend-client.js"></script>
+</body>
+</html>

@@ -1,0 +1,37 @@
+body{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0d3b5e 0%,#1a5f8a 50%,#0d3b5e 100%);font-family:'Segoe UI',Tahoma,Arial,sans-serif;direction:rtl}
+.bg-grid{position:fixed;inset:0;opacity:0.04;background-image:repeating-linear-gradient(0deg,transparent,transparent 40px,#fff 40px,#fff 41px),repeating-linear-gradient(90deg,transparent,transparent 40px,#fff 40px,#fff 41px);pointer-events:none}
+.card{background:#fff;border-radius:16px;padding:40px;width:390px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.3);position:relative;z-index:1}
+.logo-wrap{text-align:center;margin-bottom:32px}
+.logo-icon{font-size:42px;margin-bottom:10px}
+.logo-text{font-size:24px;font-weight:700;color:#0d3b5e}
+.logo-text span{color:#1a7fc1}
+.logo-sub{font-size:12px;color:#64748b;margin-top:4px}
+.divider{height:1px;background:#e2e8f0;margin:20px 0}
+.form-group{margin-bottom:18px}
+label{display:block;font-size:12px;font-weight:600;color:#64748b;margin-bottom:6px;text-transform:uppercase;letter-spacing:0.4px}
+.input-wrap{position:relative}
+input{width:100%;padding:11px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:14px;color:#1e293b;font-family:inherit;transition:border-color 0.15s}
+input:focus{outline:none;border-color:#1a7fc1;box-shadow:0 0 0 3px rgba(26,127,193,0.1)}
+input[type="email"]{direction:ltr;text-align:left}
+.eye-btn{position:absolute;left:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:#94a3b8;font-size:16px;padding:0}
+.forgot-link{display:block;text-align:left;font-size:12px;color:#1a7fc1;text-decoration:none;margin-top:6px}
+.forgot-link:hover{text-decoration:underline}
+.btn-login{width:100%;padding:13px;border-radius:8px;border:none;cursor:pointer;font-size:15px;font-weight:700;font-family:inherit;background:#0d3b5e;color:#fff;transition:background 0.15s;margin-top:4px}
+.btn-login:hover{background:#1a7fc1}
+.btn-login:disabled{background:#94a3b8;cursor:not-allowed}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,0.4);border-top-color:#fff;border-radius:50%;animation:spin 0.7s linear infinite;vertical-align:middle;margin-left:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error-msg{background:#fee2e2;color:#991b1b;border-radius:8px;padding:10px 14px;font-size:13px;margin-top:14px;display:none;text-align:center}
+.error-msg.show{display:block}
+.footer{text-align:center;font-size:11px;color:#94a3b8;margin-top:24px;line-height:1.6}
+#fp-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100;align-items:center;justify-content:center}
+#fp-overlay.open{display:flex}
+#fp-modal{background:#fff;border-radius:12px;padding:28px;width:360px;max-width:95vw;direction:rtl;box-shadow:0 8px 32px rgba(0,0,0,0.2)}
+.fp-title{font-size:16px;font-weight:700;color:#0d3b5e;margin-bottom:8px}
+.fp-sub{font-size:13px;color:#64748b;margin-bottom:20px;line-height:1.5}
+.fp-btns{display:flex;gap:10px;margin-top:16px}
+.btn-send{flex:1;padding:10px;border-radius:7px;border:none;cursor:pointer;background:#0d3b5e;color:#fff;font-size:13px;font-weight:600;font-family:inherit}
+.btn-send:hover{background:#1a7fc1}
+.btn-cancel{padding:10px 16px;border-radius:7px;cursor:pointer;background:transparent;color:#64748b;font-size:13px;border:1px solid #e2e8f0;font-family:inherit}
+.fp-ok{background:#dcfce7;color:#166534;border-radius:8px;padding:10px 14px;font-size:13px;margin-top:12px;display:none}
+.fp-ok.show{display:block}

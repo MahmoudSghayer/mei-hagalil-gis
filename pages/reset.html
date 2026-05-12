@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>מי הגליל | איפוס סיסמה</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="../js/auth.js"></script>
+  <link rel="stylesheet" href="../css/shared.css"/>
+  <link rel="stylesheet" href="../css/pages/reset.css"/>
+</head>
+<body>
+<div class="card">
+  <div class="logo-wrap">
+    <div class="logo-icon">💧</div>
+    <div class="logo-text">מי <span>הגליל</span></div>
+    <div class="logo-sub">איפוס סיסמה</div>
+  </div>
+  <div id="loading-state">⏳ מאמת קישור...</div>
+  <div id="form-section" style="display:none">
+    <div class="form-group">
+      <label>סיסמה חדשה</label>
+      <input type="password" id="new-pass" placeholder="לפחות 8 תווים" oninput="checkStrength(this.value)"/>
+      <div class="strength-bar"><div class="strength-fill" id="strength-fill"></div></div>
+    </div>
+    <div class="form-group">
+      <label>אימות סיסמה</label>
+      <input type="password" id="confirm-pass" placeholder="הכנס שוב"/>
+    </div>
+    <button class="btn" id="reset-btn" onclick="doReset()">עדכן סיסמה</button>
+    <div class="msg error" id="err-msg"></div>
+    <div class="msg success" id="ok-msg"></div>
+  </div>
+  <div id="invalid-section" style="display:none;text-align:center;padding:10px 0">
+    <div style="font-size:40px;margin-bottom:12px">❌</div>
+    <div style="font-size:14px;font-weight:600;color:#991b1b;margin-bottom:8px">הקישור לא תקין או פג תוקף</div>
+    <div style="font-size:12px;color:#64748b">בקש קישור חדש מהמנהל</div>
+  </div>
+  <a href="login.html" class="back-link">← חזרה לדף הכניסה</a>
+</div>
+
+<script src="../js/motion-utils.js"></script>
+<script src="../js/pages/reset.js"></script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>מי הגליל | כניסה</title>
+  <link rel="stylesheet" href="../css/shared.css"/>
+  <link rel="stylesheet" href="../css/pages/login.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="../js/auth.js"></script>
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="card">
+  <div class="logo-wrap">
+    <div class="logo-icon">💧</div>
+    <div class="logo-text">מי <span>הגליל</span></div>
+    <div class="logo-sub">מערכת ניהול GIS | כניסה למורשים בלבד</div>
+  </div>
+  <div class="divider"></div>
+  <div class="form-group">
+    <label>כתובת אימייל</label>
+    <input type="email" id="email" placeholder="your@email.com" autocomplete="username"/>
+  </div>
+  <div class="form-group">
+    <label>סיסמה</label>
+    <div class="input-wrap">
+      <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
+      <button class="eye-btn" onclick="togglePass()" id="eye-btn">👁</button>
+    </div>
+    <a href="#" class="forgot-link" onclick="openFP(event)">שכחתי סיסמה</a>
+  </div>
+  <button class="btn-login" id="login-btn" onclick="doLogin()">כניסה למערכת</button>
+  <div class="error-msg" id="err"></div>
+  <div class="footer">גישה למורשים בלבד · מי הגליל © 2025<br>ליצירת חשבון פנה למנהל המערכת</div>
+</div>
+
+<div id="fp-overlay" onclick="if(event.target.id==='fp-overlay')closeFP()">
+  <div id="fp-modal">
+    <div class="fp-title">🔑 שכחת סיסמה?</div>
+    <div class="fp-sub">הכנס את כתובת האימייל שלך ונשלח לך קישור לאיפוס הסיסמה.</div>
+    <div class="form-group" style="margin-bottom:0">
+      <label>כתובת אימייל</label>
+      <input type="email" id="fp-email" placeholder="your@email.com"/>
+    </div>
+    <div class="fp-ok" id="fp-ok">✅ קישור נשלח! בדוק את תיבת הדואר.</div>
+    <div class="fp-btns">
+      <button class="btn-send" onclick="sendReset()">שלח קישור</button>
+      <button class="btn-cancel" onclick="closeFP()">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<script src="../js/motion-utils.js"></script>
+<script src="../js/pages/login.js"></script>
+</body>
+</html>
