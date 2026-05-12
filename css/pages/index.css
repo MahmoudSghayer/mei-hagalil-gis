@@ -308,3 +308,170 @@ body.dark-basemap .map-label { color: #fff; text-shadow: 1px 1px 0 rgba(0,0,0,0.
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: var(--r-full); }
 ::-webkit-scrollbar-thumb:hover { background: var(--muted-2); }
+
+/* ══════════════════════════════════════════════════════════
+   MEASURE TOOLS
+══════════════════════════════════════════════════════════ */
+
+/* Toolbar */
+#measure-toolbar {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 800;
+  background: rgba(13, 27, 46, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(90,184,232,0.2);
+  border-radius: 14px;
+  padding: 8px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.04);
+  min-width: 68px;
+}
+
+.mt-header {
+  font-size: 9px;
+  font-weight: 700;
+  color: rgba(90,184,232,0.7);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  text-align: center;
+  padding: 2px 4px 6px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+  margin-bottom: 2px;
+}
+
+.mt-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 6px 6px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  cursor: pointer;
+  color: rgba(255,255,255,0.55);
+  font-size: 18px;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.12s;
+  white-space: nowrap;
+  line-height: 1;
+}
+.mt-btn span {
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.4);
+  letter-spacing: 0.3px;
+  transition: color 0.15s;
+}
+.mt-btn:hover {
+  background: rgba(90,184,232,0.12);
+  border-color: rgba(90,184,232,0.2);
+  color: #fff;
+  transform: scale(1.06);
+}
+.mt-btn:hover span { color: rgba(255,255,255,0.75); }
+.mt-btn.active {
+  background: rgba(26,127,193,0.3);
+  border-color: rgba(90,184,232,0.5);
+  color: #fff;
+  box-shadow: 0 0 12px rgba(90,184,232,0.25);
+}
+.mt-btn.active span { color: var(--blue-light); }
+.mt-btn.mt-clear:hover {
+  background: rgba(220,38,38,0.18);
+  border-color: rgba(220,38,38,0.35);
+  color: #fca5a5;
+}
+.mt-btn.mt-clear:hover span { color: #fca5a5; }
+
+.mt-sep {
+  height: 1px;
+  background: rgba(255,255,255,0.07);
+  margin: 3px 4px;
+}
+
+/* Instruction banner */
+#mt-banner {
+  display: none;
+  position: absolute;
+  bottom: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 810;
+  background: rgba(13,27,46,0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(90,184,232,0.3);
+  border-radius: 9999px;
+  padding: 8px 20px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.85);
+  white-space: nowrap;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  pointer-events: none;
+  font-family: 'Rubik', sans-serif;
+  direction: rtl;
+}
+#mt-banner b { color: #5ab8e8; }
+
+/* Cursor when tool is active */
+.mt-cursor { cursor: crosshair !important; }
+.mt-cursor .leaflet-interactive { cursor: crosshair !important; }
+
+/* Segment distance labels on map */
+.mt-seg-label {
+  pointer-events: none;
+}
+.mt-seg-label span {
+  display: inline-block;
+  background: rgba(245,158,11,0.92);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: 'Rubik', sans-serif;
+  padding: 2px 7px;
+  border-radius: 9999px;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  transform: translate(-50%, -50%);
+}
+
+/* Result popup labels on map */
+.mt-result-icon {
+  pointer-events: none;
+}
+.mt-result-box {
+  background: rgba(13,27,46,0.95);
+  border: 1px solid rgba(90,184,232,0.35);
+  border-radius: 11px;
+  padding: 10px 14px;
+  font-family: 'Rubik', sans-serif;
+  direction: rtl;
+  white-space: nowrap;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.5);
+  min-width: 140px;
+}
+.mt-r-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(90,184,232,0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 5px;
+}
+.mt-r-val {
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.1;
+  margin-bottom: 3px;
+}
+.mt-r-sub {
+  font-size: 11px;
+  color: rgba(255,255,255,0.5);
+}

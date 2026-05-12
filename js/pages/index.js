@@ -110,6 +110,7 @@ function initMap() {
   gMap.on('zoomend',function(){document.getElementById('zoom-level').textContent=gMap.getZoom();});
   gMap.on('click',function(e){gLastLat=e.latlng.lat;gLastLng=e.latlng.lng;});
   gIncidentsLayer = L.layerGroup().addTo(gMap);
+  MeasureTools.init(gMap);
 }
 
 function applyBasemap(key) {
