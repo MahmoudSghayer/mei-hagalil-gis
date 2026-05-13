@@ -344,6 +344,35 @@ function buildDXF(features) {
     annotation_points:3,sewer_exit:2,annotation_polygons:3,annotation_lines:3,
     valve_chamber:6,block:4,other:7
   };
+  // Deduplicate features: same GlobalID/OBJECTID per category, or same coordinate fingerprint
+  var seenFeatures = {};
+  features = features.filter(function (f) {
+    var props = f.properties || {};
+    var cat   = props._category || 'other';
+    var key;
+    if (props.GlobalID) {
+      key = cat + ':' + props.GlobalID;
+    } else if (props.OBJECTID !== undefined) {
+      key = cat + ':obj:' + String(props.OBJECTID);
+    } else {
+      var g = f.geometry;
+      if (!g) return true;
+      var coords = g.type === 'Point'            ? [g.coordinates]
+                 : g.type === 'LineString'        ? g.coordinates
+                 : g.type === 'MultiLineString'   ? g.coordinates[0]
+                 : g.type === 'Polygon'           ? g.coordinates[0]
+                 : g.type === 'MultiPolygon'      ? g.coordinates[0][0]
+                 : null;
+      if (!coords || !coords.length) return true;
+      key = cat + ':' + coords[0][0].toFixed(4) + ':' + coords[0][1].toFixed(4) +
+            ':' + coords[coords.length - 1][0].toFixed(4) + ':' + coords[coords.length - 1][1].toFixed(4) +
+            ':' + coords.length;
+    }
+    if (seenFeatures[key]) return false;
+    seenFeatures[key] = true;
+    return true;
+  });
+
   var seen = {};
   features.forEach(function (f) {
     var c = (f.properties && f.properties._category) || 'other';
@@ -381,22 +410,36 @@ function buildDXF(features) {
     var layer = (f.properties && f.properties._category) || 'other';
     var g = f.geometry;
     if (!g) return;
+    var labelPt = null; // compute representative point for attribute label — once per feature
     if (g.type === 'Point') {
       var p = toITM(g.coordinates[0], g.coordinates[1]);
       lines.push('0','POINT','8',layer,'10',String(p[0]),'20',String(p[1]),'30','0');
       dxfXdata(lines, f.properties);
-      dxfAttrLabel(lines, f.properties, p[0], p[1]);
       if (f.properties && f.properties.Text)
         lines.push('0','TEXT','8',layer,'10',String(p[0]),'20',String(p[1]),'30','0','40','1.0','1',String(f.properties.Text));
+      labelPt = p;
     } else if (g.type === 'LineString') {
       dxfPolyline(lines, g.coordinates, layer, false, toITM, f.properties);
+      var mid = g.coordinates[Math.floor(g.coordinates.length / 2)];
+      labelPt = toITM(mid[0], mid[1]);
     } else if (g.type === 'MultiLineString') {
       g.coordinates.forEach(function (seg) { dxfPolyline(lines, seg, layer, false, toITM, f.properties); });
+      var segs = g.coordinates;
+      var midSeg = segs[Math.floor(segs.length / 2)];
+      var midPt  = midSeg[Math.floor(midSeg.length / 2)];
+      labelPt = toITM(midPt[0], midPt[1]);
     } else if (g.type === 'Polygon') {
       dxfPolyline(lines, g.coordinates[0], layer, true, toITM, f.properties);
+      var ring = g.coordinates[0];
+      var rpt  = ring[Math.floor(ring.length / 2)];
+      labelPt = toITM(rpt[0], rpt[1]);
     } else if (g.type === 'MultiPolygon') {
       g.coordinates.forEach(function (poly) { dxfPolyline(lines, poly[0], layer, true, toITM, f.properties); });
+      var ring = g.coordinates[0][0];
+      var rpt  = ring[Math.floor(ring.length / 2)];
+      labelPt = toITM(rpt[0], rpt[1]);
     }
+    if (labelPt) dxfAttrLabel(lines, f.properties, labelPt[0], labelPt[1]);
   });
   lines.push('0','ENDSEC','0','EOF');
   return lines.join('\r\n');
@@ -429,9 +472,10 @@ function dxfAttrLabel(lines, props, x, y) {
   var plen = parseFloat(rawLen);
   if (!isNaN(plen) && plen > 0) rows.push('L: ' + plen.toFixed(1) + ' m');
 
-  // Stack each row as a separate TEXT entity, 0.9m apart, small text (0.6m)
-  var th = 0.6, spacing = 2.0;
-  var ox = x + 1.0, oy = y + (rows.length * spacing); // start from top, go downward
+  // Stack rows vertically: text height 1.5m, 5m between baselines, 5m to the right of the point
+  var th = 1.5, spacing = 5.0;
+  var ox = x + 5.0;
+  var oy = y + ((rows.length - 1) * spacing); // top row first, go downward
   rows.forEach(function(row, i) {
     lines.push('0','TEXT','8','ATTR',
       '10', String(ox),
@@ -469,12 +513,6 @@ function dxfPolyline(lines, coords, layer, closed, toITM, props) {
     lines.push('0','VERTEX','8',layer,'10',String(p[0]),'20',String(p[1]),'30','0');
   });
   lines.push('0','SEQEND','8',layer);
-  // Place attribute label at line midpoint, on same layer as geometry
-  if (props && coords.length) {
-    var mid = coords[Math.floor(coords.length / 2)];
-    var mp = toITM(mid[0], mid[1]);
-    dxfAttrLabel(lines, props, mp[0], mp[1]);
-  }
 }
 
 // ── CSV ───────────────────────────────────────────────────────────────────────
