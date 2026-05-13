@@ -42,6 +42,7 @@ var SUB_LAYERS = {
 var gMap, gIncidentsLayer, gIncidents=[], gMarkers={};
 var gCurrentBasemap = 'satellite';
 var gActiveBasemapLayers = [];
+var gCadastralLayer = null, gCadastralVisible = false;
 var gVillages = [], gVillageLayers = {}, gVillageState = {}, gVillageBounds = {};
 var gLastLat=null, gLastLng=null, gFilter='';
 var gUser=null, gProfile=null, gClosingId=null;
@@ -112,6 +113,86 @@ function initMap() {
   gMap.on('click',function(e){gLastLat=e.latlng.lat;gLastLng=e.latlng.lng;});
   gIncidentsLayer = L.layerGroup().addTo(gMap);
   MeasureTools.init(gMap);
+  initCadastralLayer();
+}
+
+function initCadastralLayer() {
+  gCadastralLayer = L.tileLayer.wms('https://www.govmap.gov.il/api/geoserver/ows/public/', {
+    layers: 'govmap:layer_parcel_all',
+    styles: 'govmap:layer_parcel_all',
+    format: 'image/png',
+    transparent: true,
+    version: '1.3.0',
+    FEATUREVERSION: 2,
+    TILED: true,
+    maxZoom: 20,
+    opacity: 1
+  });
+
+  gMap.on('click', function(e) {
+    if (!gCadastralVisible) return;
+    queryCadastralParcel(e);
+  });
+}
+
+function toggleCadastralLayer() {
+  gCadastralVisible = !gCadastralVisible;
+  if (gCadastralVisible) {
+    gCadastralLayer.addTo(gMap);
+    gCadastralLayer.bringToFront();
+  } else {
+    gMap.removeLayer(gCadastralLayer);
+    gMap.closePopup();
+  }
+  document.getElementById('cadastral-toggle').classList.toggle('active', gCadastralVisible);
+}
+window.toggleCadastralLayer = toggleCadastralLayer;
+
+function queryCadastralParcel(e) {
+  var bounds = gMap.getBounds();
+  var size   = gMap.getSize();
+  var sw = _latlngToMerc(bounds.getSouth(), bounds.getWest());
+  var ne = _latlngToMerc(bounds.getNorth(), bounds.getEast());
+  var bbox = sw[0] + ',' + sw[1] + ',' + ne[0] + ',' + ne[1];
+  var cp   = e.containerPoint;
+
+  var url = 'https://www.govmap.gov.il/api/geoserver/ows/public/?' +
+    'REQUEST=GetFeatureInfo&SERVICE=WMS&VERSION=1.3.0' +
+    '&LAYERS=govmap:layer_parcel_all&QUERY_LAYERS=govmap:layer_parcel_all' +
+    '&CRS=EPSG:3857&FEATUREVERSION=2' +
+    '&BBOX=' + bbox +
+    '&WIDTH=' + size.x + '&HEIGHT=' + size.y +
+    '&I=' + Math.round(cp.x) + '&J=' + Math.round(cp.y) +
+    '&INFO_FORMAT=application/json&FEATURE_COUNT=1';
+
+  fetch(url)
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var features = data.features || [];
+      if (!features.length) return;
+      var p    = features[0].properties || {};
+      var gush  = p.GUSH_NUM  || p.gush_num  || p.GUSH  || p.gush  || '—';
+      var helka = p.PARCEL_NUM || p.parcel_num || p.HELKA_NUM || p.helka_num || p.HELKA || p.helka || '—';
+      var area  = p.SHAPE_Area || p.shape_area || p.AREA || p.area || null;
+      var areaStr = area ? '<div style="margin-top:4px">שטח: <b>' + (area / 1000).toFixed(3) + ' דונם</b></div>' : '';
+      L.popup({ direction: 'top', className: 'cadastral-popup' })
+        .setLatLng(e.latlng)
+        .setContent(
+          '<div style="direction:rtl;font-family:inherit;line-height:1.6">' +
+          '<div style="font-weight:700;font-size:13px;margin-bottom:4px">📐 נתוני חלקה</div>' +
+          '<div>גוש: <b>' + gush + '</b></div>' +
+          '<div>חלקה: <b>' + helka + '</b></div>' +
+          areaStr +
+          '</div>'
+        )
+        .openOn(gMap);
+    })
+    .catch(function() {});
+}
+
+function _latlngToMerc(lat, lng) {
+  var R = 6378137;
+  return [lng * Math.PI / 180 * R, Math.log(Math.tan((90 + lat) * Math.PI / 360)) * R];
 }
 
 function applyBasemap(key) {

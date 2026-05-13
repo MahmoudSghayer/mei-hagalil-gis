@@ -53,6 +53,11 @@
   <div id="main">
     <div id="map-wrap">
       <div id="map"></div>
+      <div id="layer-toggles">
+        <button id="cadastral-toggle" class="layer-toggle-btn" onclick="toggleCadastralLayer()">
+          <span class="lt-icon">📐</span><span class="lt-label">חלקות</span>
+        </button>
+      </div>
       <div id="basemap-switcher">
         <button class="basemap-btn active" data-basemap="satellite" onclick="switchBasemap('satellite')">
           <div class="basemap-icon">🛰️</div><div class="basemap-label">לוויין HD</div>
