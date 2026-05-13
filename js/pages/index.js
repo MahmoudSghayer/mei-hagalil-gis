@@ -36,7 +36,17 @@ var SUB_LAYERS = {
   reservoirs:       { label:'🏗️ מאגרי מים', icon:'▣', color:'#0d9488', type:'mixed', defaultOn:true },
   pump_stations:    { label:'⛽ תחנות שאיבה', icon:'▲', color:'#15803d', type:'point', radius:7, defaultOn:true },
   sampling_points:  { label:'🧪 נקודות דיגום', icon:'•', color:'#be185d', type:'point', radius:5, defaultOn:false },
-  other:            { label:'אחר', icon:'·', color:'#94a3b8', type:'mixed', defaultOn:false }
+  main_sewer:         { label:'🔴 ביב ראשי', icon:'─', color:'#7f1d1d', type:'line', weight:3.5, defaultOn:true },
+  supply_pipe:        { label:'🔵 קו הספקה', icon:'─', color:'#0369a1', type:'line', weight:2.5, defaultOn:true },
+  sewage_cascade:     { label:'⬇️ מפל ביוב', icon:'⬇', color:'#92400e', type:'point', radius:5, defaultOn:true },
+  fittings:           { label:'🔩 מתאמים', icon:'◈', color:'#64748b', type:'point', radius:4, defaultOn:true },
+  annotation_points:  { label:'📍 נקודות להערות', icon:'•', color:'#f59e0b', type:'point', radius:4, defaultOn:false },
+  sewer_exit:         { label:'🚪 יציאה מרשת ביוב', icon:'●', color:'#6b21a8', type:'point', radius:5, defaultOn:true },
+  annotation_polygons:{ label:'🔷 פוליגונים להערות', icon:'◇', color:'#f59e0b', type:'polygon', defaultOn:false },
+  annotation_lines:   { label:'📏 קווים להערות', icon:'─', color:'#f59e0b', type:'line', weight:1.5, dashArray:'4,3', defaultOn:false },
+  valve_chamber:      { label:'🔲 תא מגופים', icon:'▣', color:'#0f766e', type:'point', radius:6, defaultOn:true },
+  block:              { label:'🗂️ גוש', icon:'◇', color:'#ca8a04', type:'mixed', defaultOn:false },
+  other:              { label:'אחר', icon:'·', color:'#94a3b8', type:'mixed', defaultOn:false }
 };
 
 var gMap, gIncidentsLayer, gIncidents=[], gMarkers={};
@@ -81,6 +91,14 @@ function setUserUI(p) {
 }
 
 function toggleDD() { document.getElementById('user-dd').classList.toggle('open'); }
+
+function toggleSidebar() {
+  var sb = document.getElementById('sidebar');
+  var btn = document.getElementById('sidebar-collapse-btn');
+  var collapsed = sb.classList.toggle('collapsed');
+  btn.textContent = collapsed ? '›' : '‹';
+  setTimeout(function() { gMap && gMap.invalidateSize(); }, 300);
+}
 document.addEventListener('click', function(e) {
   var btn = document.getElementById('user-btn');
   if (btn && !btn.contains(e.target)) document.getElementById('user-dd').classList.remove('open');

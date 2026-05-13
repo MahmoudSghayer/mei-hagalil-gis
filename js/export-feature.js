@@ -10,7 +10,13 @@ var LABELS = {
   sewage_manholes:'שוחות ביוב', hydrants:'הידרנטים', valves:'מגופים',
   control_valves:'מגופים שולטים', connection_points:'נקודות חיבור מקורות',
   reservoirs:'מאגרי מים', pump_stations:'תחנות שאיבה',
-  sampling_points:'נקודות דיגום', other:'אחר'
+  sampling_points:'נקודות דיגום',
+  main_sewer:'ביב ראשי', supply_pipe:'קו הספקה',
+  sewage_cascade:'מפל ביוב', fittings:'מתאמים',
+  annotation_points:'נקודות להערות', sewer_exit:'יציאה מרשת ביוב',
+  annotation_polygons:'פוליגונים להערות', annotation_lines:'קווים להערות',
+  valve_chamber:'תא מגופים', block:'גוש',
+  other:'אחר'
 };
 
 var gRect = null, gDrawing = false, gDrawStart = null, gDrawTemp = null;
@@ -331,7 +337,10 @@ function buildDXF(features) {
     hydrants:1,valves:6,control_valves:6,buildings:8,parcels:3,sewage_pipes:42,
     sewage_manholes:42,reservoirs:3,pump_stations:2,sampling_points:6,
     connection_points:5,pipe_label:7,elevation_label:7,attribute_label:7,
-    distance_label:7,dimension_line:9,manhole_drawing:8,other:7
+    distance_label:7,dimension_line:9,manhole_drawing:8,
+    main_sewer:1,supply_pipe:5,sewage_cascade:42,fittings:8,
+    annotation_points:3,sewer_exit:2,annotation_polygons:3,annotation_lines:3,
+    valve_chamber:6,block:4,other:7
   };
   var seen = {};
   features.forEach(function (f) {
