@@ -326,14 +326,6 @@ function makeToITM() {
 // ── DXF ───────────────────────────────────────────────────────────────────────
 function buildDXF(features) {
   var toITM = makeToITM();
-  var lines = [
-    '0','SECTION','2','HEADER',
-    '9','$ACADVER','1','AC1015',
-    '9','$INSUNITS','70','6',
-    '9','$MEASUREMENT','70','1',
-    '0','ENDSEC'
-  ];
-  lines.push('0','SECTION','2','TABLES','0','TABLE','2','LAYER','70','24');
   var colors = {
     sewage_pipe:2,manhole:4,sleeve:6,control_point:1,water_pipes:5,water_meters:5,
     hydrants:1,valves:6,control_valves:6,buildings:8,parcels:3,sewage_pipes:42,
@@ -344,10 +336,30 @@ function buildDXF(features) {
   var seen = {};
   features.forEach(function (f) {
     var c = (f.properties && f.properties._category) || 'other';
-    if (seen[c]) return; seen[c] = true;
+    seen[c] = true;
+  });
+
+  var lines = [
+    '0','SECTION','2','HEADER',
+    '9','$ACADVER','1','AC1009',
+    '9','$INSUNITS','70','6',
+    '9','$MEASUREMENT','70','1',
+    '0','ENDSEC'
+  ];
+
+  // TABLES — LTYPE is required by AutoCAD even if only CONTINUOUS is used
+  lines.push('0','SECTION','2','TABLES');
+  lines.push('0','TABLE','2','LTYPE','70','1');
+  lines.push('0','LTYPE','2','CONTINUOUS','70','0','3','Solid line','72','65','73','0','40','0.0');
+  lines.push('0','ENDTAB');
+  // LAYER — layer 0 is mandatory in every valid DXF
+  lines.push('0','TABLE','2','LAYER','70',String(Object.keys(seen).length + 1));
+  lines.push('0','LAYER','2','0','70','0','62','7','6','CONTINUOUS');
+  Object.keys(seen).forEach(function (c) {
     lines.push('0','LAYER','2',c,'70','0','62',String(colors[c]||7),'6','CONTINUOUS');
   });
-  lines.push('0','ENDTAB','0','ENDSEC');
+  lines.push('0','ENDTAB');
+  lines.push('0','ENDSEC');
   lines.push('0','SECTION','2','ENTITIES');
   features.forEach(function (f) {
     var layer = (f.properties && f.properties._category) || 'other';
