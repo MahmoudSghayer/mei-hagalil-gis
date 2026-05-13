@@ -133,6 +133,43 @@ function initMap() {
   gIncidentsLayer = L.layerGroup().addTo(gMap);
   MeasureTools.init(gMap);
   initCadastralLayer();
+  gMap.on('popupopen', function(e) { makePopupDraggable(e.popup); });
+}
+
+function makePopupDraggable(popup) {
+  var el = popup.getElement();
+  if (!el || el._mgDrag) return;
+  el._mgDrag = true;
+  var wrapper = el.querySelector('.leaflet-popup-content-wrapper');
+  if (!wrapper) return;
+  wrapper.style.cursor = 'grab';
+  var dragging = false, startMouse, startLatLng;
+  wrapper.addEventListener('mousedown', function(e) {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragging = true;
+    startMouse = { x: e.clientX, y: e.clientY };
+    startLatLng = popup.getLatLng();
+    wrapper.style.cursor = 'grabbing';
+    gMap.dragging.disable();
+    function onMove(e) {
+      if (!dragging) return;
+      var dx = e.clientX - startMouse.x;
+      var dy = e.clientY - startMouse.y;
+      var pt = gMap.latLngToContainerPoint(startLatLng);
+      popup.setLatLng(gMap.containerPointToLatLng(L.point(pt.x + dx, pt.y + dy)));
+    }
+    function onUp() {
+      dragging = false;
+      wrapper.style.cursor = 'grab';
+      gMap.dragging.enable();
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
 }
 
 function initCadastralLayer() {

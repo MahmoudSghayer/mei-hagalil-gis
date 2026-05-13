@@ -312,7 +312,8 @@ html, body { height: 100%; font-family: 'Rubik', 'Segoe UI', Tahoma, Arial, sans
 .strength-fill { height: 100%; border-radius: 2px; width: 0; transition: width 0.3s, background 0.3s; }
 
 /* ── Leaflet popup ──────────────────────────────────────── */
-.leaflet-popup-content-wrapper { border-radius: var(--r-lg); font-family: 'Rubik', 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; text-align: right; box-shadow: var(--shadow-lg); }
+.leaflet-popup-content-wrapper { border-radius: var(--r-lg); font-family: 'Rubik', 'Segoe UI', Tahoma, Arial, sans-serif; direction: rtl; text-align: right; box-shadow: var(--shadow-lg); cursor: grab; user-select: none; }
+.leaflet-popup-content-wrapper:active { cursor: grabbing; }
 .leaflet-popup-content { margin: 12px 16px; font-size: 13px; line-height: 1.6; }
 .popup-title { font-weight: 700; font-size: 14px; color: var(--blue-dark); margin-bottom: 6px; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
 .popup-row   { display: flex; justify-content: space-between; gap: 14px; padding: 2px 0; }
