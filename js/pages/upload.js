@@ -131,6 +131,59 @@ function validateCoord(lng, lat) {
   return lat >= 29 && lat <= 34 && lng >= 34 && lng <= 37;
 }
 
+// ── DBF READER (handles type F / Float that shapefile.js ignores) ─────────────
+
+function readDbfRecords(buf) {
+  var bytes = new Uint8Array(buf);
+  var view  = new DataView(buf);
+  var numRecs    = view.getUint32(4, true);
+  var headerSize = view.getUint16(8, true);
+  var recSize    = view.getUint16(10, true);
+
+  var fields = [];
+  var pos = 32;
+  while (pos + 32 <= headerSize && bytes[pos] !== 0x0D) {
+    var name = '';
+    for (var i = 0; i < 11 && bytes[pos + i]; i++) name += String.fromCharCode(bytes[pos + i]);
+    var type = String.fromCharCode(bytes[pos + 11]);
+    var len  = bytes[pos + 16];
+    fields.push({ name: name, type: type, len: len });
+    pos += 32;
+  }
+
+  var records = [];
+  for (var r = 0; r < numRecs; r++) {
+    var rStart = headerSize + r * recSize;
+    if (rStart + recSize > bytes.length) break;
+    var rec = {};
+    var fStart = rStart + 1;
+    for (var f = 0; f < fields.length; f++) {
+      var fd = fields[f];
+      var raw = '';
+      for (var c = 0; c < fd.len; c++) {
+        var b = bytes[fStart + c];
+        raw += (b && b !== 0) ? String.fromCharCode(b) : '';
+      }
+      var trimmed = raw.trim();
+      if (fd.type === 'C') {
+        rec[fd.name] = trimmed;
+      } else if (fd.type === 'N' || fd.type === 'F') {
+        var n = parseFloat(trimmed);
+        rec[fd.name] = isNaN(n) ? null : n;
+      } else if (fd.type === 'D') {
+        rec[fd.name] = trimmed || null;
+      } else if (fd.type === 'L') {
+        rec[fd.name] = (trimmed === 'T' || trimmed === 'Y' || trimmed === 't' || trimmed === 'y');
+      } else {
+        rec[fd.name] = trimmed;
+      }
+      fStart += fd.len;
+    }
+    records.push(rec);
+  }
+  return records;
+}
+
 // ── SHAPEFILE ZIP PROCESSING ──────────────────────────────────────────────────
 
 function processZipFile(file, onDone, onError) {
@@ -167,9 +220,12 @@ function processZipFile(file, onDone, onError) {
           crs = 'ITM'; // Safe default for Israeli data
         }
 
-        return window.shapefile.read(shpBuf, dbfBuf).then(function(collection) {
+        // Parse DBF ourselves so type-F (Float) fields like TL / LowIL are read correctly
+        var dbfRecords = dbfBuf ? readDbfRecords(dbfBuf) : [];
+
+        return window.shapefile.read(shpBuf, null).then(function(collection) {
           var bad = 0;
-          collection.features.forEach(function(f) {
+          collection.features.forEach(function(f, idx) {
             if (!f.geometry) return;
             var converted = convertGeometry(f.geometry, crs);
 
@@ -178,7 +234,8 @@ function processZipFile(file, onDone, onError) {
             while (Array.isArray(sample[0])) sample = sample[0];
             if (!validateCoord(sample[0], sample[1])) { bad++; return; }
 
-            if (!f.properties) f.properties = {};
+            // Use our own DBF parser output (handles type F correctly)
+            f.properties = dbfRecords[idx] ? Object.assign({}, dbfRecords[idx]) : {};
             f.properties.Layer = layerName;
             f.properties._original_layer = layerName;
             f.geometry = converted;
