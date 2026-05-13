@@ -1,4 +1,4 @@
-// Vercel serverless proxy — server-side fetch has no CORS restrictions
+// Vercel serverless proxy — server-side fetch, no CORS
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -11,85 +11,84 @@ module.exports = async function handler(req, res) {
 
   const g = parseInt(gush);
   const h = parseInt(helka);
-  const log = [];   // collected for debugging in the 404 response
+  const log = [];
 
-  const qs = new URLSearchParams({
-    where:          `GUSH_NUM=${g} AND PARCEL_NUM=${h}`,
-    outFields:      '*',
-    returnGeometry: 'true',
-    outSR:          '4326',
-    f:              'json',
-  });
+  // ── Query a layer after discovering its real field names ──────────────────
+  async function queryLayer(base) {
+    // Step 1: get schema
+    const info = await get(`${base}?f=json`, 5000);
+    const fieldNames = info.data?.fields?.map(f => f.name) || [];
+    log.push({ schema: base, status: info.status, fields: fieldNames });
 
-  // ── 1. Try to discover the right service from the ArcGIS catalog ──────────
+    if (!fieldNames.length) {
+      // Grab one sample record so we can see what the service actually returns
+      const sample = await get(
+        `${base}/query?where=1%3D1&outFields=*&returnGeometry=false&resultRecordCount=1&f=json`,
+        4000
+      );
+      log.push({ sample_status: sample.status, sample_attrs: sample.data?.features?.[0]?.attributes, sample_preview: sample.preview });
+      return null;
+    }
+
+    // Step 2: find gush + parcel fields by name pattern
+    const gushF   = info.data.fields.find(f => /gush/i.test(f.name));
+    const parcelF = info.data.fields.find(f => /parcel|helka|hlk/i.test(f.name));
+
+    if (!gushF || !parcelF) {
+      // Still grab a sample so we can see available field names & values
+      const sample = await get(
+        `${base}/query?where=1%3D1&outFields=*&returnGeometry=false&resultRecordCount=1&f=json`,
+        4000
+      );
+      log.push({ msg: 'no gush/parcel field match', sample_attrs: sample.data?.features?.[0]?.attributes });
+      return null;
+    }
+
+    // Step 3: query with real field names
+    const where = `${gushF.name}=${g} AND ${parcelF.name}=${h}`;
+    log.push({ where });
+    const qs = new URLSearchParams({ where, outFields: '*', returnGeometry: 'true', outSR: '4326', f: 'json' });
+    const result = await get(`${base}/query?${qs}`, 6000);
+    log.push({ query_status: result.status, features: result.data?.features?.length ?? 0 });
+
+    return result.data?.features?.length ? result.data : null;
+  }
+
+  // ── 1. Catalog discovery (log ALL service names) ──────────────────────────
   const catalogRoots = [
     'https://www.govmap.gov.il/arcgis/rest/services',
     'https://www.govmap.gov.il/server/rest/services',
-    'https://gisn.tel-aviv.gov.il/arcgis/rest/services',   // common Israeli ArcGIS host
+    'https://mapi.gov.il/arcgis/rest/services',
   ];
 
   for (const root of catalogRoots) {
-    const catalog = await get(`${root}?f=json`, 5000);
-    log.push({ url: `${root}?f=json`, status: catalog.status });
+    const cat = await get(`${root}?f=json`, 5000);
+    const allNames = (cat.data?.services || []).map(s => ({ name: s.name, type: s.type }));
+    log.push({ catalog: root, status: cat.status, all_services: allNames });
 
-    if (!catalog.data?.services) continue;
-
-    const candidates = catalog.data.services.filter(s =>
-      /parcel|cadastr|gush|helk/i.test(s.name)
+    // Broad filter — include any service that might relate to land/survey/parcel
+    const candidates = (cat.data?.services || []).filter(s =>
+      /parcel|cadastr|gush|helk|kds|land|survey|meas|real.?est|מקרקע|קדסטר/i.test(s.name)
     );
-    log.push({ found_services: candidates.map(s => s.name) });
-
     for (const svc of candidates) {
       for (const layer of [0, 1, 2]) {
-        const url = `${root}/${svc.name}/${svc.type}/${layer}/query?${qs}`;
-        const r = await get(url, 6000);
-        log.push({ url, status: r.status });
-        if (r.data?.features?.length) {
-          return res.json({ type: 'polygon', features: r.data.features });
-        }
+        const data = await queryLayer(`${root}/${svc.name}/${svc.type}/${layer}`);
+        if (data?.features?.length) return res.json({ type: 'polygon', features: data.features });
       }
     }
   }
 
-  // ── 2. Try hardcoded ArcGIS service paths ─────────────────────────────────
-  const arcgisBases = [
+  // ── 2. Known 200-returning bases — schema discovery ───────────────────────
+  const knownBases = [
     'https://www.govmap.gov.il/arcgis/rest/services/PARCELS/MapServer/0',
     'https://www.govmap.gov.il/arcgis/rest/services/CADASTRE/MapServer/0',
     'https://www.govmap.gov.il/arcgis/rest/services/GushHelka/MapServer/0',
-    'https://ags.survey.gov.il/arcgis/rest/services/PARCELS/MapServer/0',
-    'https://ags2.survey.gov.il/arcgis/rest/services/PARCELS/MapServer/0',
     'https://mapi.gov.il/arcgis/rest/services/PARCELS/MapServer/0',
   ];
 
-  for (const base of arcgisBases) {
-    const url = `${base}/query?${qs}`;
-    const r = await get(url, 5000);
-    log.push({ url, status: r.status });
-    if (r.data?.features?.length) {
-      return res.json({ type: 'polygon', features: r.data.features });
-    }
-  }
-
-  // ── 3. Try GovMap geocode API for centroid-only result ────────────────────
-  const geocodeUrls = [
-    `https://www.govmap.gov.il/govmap/api/GeoLocator/GeoSearch?types=12&gush=${g}&helka=${h}&lang=1`,
-    `https://www.govmap.gov.il/govmap/api/GeoLocate?types=12&gush=${g}&helka=${h}&lang=1`,
-    `https://www.govmap.gov.il/govmap/api/GeoLocator?gush=${g}&helka=${h}&lang=1`,
-    `https://www.govmap.gov.il/api/GeoLocate?gush=${g}&helka=${h}&lang=1`,
-    `https://www.govmap.gov.il/govmap/api/search?gush=${g}&helka=${h}&lang=1`,
-  ];
-
-  for (const url of geocodeUrls) {
-    const r = await get(url, 5000);
-    log.push({ url, status: r.status, preview: r.preview });
-    if (r.data) {
-      const item = Array.isArray(r.data) ? r.data[0] : r.data;
-      const x = item?.X || item?.x;
-      const y = item?.Y || item?.y;
-      if (x && y) {
-        return res.json({ type: 'centroid', x, y, itm: true });
-      }
-    }
+  for (const base of knownBases) {
+    const data = await queryLayer(base);
+    if (data?.features?.length) return res.json({ type: 'polygon', features: data.features });
   }
 
   return res.status(404).json({ error: 'not found', log });
@@ -109,9 +108,8 @@ async function get(url, ms) {
     });
     clearTimeout(t);
     const text = await r.text();
-    let data = null;
-    let preview = null;
-    try { data = JSON.parse(text); } catch { preview = text.slice(0, 120); }
+    let data = null, preview = null;
+    try { data = JSON.parse(text); } catch { preview = text.slice(0, 200); }
     return { status: r.status, data, preview };
   } catch (e) {
     clearTimeout(t);
