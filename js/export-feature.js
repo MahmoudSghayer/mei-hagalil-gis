@@ -368,6 +368,10 @@ function buildDXF(features) {
     lines.push('0','LAYER','2',c,'70','0','62',String(colors[c]||7),'6','CONTINUOUS');
   });
   lines.push('0','ENDTAB');
+  // APPID — required to attach XDATA (attribute data) to entities
+  lines.push('0','TABLE','2','APPID','70','1');
+  lines.push('0','APPID','2','MGIS','70','0');
+  lines.push('0','ENDTAB');
   lines.push('0','ENDSEC');
   lines.push('0','SECTION','2','ENTITIES');
   features.forEach(function (f) {
@@ -377,24 +381,45 @@ function buildDXF(features) {
     if (g.type === 'Point') {
       var p = toITM(g.coordinates[0], g.coordinates[1]);
       lines.push('0','POINT','8',layer,'10',String(p[0]),'20',String(p[1]),'30','0');
+      dxfXdata(lines, f.properties);
       if (f.properties && f.properties.Text)
         lines.push('0','TEXT','8',layer,'10',String(p[0]),'20',String(p[1]),'30','0','40','1.0','1',String(f.properties.Text));
     } else if (g.type === 'LineString') {
-      dxfPolyline(lines, g.coordinates, layer, false, toITM);
+      dxfPolyline(lines, g.coordinates, layer, false, toITM, f.properties);
     } else if (g.type === 'MultiLineString') {
-      g.coordinates.forEach(function (seg) { dxfPolyline(lines, seg, layer, false, toITM); });
+      g.coordinates.forEach(function (seg) { dxfPolyline(lines, seg, layer, false, toITM, f.properties); });
     } else if (g.type === 'Polygon') {
-      dxfPolyline(lines, g.coordinates[0], layer, true, toITM);
+      dxfPolyline(lines, g.coordinates[0], layer, true, toITM, f.properties);
     } else if (g.type === 'MultiPolygon') {
-      g.coordinates.forEach(function (poly) { dxfPolyline(lines, poly[0], layer, true, toITM); });
+      g.coordinates.forEach(function (poly) { dxfPolyline(lines, poly[0], layer, true, toITM, f.properties); });
     }
   });
   lines.push('0','ENDSEC','0','EOF');
   return lines.join('\r\n');
 }
 
-function dxfPolyline(lines, coords, layer, closed, toITM) {
+// Attach all feature attributes as XDATA on the entity
+var XDATA_SKIP = { Layer:1, Text:1, EntityHand:1, GlobalID:1, created_us:1, created_da:1, last_edite:1, last_edi_1:1, UpdatingUs:1, UpdatingDa:1 };
+function dxfXdata(lines, props) {
+  if (!props) return;
+  var entries = [];
+  Object.keys(props).forEach(function(k) {
+    if (k.charAt(0) === '_') return;
+    if (XDATA_SKIP[k]) return;
+    var v = props[k];
+    if (v === null || v === undefined || v === '') return;
+    var str = String(v);
+    if (str.length > 250) str = str.substring(0, 250);
+    entries.push(k + '=' + str);
+  });
+  if (!entries.length) return;
+  lines.push('1001','MGIS');
+  entries.forEach(function(e) { lines.push('1000', e); });
+}
+
+function dxfPolyline(lines, coords, layer, closed, toITM, props) {
   lines.push('0','POLYLINE','8',layer,'66','1','70',closed?'1':'0','10','0','20','0','30','0');
+  dxfXdata(lines, props);
   coords.forEach(function (c) {
     var p = toITM(c[0], c[1]);
     lines.push('0','VERTEX','8',layer,'10',String(p[0]),'20',String(p[1]),'30','0');
