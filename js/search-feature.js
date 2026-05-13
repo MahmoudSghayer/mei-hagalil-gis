@@ -330,7 +330,10 @@ function jsonpFetch(url) {
   });
 }
 
-// ── GUSH/HELKA — query Survey of Israel cadastre (JSONP, no CORS) ──
+// ── GUSH/HELKA ────────────────────────────────────────────────
+// Strategy 1 — GovMap geocode API (fetch; they run a web app so CORS is open)
+// Strategy 2 — Survey of Israel ArcGIS REST (JSONP, bypasses CORS)
+// ──────────────────────────────────────────────────────────────
 function handleGushHelka(gush, helka) {
   clearMapMarker();
   showPanel(
@@ -338,65 +341,101 @@ function handleGushHelka(gush, helka) {
     '<span style="color:#64748b">⏳ מחפש חלקה...</span>'
   );
 
-  var base   = 'https://ags.survey.gov.il/arcgis/rest/services/PARCELS/MapServer/0/query';
-  var params = 'where=' + encodeURIComponent('GUSH_NUM=' + parseInt(gush) + ' AND PARCEL_NUM=' + parseInt(helka)) +
-               '&outFields=GUSH_NUM,PARCEL_NUM,SHAPE_Area' +
-               '&returnGeometry=true&outSR=4326&f=json';
+  // ── Strategy 1: GovMap public geocode API ──
+  var govmapUrl =
+    'https://www.govmap.gov.il/api/data/geolocate?version=1.0&lang=1&types=12' +
+    '&gush=' + encodeURIComponent(gush) +
+    '&helka=' + encodeURIComponent(helka);
 
-  jsonpFetch(base + '?' + params)
-    .then(function(data) { renderParcel(gush, helka, data); })
-    .catch(function(e) {
-      console.error('Gush/Helka JSONP error:', e);
-      showPanel(
-        '📐 גוש ' + gush + ' · חלקה ' + helka,
-        '❌ לא ניתן לטעון נתוני חלקה.<br>' +
-        '<span style="font-size:11px;color:#64748b">ודא שהגוש והחלקה נכונים ונסה שוב.</span>'
-      );
+  fetch(govmapUrl)
+    .then(function(r) {
+      if (!r.ok) throw new Error('http ' + r.status);
+      return r.json();
+    })
+    .then(function(raw) {
+      // GovMap returns either an object or array; extract first result
+      var res = Array.isArray(raw) ? raw[0] : raw;
+      if (!res) throw new Error('empty');
+
+      var x = res.X || res.x || res.Lon || res.lon;
+      var y = res.Y || res.y || res.Lat || res.lat;
+      if (!x || !y) throw new Error('no coords');
+
+      // Coordinates are in ITM (large numbers) — convert to WGS84
+      loadProj4(function() {
+        if (res.Bounds) {
+          var sw = itmToWgs84(res.Bounds.xmin, res.Bounds.ymin);
+          var ne = itmToWgs84(res.Bounds.xmax, res.Bounds.ymax);
+          if (sw && ne) {
+            gPolygon = L.rectangle([[sw.lat, sw.lng], [ne.lat, ne.lng]], {
+              color: '#1a7fc1', weight: 2.5, fillColor: '#1a7fc1',
+              fillOpacity: 0.15, interactive: false
+            }).addTo(window.gMap);
+            window.gMap.flyToBounds(gPolygon.getBounds(), { padding: [60, 60], maxZoom: 18, duration: 1.2 });
+            showParcelPanel(gush, helka, null);
+            return;
+          }
+        }
+        var ctr = itmToWgs84(x, y);
+        if (ctr) {
+          goToLocation(ctr.lat, ctr.lng,
+            ctr.lat.toFixed(5) + '°N, ' + ctr.lng.toFixed(5) + '°E',
+            '📐 גוש ' + gush + ' · חלקה ' + helka, 18);
+        }
+      });
+    })
+    .catch(function() {
+      // ── Strategy 2: SOI ArcGIS via JSONP ──
+      var soiBase =
+        'https://ags.survey.gov.il/arcgis/rest/services/PARCELS/MapServer/0/query';
+      var soiParams =
+        'where=' + encodeURIComponent('GUSH_NUM=' + parseInt(gush) + ' AND PARCEL_NUM=' + parseInt(helka)) +
+        '&outFields=GUSH_NUM,PARCEL_NUM,SHAPE_Area&returnGeometry=true&outSR=4326&f=json';
+
+      jsonpFetch(soiBase + '?' + soiParams)
+        .then(function(data) { renderParcelPolygon(gush, helka, data); })
+        .catch(function(e) {
+          console.error('Gush/Helka — all sources failed:', e);
+          showPanel(
+            '📐 גוש ' + gush + ' · חלקה ' + helka,
+            '❌ לא ניתן לאתר חלקה זו.<br>' +
+            '<span style="font-size:11px;color:#64748b">ודא שמספרי הגוש והחלקה נכונים.</span>'
+          );
+        });
     });
 }
 
-function renderParcel(gush, helka, data) {
+function renderParcelPolygon(gush, helka, data) {
   if (!data.features || !data.features.length) {
-    showPanel(
-      '📐 גוש ' + gush + ' · חלקה ' + helka,
-      '❌ לא נמצאה חלקה זו במאגר הקדסטר.'
-    );
+    showPanel('📐 גוש ' + gush + ' · חלקה ' + helka, '❌ לא נמצאה חלקה זו במאגר הקדסטר.');
     return;
   }
-
   var feat  = data.features[0];
   var rings = feat.geometry && feat.geometry.rings;
   if (!rings || !rings.length) {
-    showPanel(
-      '📐 גוש ' + gush + ' · חלקה ' + helka,
-      '⚠️ נמצאה חלקה אך חסרים נתוני גבולות.'
-    );
+    showPanel('📐 גוש ' + gush + ' · חלקה ' + helka, '⚠️ נמצאה חלקה אך חסרים נתוני גבולות.');
     return;
   }
 
-  // ArcGIS rings: [[lng, lat], ...] → Leaflet: [[lat, lng], ...]
   var latlngs = rings.map(function(ring) {
     return ring.map(function(pt) { return [pt[1], pt[0]]; });
   });
-
   gPolygon = L.polygon(latlngs, {
-    color: '#1a7fc1',
-    weight: 2.5,
-    fillColor: '#1a7fc1',
-    fillOpacity: 0.15,
-    interactive: false
+    color: '#1a7fc1', weight: 2.5, fillColor: '#1a7fc1', fillOpacity: 0.15, interactive: false
   }).addTo(window.gMap);
-
   window.gMap.flyToBounds(gPolygon.getBounds(), { padding: [60, 60], maxZoom: 18, duration: 1.2 });
 
-  var attrs = feat.attributes || {};
-  var area  = attrs.SHAPE_Area
-    ? (attrs.SHAPE_Area / 1000).toFixed(3) + ' דונם (' + Math.round(attrs.SHAPE_Area) + ' מ"ר)'
-    : '—';
+  var area = (feat.attributes || {}).SHAPE_Area;
+  showParcelPanel(gush, helka, area);
+}
 
+function showParcelPanel(gush, helka, area) {
+  var areaStr = area
+    ? 'שטח: ' + (area / 1000).toFixed(3) + ' דונם (' + Math.round(area) + ' מ"ר)<br>'
+    : '';
   showPanel(
     '📐 גוש ' + gush + ' · חלקה ' + helka,
-    'שטח: ' + area + '<br>' +
+    areaStr +
     '<span style="font-size:11px;color:#64748b;display:block;margin-top:6px">' +
       '<span style="cursor:pointer;color:#dc2626" onclick="window.searchClearMarker()">✖ הסר סימון</span>' +
     '</span>'
