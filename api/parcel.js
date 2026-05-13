@@ -1,4 +1,4 @@
-// Vercel serverless proxy — no CORS restrictions on server-side fetch
+// Vercel serverless proxy — server-side fetch has no CORS restrictions
 module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
@@ -11,47 +11,110 @@ module.exports = async function handler(req, res) {
 
   const g = parseInt(gush);
   const h = parseInt(helka);
+  const log = [];   // collected for debugging in the 404 response
 
   const qs = new URLSearchParams({
     where:          `GUSH_NUM=${g} AND PARCEL_NUM=${h}`,
-    outFields:      'GUSH_NUM,PARCEL_NUM,SHAPE_Area',
+    outFields:      '*',
     returnGeometry: 'true',
     outSR:          '4326',
-    f:              'json'
+    f:              'json',
   });
 
-  // Candidates — tried in parallel; first one with features wins
-  const bases = [
-    'https://www.govmap.gov.il/arcgis/rest/services/PARCELS/MapServer/0',
-    'https://www.govmap.gov.il/arcgis/rest/services/CADASTRE/MapServer/0',
-    'https://www.govmap.gov.il/arcgis/rest/services/GushHelka/MapServer/0',
-    'https://www.govmap.gov.il/server/rest/services/PARCELS/MapServer/0',
-    'https://ags.survey.gov.il/arcgis/rest/services/PARCELS/MapServer/0',
+  // ── 1. Try to discover the right service from the ArcGIS catalog ──────────
+  const catalogRoots = [
+    'https://www.govmap.gov.il/arcgis/rest/services',
+    'https://www.govmap.gov.il/server/rest/services',
+    'https://gisn.tel-aviv.gov.il/arcgis/rest/services',   // common Israeli ArcGIS host
   ];
 
-  async function attempt(base) {
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 6000);
-    try {
-      const r = await fetch(`${base}/query?${qs}`, {
-        signal: ctrl.signal,
-        headers: { Accept: 'application/json', 'User-Agent': 'MeiHaGalil-GIS/1.0' }
-      });
-      clearTimeout(t);
-      if (!r.ok) throw new Error('http ' + r.status);
-      const data = await r.json();
-      if (!data.features || !data.features.length) throw new Error('empty');
-      return data;
-    } catch (e) {
-      clearTimeout(t);
-      throw e;
+  for (const root of catalogRoots) {
+    const catalog = await get(`${root}?f=json`, 5000);
+    log.push({ url: `${root}?f=json`, status: catalog.status });
+
+    if (!catalog.data?.services) continue;
+
+    const candidates = catalog.data.services.filter(s =>
+      /parcel|cadastr|gush|helk/i.test(s.name)
+    );
+    log.push({ found_services: candidates.map(s => s.name) });
+
+    for (const svc of candidates) {
+      for (const layer of [0, 1, 2]) {
+        const url = `${root}/${svc.name}/${svc.type}/${layer}/query?${qs}`;
+        const r = await get(url, 6000);
+        log.push({ url, status: r.status });
+        if (r.data?.features?.length) {
+          return res.json({ type: 'polygon', features: r.data.features });
+        }
+      }
     }
   }
 
-  try {
-    const data = await Promise.any(bases.map(attempt));
-    return res.json(data);
-  } catch {
-    return res.status(404).json({ error: 'parcel not found in any source' });
+  // ── 2. Try hardcoded ArcGIS service paths ─────────────────────────────────
+  const arcgisBases = [
+    'https://www.govmap.gov.il/arcgis/rest/services/PARCELS/MapServer/0',
+    'https://www.govmap.gov.il/arcgis/rest/services/CADASTRE/MapServer/0',
+    'https://www.govmap.gov.il/arcgis/rest/services/GushHelka/MapServer/0',
+    'https://ags.survey.gov.il/arcgis/rest/services/PARCELS/MapServer/0',
+    'https://ags2.survey.gov.il/arcgis/rest/services/PARCELS/MapServer/0',
+    'https://mapi.gov.il/arcgis/rest/services/PARCELS/MapServer/0',
+  ];
+
+  for (const base of arcgisBases) {
+    const url = `${base}/query?${qs}`;
+    const r = await get(url, 5000);
+    log.push({ url, status: r.status });
+    if (r.data?.features?.length) {
+      return res.json({ type: 'polygon', features: r.data.features });
+    }
   }
+
+  // ── 3. Try GovMap geocode API for centroid-only result ────────────────────
+  const geocodeUrls = [
+    `https://www.govmap.gov.il/govmap/api/GeoLocator/GeoSearch?types=12&gush=${g}&helka=${h}&lang=1`,
+    `https://www.govmap.gov.il/govmap/api/GeoLocate?types=12&gush=${g}&helka=${h}&lang=1`,
+    `https://www.govmap.gov.il/govmap/api/GeoLocator?gush=${g}&helka=${h}&lang=1`,
+    `https://www.govmap.gov.il/api/GeoLocate?gush=${g}&helka=${h}&lang=1`,
+    `https://www.govmap.gov.il/govmap/api/search?gush=${g}&helka=${h}&lang=1`,
+  ];
+
+  for (const url of geocodeUrls) {
+    const r = await get(url, 5000);
+    log.push({ url, status: r.status, preview: r.preview });
+    if (r.data) {
+      const item = Array.isArray(r.data) ? r.data[0] : r.data;
+      const x = item?.X || item?.x;
+      const y = item?.Y || item?.y;
+      if (x && y) {
+        return res.json({ type: 'centroid', x, y, itm: true });
+      }
+    }
+  }
+
+  return res.status(404).json({ error: 'not found', log });
 };
+
+async function get(url, ms) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    const r = await fetch(url, {
+      signal: ctrl.signal,
+      headers: {
+        Accept: 'application/json, text/plain, */*',
+        'User-Agent': 'MeiHaGalil-GIS/1.0',
+        Referer: 'https://www.govmap.gov.il/',
+      },
+    });
+    clearTimeout(t);
+    const text = await r.text();
+    let data = null;
+    let preview = null;
+    try { data = JSON.parse(text); } catch { preview = text.slice(0, 120); }
+    return { status: r.status, data, preview };
+  } catch (e) {
+    clearTimeout(t);
+    return { status: 0, error: e.message };
+  }
+}

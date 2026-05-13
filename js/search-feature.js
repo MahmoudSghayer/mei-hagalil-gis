@@ -319,36 +319,35 @@ function handleGushHelka(gush, helka) {
   );
 
   fetch('/api/parcel?gush=' + encodeURIComponent(gush) + '&helka=' + encodeURIComponent(helka))
-    .then(function(r) {
-      if (r.status === 404) throw new Error('not found');
-      if (!r.ok) throw new Error('http ' + r.status);
-      return r.json();
+    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; }); })
+    .then(function(res) {
+      if (!res.ok) {
+        console.warn('Parcel API 404 debug log:', res.data && res.data.log);
+        throw new Error('not found');
+      }
+      var d = res.data;
+      if (d.type === 'polygon') {
+        renderParcelPolygon(gush, helka, d);
+      } else if (d.type === 'centroid') {
+        renderParcelCentroid(gush, helka, d);
+      }
     })
-    .then(function(data) { renderParcelPolygon(gush, helka, data); })
     .catch(function(e) {
-      console.error('Gush/Helka error:', e.message);
       showPanel(
         '📐 גוש ' + gush + ' · חלקה ' + helka,
-        (e.message === 'not found'
-          ? '❌ לא נמצאה חלקה זו במאגר.'
-          : '❌ שגיאה בחיפוש. נסה שוב.') +
-        '<br><span style="font-size:11px;color:#64748b">ודא שמספרי הגוש והחלקה נכונים.</span>'
+        '❌ לא נמצאה חלקה זו.<br>' +
+        '<span style="font-size:11px;color:#64748b">ודא שמספרי הגוש והחלקה נכונים.</span>'
       );
     });
 }
 
-function renderParcelPolygon(gush, helka, data) {
-  if (!data.features || !data.features.length) {
-    showPanel('📐 גוש ' + gush + ' · חלקה ' + helka, '❌ לא נמצאה חלקה זו במאגר הקדסטר.');
-    return;
-  }
-  var feat  = data.features[0];
+function renderParcelPolygon(gush, helka, d) {
+  var feat  = d.features[0];
   var rings = feat.geometry && feat.geometry.rings;
   if (!rings || !rings.length) {
     showPanel('📐 גוש ' + gush + ' · חלקה ' + helka, '⚠️ נמצאה חלקה אך חסרים נתוני גבולות.');
     return;
   }
-
   var latlngs = rings.map(function(ring) {
     return ring.map(function(pt) { return [pt[1], pt[0]]; });
   });
@@ -356,9 +355,18 @@ function renderParcelPolygon(gush, helka, data) {
     color: '#1a7fc1', weight: 2.5, fillColor: '#1a7fc1', fillOpacity: 0.15, interactive: false
   }).addTo(window.gMap);
   window.gMap.flyToBounds(gPolygon.getBounds(), { padding: [60, 60], maxZoom: 18, duration: 1.2 });
-
   var area = (feat.attributes || {}).SHAPE_Area;
   showParcelPanel(gush, helka, area);
+}
+
+function renderParcelCentroid(gush, helka, d) {
+  loadProj4(function() {
+    var wgs = itmToWgs84(d.x, d.y);
+    if (!wgs) { showPanel('📐 גוש ' + gush + ' · חלקה ' + helka, '❌ שגיאה בהמרת קואורדינטות.'); return; }
+    goToLocation(wgs.lat, wgs.lng,
+      wgs.lat.toFixed(5) + '°N, ' + wgs.lng.toFixed(5) + '°E',
+      '📐 גוש ' + gush + ' · חלקה ' + helka, 18);
+  });
 }
 
 function showParcelPanel(gush, helka, area) {
