@@ -364,8 +364,9 @@ function buildDXF(features) {
   lines.push('0','LTYPE','2','CONTINUOUS','70','0','3','Solid line','72','65','73','0','40','0.0');
   lines.push('0','ENDTAB');
   // LAYER — layer 0 is mandatory in every valid DXF
-  lines.push('0','TABLE','2','LAYER','70',String(Object.keys(seen).length + 1));
+  lines.push('0','TABLE','2','LAYER','70',String(Object.keys(seen).length + 2));
   lines.push('0','LAYER','2','0','70','0','62','7','6','CONTINUOUS');
+  lines.push('0','LAYER','2','ATTR','70','0','62','3','6','CONTINUOUS');
   Object.keys(seen).forEach(function (c) {
     lines.push('0','LAYER','2',c,'70','0','62',String(colors[c]||7),'6','CONTINUOUS');
   });
@@ -384,6 +385,7 @@ function buildDXF(features) {
       var p = toITM(g.coordinates[0], g.coordinates[1]);
       lines.push('0','POINT','8',layer,'10',String(p[0]),'20',String(p[1]),'30','0');
       dxfXdata(lines, f.properties);
+      dxfAttrLabel(lines, f.properties, p[0], p[1]);
       if (f.properties && f.properties.Text)
         lines.push('0','TEXT','8',layer,'10',String(p[0]),'20',String(p[1]),'30','0','40','1.0','1',String(f.properties.Text));
     } else if (g.type === 'LineString') {
@@ -398,6 +400,36 @@ function buildDXF(features) {
   });
   lines.push('0','ENDSEC','0','EOF');
   return lines.join('\r\n');
+}
+
+// Write visible attribute text label on the ATTR layer
+function dxfAttrLabel(lines, props, x, y) {
+  if (!props) return;
+  var cat = props._category || '';
+  var parts = [];
+
+  if (cat === 'sewage_manholes') {
+    if (props.ManholeNum) parts.push('MH:' + props.ManholeNum);
+    var tl = parseFloat(props.TL), dep = parseFloat(props.Depth);
+    if (!isNaN(tl)  && props.TL  !== 0) parts.push('TL:'  + tl.toFixed(2));
+    if (!isNaN(dep) && props.Depth !== 0) parts.push('D:'  + dep.toFixed(2) + 'm');
+  } else if (cat === 'sewage_pipes' || cat === 'sewage_pipe' || cat === 'main_sewer') {
+    if (props.SectionNum) parts.push(String(props.SectionNum));
+    if (props.LineDiamet) parts.push('D' + props.LineDiamet + 'mm');
+    var len = parseFloat(props.MeasuredLe || props.Shape_Leng);
+    if (!isNaN(len) && len > 0) parts.push('L:' + len.toFixed(1) + 'm');
+  } else if (cat === 'water_pipes' || cat === 'supply_pipe') {
+    if (props.SectionNum) parts.push(String(props.SectionNum));
+    if (props.LineDiamet) parts.push('D' + props.LineDiamet + 'mm');
+    var len = parseFloat(props.Measuredle || props.MeasuredLe || props.Shape_Leng);
+    if (!isNaN(len) && len > 0) parts.push('L:' + len.toFixed(1) + 'm');
+  } else if (cat === 'water_meters') {
+    if (props.MeterNum || props.SectionNum) parts.push(String(props.MeterNum || props.SectionNum));
+  }
+
+  if (!parts.length) return;
+  var text = parts.join('  ');
+  lines.push('0','TEXT','8','ATTR','10',String(x + 1.5),'20',String(y + 1.5),'30','0','40','0.8','1',text);
 }
 
 // Attach all feature attributes as XDATA on the entity
@@ -427,6 +459,12 @@ function dxfPolyline(lines, coords, layer, closed, toITM, props) {
     lines.push('0','VERTEX','8',layer,'10',String(p[0]),'20',String(p[1]),'30','0');
   });
   lines.push('0','SEQEND','8',layer);
+  // Place attribute label at line midpoint
+  if (props && coords.length) {
+    var mid = coords[Math.floor(coords.length / 2)];
+    var mp = toITM(mid[0], mid[1]);
+    dxfAttrLabel(lines, props, mp[0], mp[1]);
+  }
 }
 
 // ── CSV ───────────────────────────────────────────────────────────────────────
