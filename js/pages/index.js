@@ -299,6 +299,13 @@ async function loadAllVillages() {
     return;
   }
   gVillages = listRes.data;
+  // Keep only the most recent upload per village — village_id format is slug_timestamp(_index)
+  var latestBySlug = {};
+  gVillages.forEach(function(v) {
+    var slug = v.village_id.replace(/_\d+(_\d+)?$/, '');
+    if (!latestBySlug[slug] || v.uploaded_at > latestBySlug[slug].uploaded_at) latestBySlug[slug] = v;
+  });
+  gVillages = Object.keys(latestBySlug).map(function(k) { return latestBySlug[k]; });
   document.getElementById('layer-count').textContent = gVillages.length;
   for (var i = 0; i < gVillages.length; i++) await loadVillageData(gVillages[i]);
   renderVillagesList();

@@ -98,7 +98,7 @@ function injectUI() {
     '<div class="exp-bg" id="exp-modal">' +
       '<div class="exp-mod">' +
         '<div class="exp-head">' +
-          '<div class="exp-title">📥 יצוא נתונים</div>' +
+          '<div class="exp-title">📥 יצוא נתונים <span style="font-size:10px;font-weight:400;opacity:0.45;font-family:monospace">v5</span></div>' +
           '<button class="exp-close-btn" onclick="closeExportModal()">✕</button>' +
         '</div>' +
         '<div class="exp-body">' +
@@ -213,6 +213,13 @@ function collectFeatures(selectedCats, bounds, cb) {
   var features = [];
   var villages = window.gVillages || [];
   if (!villages.length) { cb([]); return; }
+  // Deduplicate: if the same village was uploaded multiple times, use only the most recent file
+  var latestBySlug = {};
+  villages.forEach(function(v) {
+    var slug = v.village_id.replace(/_\d+(_\d+)?$/, '');
+    if (!latestBySlug[slug] || (v.uploaded_at || '') > (latestBySlug[slug].uploaded_at || '')) latestBySlug[slug] = v;
+  });
+  villages = Object.keys(latestBySlug).map(function(k) { return latestBySlug[k]; });
   var remaining = villages.length;
   function done() { if (--remaining === 0) cb(features); }
   villages.forEach(function (v) {
