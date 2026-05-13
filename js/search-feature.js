@@ -309,8 +309,30 @@ function doSearch(raw) {
   }
 }
 
-// ── GUSH/HELKA — proxied through our own Vercel serverless function ──
-// /api/parcel handles CORS + tries multiple Israeli cadastre backends server-side
+// ── GUSH/HELKA — direct GovMap API (CORS open) ──
+function mercToLatLng(x, y) {
+  var R = 6378137;
+  var lng = (x / R) * (180 / Math.PI);
+  var lat = (2 * Math.atan(Math.exp(y / R)) - Math.PI / 2) * (180 / Math.PI);
+  return [lat, lng];
+}
+
+function wktToLeafletRings(wkt) {
+  // Extract all coordinate rings from MULTIPOLYGON or POLYGON WKT
+  var rings = [];
+  var re = /\(([^()]+)\)/g;
+  var m;
+  while ((m = re.exec(wkt)) !== null) {
+    var pairs = m[1].trim().split(',');
+    var ring = pairs.map(function(p) {
+      var parts = p.trim().split(/\s+/);
+      return mercToLatLng(parseFloat(parts[0]), parseFloat(parts[1]));
+    });
+    if (ring.length >= 3) rings.push(ring);
+  }
+  return rings;
+}
+
 function handleGushHelka(gush, helka) {
   clearMapMarker();
   showPanel(
@@ -318,54 +340,57 @@ function handleGushHelka(gush, helka) {
     '<span style="color:#64748b">⏳ מחפש חלקה...</span>'
   );
 
-  fetch('/api/parcel?gush=' + encodeURIComponent(gush) + '&helka=' + encodeURIComponent(helka))
-    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; }); })
-    .then(function(res) {
-      if (!res.ok) {
-        console.warn('Parcel API 404 debug log:', res.data && res.data.log);
-        throw new Error('not found');
-      }
-      var d = res.data;
-      if (d.type === 'polygon') {
-        renderParcelPolygon(gush, helka, d);
-      } else if (d.type === 'centroid') {
-        renderParcelCentroid(gush, helka, d);
-      }
-    })
-    .catch(function(e) {
-      showPanel(
-        '📐 גוש ' + gush + ' · חלקה ' + helka,
-        '❌ לא נמצאה חלקה זו.<br>' +
-        '<span style="font-size:11px;color:#64748b">ודא שמספרי הגוש והחלקה נכונים.</span>'
-      );
-    });
-}
+  var query = 'גוש ' + gush + ' חלקה ' + helka;
+  var AUTOCOMPLETE = 'https://www.govmap.gov.il/api/search-service/autocomplete';
+  var GETSHAPE     = 'https://www.govmap.gov.il/api/search-service/getShape';
 
-function renderParcelPolygon(gush, helka, d) {
-  var feat  = d.features[0];
-  var rings = feat.geometry && feat.geometry.rings;
-  if (!rings || !rings.length) {
-    showPanel('📐 גוש ' + gush + ' · חלקה ' + helka, '⚠️ נמצאה חלקה אך חסרים נתוני גבולות.');
-    return;
-  }
-  var latlngs = rings.map(function(ring) {
-    return ring.map(function(pt) { return [pt[1], pt[0]]; });
-  });
-  gPolygon = L.polygon(latlngs, {
-    color: '#1a7fc1', weight: 2.5, fillColor: '#1a7fc1', fillOpacity: 0.15, interactive: false
-  }).addTo(window.gMap);
-  window.gMap.flyToBounds(gPolygon.getBounds(), { padding: [60, 60], maxZoom: 18, duration: 1.2 });
-  var area = (feat.attributes || {}).SHAPE_Area;
-  showParcelPanel(gush, helka, area);
-}
+  fetch(AUTOCOMPLETE, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query: query })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(data) {
+    var results = Array.isArray(data) ? data : (data.results || data.data || []);
+    var match = null;
+    for (var i = 0; i < results.length; i++) {
+      if (results[i].type === 'parcel') { match = results[i]; break; }
+    }
+    if (!match) throw new Error('parcel not found in autocomplete');
 
-function renderParcelCentroid(gush, helka, d) {
-  loadProj4(function() {
-    var wgs = itmToWgs84(d.x, d.y);
-    if (!wgs) { showPanel('📐 גוש ' + gush + ' · חלקה ' + helka, '❌ שגיאה בהמרת קואורדינטות.'); return; }
-    goToLocation(wgs.lat, wgs.lng,
-      wgs.lat.toFixed(5) + '°N, ' + wgs.lng.toFixed(5) + '°E',
-      '📐 גוש ' + gush + ' · חלקה ' + helka, 18);
+    // id format: "parcel|LAYER_PARCEL_ALL|424884"
+    var parcelId = String(match.id).split('|').pop();
+
+    return fetch(GETSHAPE, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idType: 'parcel', id: parcelId })
+    }).then(function(r) { return r.json(); });
+  })
+  .then(function(shapeData) {
+    var wkt = typeof shapeData === 'string' ? shapeData : (shapeData.shape || shapeData.wkt || shapeData.geometry || '');
+    if (!wkt) throw new Error('no WKT in shape response');
+
+    var rings = wktToLeafletRings(wkt);
+    if (!rings.length) throw new Error('could not parse WKT rings');
+
+    if (gPolygon) { window.gMap.removeLayer(gPolygon); gPolygon = null; }
+    gPolygon = L.polygon(rings, {
+      color: '#1a7fc1', weight: 2.5, fillColor: '#1a7fc1', fillOpacity: 0.15, interactive: false
+    }).addTo(window.gMap);
+    window.gMap.flyToBounds(gPolygon.getBounds(), { padding: [60, 60], maxZoom: 18, duration: 1.2 });
+
+    // Estimate area from bounding box (rough fallback — GovMap doesn't return area)
+    var bounds = gPolygon.getBounds();
+    showParcelPanel(gush, helka, null);
+  })
+  .catch(function(e) {
+    console.warn('Gush/Helka search failed:', e.message);
+    showPanel(
+      '📐 גוש ' + gush + ' · חלקה ' + helka,
+      '❌ לא נמצאה חלקה זו.<br>' +
+      '<span style="font-size:11px;color:#64748b">ודא שמספרי הגוש והחלקה נכונים.</span>'
+    );
   });
 }
 
