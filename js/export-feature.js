@@ -430,7 +430,7 @@ function dxfAttrLabel(lines, props, x, y) {
   if (!isNaN(plen) && plen > 0) rows.push('L: ' + plen.toFixed(1) + ' m');
 
   // Stack each row as a separate TEXT entity, 0.9m apart, small text (0.6m)
-  var th = 0.6, spacing = 0.9;
+  var th = 0.6, spacing = 2.0;
   var ox = x + 1.0, oy = y + (rows.length * spacing); // start from top, go downward
   rows.forEach(function(row, i) {
     lines.push('0','TEXT','8','ATTR',
