@@ -326,6 +326,37 @@ html, body { height: 100%; font-family: 'Rubik', 'Segoe UI', Tahoma, Arial, sans
 .popup-btn.success { background: var(--green); color: #fff; border-color: var(--green); }
 .popup-mine-tag { background: #1e40af; color: #fff; padding: 2px 7px; border-radius: 4px; font-size: 10px; font-weight: 600; display: inline-block; margin-bottom: 5px; }
 
+/* Shallow manhole warning badge (shown on map) */
+.manhole-warn-badge {
+  background: #dc2626;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 0 3px;
+  border-radius: 3px;
+  line-height: 14px;
+  height: 14px;
+  text-align: center;
+  box-shadow: 0 1px 5px rgba(0,0,0,0.5);
+  white-space: nowrap;
+  font-family: Arial, sans-serif;
+  pointer-events: none;
+}
+
+/* Warning banner inside popup */
+.popup-warn-banner {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #991b1b;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 5px 8px;
+  border-radius: 6px;
+  margin-top: 6px;
+  text-align: center;
+  line-height: 1.4;
+}
+
 /* Map feature labels */
 .map-label { background: transparent; border: none; font-size: 9px; font-weight: 700; color: #0d3b5e; text-shadow: 1px 1px 0 rgba(255,255,255,0.95), -1px -1px 0 rgba(255,255,255,0.95), 1px -1px 0 rgba(255,255,255,0.95), -1px 1px 0 rgba(255,255,255,0.95); white-space: nowrap; pointer-events: none; font-family: Arial, sans-serif; }
 body.dark-basemap .map-label { color: #fff; text-shadow: 1px 1px 0 rgba(0,0,0,0.95), -1px -1px 0 rgba(0,0,0,0.95), 1px -1px 0 rgba(0,0,0,0.95), -1px 1px 0 rgba(0,0,0,0.95); }

@@ -300,24 +300,31 @@ async function loadVillageData(village) {
           L.marker([g.coordinates[1], g.coordinates[0]], { icon:icon }).addTo(group);
         } else if (g.type === 'Point') {
           var marker = L.circleMarker([g.coordinates[1], g.coordinates[0]], { radius:def.radius||4, color:'#fff', weight:1.5, fillColor:def.color, fillOpacity:0.9 });
-          marker.bindPopup(buildPopup(p, def, village));
+          marker.bindPopup(buildPopup(p, def, village, catId));
           marker.addTo(group);
+          if (catId === 'sewage_manholes') {
+            var wtl = parseFloat(p.TL), wil = parseFloat(p.LowIL);
+            if (!isNaN(wtl) && !isNaN(wil) && (wtl - wil) < 0.80) {
+              var warnIcon = L.divIcon({ className:'', html:'<div class="manhole-warn-badge" style="pointer-events:none">⚠</div>', iconSize:[18,14], iconAnchor:[9,19] });
+              L.marker([g.coordinates[1], g.coordinates[0]], { icon:warnIcon, interactive:false, zIndexOffset:1000 }).addTo(group);
+            }
+          }
         } else if (g.type === 'LineString') {
           var coords = g.coordinates.map(function(c){return [c[1],c[0]];});
           var line = L.polyline(coords, { color:def.color, weight:def.weight||2, opacity:0.95, dashArray:def.dashArray });
-          line.bindPopup(buildPopup(p, def, village));
+          line.bindPopup(buildPopup(p, def, village, catId));
           line.addTo(group);
         } else if (g.type === 'MultiLineString') {
           g.coordinates.forEach(function(line) {
             var c = line.map(function(c){return [c[1],c[0]];});
             var pl = L.polyline(c, { color:def.color, weight:def.weight||2, opacity:0.95, dashArray:def.dashArray });
-            pl.bindPopup(buildPopup(p, def, village));
+            pl.bindPopup(buildPopup(p, def, village, catId));
             pl.addTo(group);
           });
         } else if (g.type === 'Polygon') {
           var coords = g.coordinates[0].map(function(c){return [c[1],c[0]];});
           var poly = L.polygon(coords, { color:def.color, weight:def.weight||1.5, opacity:0.85, fillOpacity:0.25, fillColor:def.color });
-          poly.bindPopup(buildPopup(p, def, village));
+          poly.bindPopup(buildPopup(p, def, village, catId));
           poly.addTo(group);
         }
       });
@@ -329,10 +336,35 @@ async function loadVillageData(village) {
   } catch(e) { console.error('Failed to load ' + village.village_id, e); }
 }
 
-function buildPopup(props, catDef, village) {
-  var html = '<div style="font-size:12px;line-height:1.5">';
+function buildPopup(props, catDef, village, catId) {
+  var html = '<div style="font-size:12px;line-height:1.5;direction:rtl">';
   if (props.Text) html += '<div style="font-weight:700;font-size:14px;color:'+catDef.color+';margin-bottom:4px">'+props.Text+'</div>';
   html += '<div class="popup-row"><span class="popup-key">סוג</span><span class="popup-val">'+catDef.label+'</span></div>';
+
+  // ── שוחות ביוב: TL / LowIL / depth ──────────────────────
+  if (catId === 'sewage_manholes') {
+    var manhNum = props.ManholeNum || props.ManholeNum;
+    if (manhNum) html += '<div class="popup-row"><span class="popup-key">מספר שוחה</span><span class="popup-val">'+manhNum+'</span></div>';
+    var tl = parseFloat(props.TL), il = parseFloat(props.LowIL);
+    if (!isNaN(tl)) html += '<div class="popup-row"><span class="popup-key">גובה עליון (TL)</span><span class="popup-val">'+tl.toFixed(2)+' מ׳</span></div>';
+    if (!isNaN(il)) html += '<div class="popup-row"><span class="popup-key">גובה תחתון (IL)</span><span class="popup-val">'+il.toFixed(2)+' מ׳</span></div>';
+    if (!isNaN(tl) && !isNaN(il)) {
+      var depth = tl - il;
+      var shallow = depth < 0.80;
+      html += '<div class="popup-row"><span class="popup-key">גובה שוחה</span><span class="popup-val" style="color:'+(shallow?'#dc2626':'#16a34a')+';font-weight:700">'+depth.toFixed(2)+' מ׳</span></div>';
+      if (shallow) html += '<div class="popup-warn-banner">⚠️ עומק נמוך מ-80 ס"מ — נדרש טיפול</div>';
+    }
+  }
+
+  // ── קווי ביוב / מים: אורך וקוטר ────────────────────────
+  if (catId === 'sewage_pipes' || catId === 'water_pipes' || catId === 'sewage_pipe' || catId === 'main_sewer' || catId === 'supply_pipe') {
+    var rawLen = props.MeasuredLe !== undefined ? props.MeasuredLe : props.Measuredle !== undefined ? props.Measuredle : props.Shape_Leng;
+    var pipeLen = parseFloat(rawLen);
+    if (!isNaN(pipeLen) && pipeLen > 0) html += '<div class="popup-row"><span class="popup-key">אורך</span><span class="popup-val">'+pipeLen.toFixed(1)+' מ׳</span></div>';
+    var diam = props.LineDiamet || props.Diameter;
+    if (diam) html += '<div class="popup-row"><span class="popup-key">קוטר</span><span class="popup-val">'+diam+' מ"מ</span></div>';
+  }
+
   if (props.Layer) html += '<div class="popup-row"><span class="popup-key">שכבה</span><span class="popup-val">'+props.Layer+'</span></div>';
   if (props.EntityHand) html += '<div class="popup-row"><span class="popup-key">מזהה</span><span class="popup-val">'+props.EntityHand+'</span></div>';
   html += '<div style="margin-top:6px;padding-top:5px;border-top:1px solid #e2e8f0;font-size:10px;color:#64748b">'+village.icon+' '+village.village_name+'</div></div>';
