@@ -97,7 +97,8 @@ async function changePass(){var p=document.getElementById('p-new').value,c=docum
 //  MAP (FIXED ZOOM: 20 max, 19 native)
 // ════════════════════════════════════════════════════════════
 function initMap() {
-  gMap = L.map('map', { zoomControl:true, attributionControl:false, maxZoom:20 }).setView([32.91,35.30],11);
+  gMap = L.map('map', { zoomControl:false, attributionControl:false, maxZoom:20 }).setView([32.91,35.30],11);
+  L.control.zoom({ position: 'topright' }).addTo(gMap);
   applyBasemap(gCurrentBasemap);
   gMap.on('mousemove', function(e) {
     var txt = e.latlng.lat.toFixed(5) + '° N,  ' + e.latlng.lng.toFixed(5) + '° E';
