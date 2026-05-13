@@ -402,42 +402,44 @@ function buildDXF(features) {
   return lines.join('\r\n');
 }
 
-// Write attribute text label on the ATTR layer (off by default — toggle in Layer Manager)
+// Write attribute text labels on the ATTR layer — one line per attribute, stacked vertically
 function dxfAttrLabel(lines, props, x, y) {
   if (!props) return;
   var cat = props._category || 'unknown';
-  var lyr = 'ATTR';
 
-  var parts = [cat];
+  var rows = [];
 
   function tryAdd(key, label) {
     var v = props[key];
     if (v === null || v === undefined || v === '' || v === 0) return;
     var disp = (typeof v === 'number') ? v.toFixed(2) : String(v);
-    parts.push((label || key) + ':' + disp);
+    rows.push((label || key) + ': ' + disp);
   }
 
-  // Common fields — added for any category that has them
+  rows.push(cat); // category header
   tryAdd('ManholeNum', 'MH');
   tryAdd('SectionNum', 'Sec');
-  tryAdd('LineDiamet', 'D');
-  tryAdd('TL',         'TL');
-  tryAdd('Depth',      'Depth');
+  tryAdd('LineDiamet', 'D (mm)');
+  tryAdd('TL',         'TL (m)');
+  tryAdd('Depth',      'Depth (m)');
 
-  // Length — pick first available field
   var rawLen = props.MeasuredLe !== undefined ? props.MeasuredLe
              : props.Measuredle !== undefined ? props.Measuredle
              : props.Shape_Leng;
   var plen = parseFloat(rawLen);
-  if (!isNaN(plen) && plen > 0) parts.push('L:' + plen.toFixed(1) + 'm');
+  if (!isNaN(plen) && plen > 0) rows.push('L: ' + plen.toFixed(1) + ' m');
 
-  var text = parts.join('  ');
-  lines.push('0','TEXT','8', lyr,
-    '10', String(x + 1.5),
-    '20', String(y + 1.5),
-    '30', '0',
-    '40', '1.5',
-    '1',  text);
+  // Stack each row as a separate TEXT entity, 0.9m apart, small text (0.6m)
+  var th = 0.6, spacing = 0.9;
+  var ox = x + 1.0, oy = y + (rows.length * spacing); // start from top, go downward
+  rows.forEach(function(row, i) {
+    lines.push('0','TEXT','8','ATTR',
+      '10', String(ox),
+      '20', String(oy - i * spacing),
+      '30', '0',
+      '40', String(th),
+      '1',  row);
+  });
 }
 
 // Attach all feature attributes as XDATA on the entity
