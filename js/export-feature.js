@@ -405,31 +405,39 @@ function buildDXF(features) {
 // Write visible attribute text label on the ATTR layer
 function dxfAttrLabel(lines, props, x, y) {
   if (!props) return;
-  var cat = props._category || '';
-  var parts = [];
+  var cat = props._category || 'unknown';
 
-  if (cat === 'sewage_manholes') {
-    if (props.ManholeNum) parts.push('MH:' + props.ManholeNum);
-    var tl = parseFloat(props.TL), dep = parseFloat(props.Depth);
-    if (!isNaN(tl)  && props.TL  !== 0) parts.push('TL:'  + tl.toFixed(2));
-    if (!isNaN(dep) && props.Depth !== 0) parts.push('D:'  + dep.toFixed(2) + 'm');
-  } else if (cat === 'sewage_pipes' || cat === 'sewage_pipe' || cat === 'main_sewer') {
-    if (props.SectionNum) parts.push(String(props.SectionNum));
-    if (props.LineDiamet) parts.push('D' + props.LineDiamet + 'mm');
-    var len = parseFloat(props.MeasuredLe || props.Shape_Leng);
-    if (!isNaN(len) && len > 0) parts.push('L:' + len.toFixed(1) + 'm');
-  } else if (cat === 'water_pipes' || cat === 'supply_pipe') {
-    if (props.SectionNum) parts.push(String(props.SectionNum));
-    if (props.LineDiamet) parts.push('D' + props.LineDiamet + 'mm');
-    var len = parseFloat(props.Measuredle || props.MeasuredLe || props.Shape_Leng);
-    if (!isNaN(len) && len > 0) parts.push('L:' + len.toFixed(1) + 'm');
-  } else if (cat === 'water_meters') {
-    if (props.MeterNum || props.SectionNum) parts.push(String(props.MeterNum || props.SectionNum));
+  // Always start with the category so ATTR layer is never empty
+  var parts = [cat];
+
+  function tryAdd(key, label) {
+    var v = props[key];
+    if (v === null || v === undefined || v === '' || v === 0) return;
+    var disp = (typeof v === 'number') ? v.toFixed(2) : String(v);
+    parts.push((label || key) + ':' + disp);
   }
 
-  if (!parts.length) return;
+  // Common fields — added for any category that has them
+  tryAdd('ManholeNum', 'MH');
+  tryAdd('SectionNum', 'Sec');
+  tryAdd('LineDiamet', 'D');
+  tryAdd('TL',         'TL');
+  tryAdd('Depth',      'Depth');
+
+  // Length — pick first available field
+  var rawLen = props.MeasuredLe !== undefined ? props.MeasuredLe
+             : props.Measuredle !== undefined ? props.Measuredle
+             : props.Shape_Leng;
+  var plen = parseFloat(rawLen);
+  if (!isNaN(plen) && plen > 0) parts.push('L:' + plen.toFixed(1) + 'm');
+
   var text = parts.join('  ');
-  lines.push('0','TEXT','8','ATTR','10',String(x + 1.5),'20',String(y + 1.5),'30','0','40','0.8','1',text);
+  lines.push('0','TEXT','8','ATTR',
+    '10', String(x + 1.5),
+    '20', String(y + 1.5),
+    '30', '0',
+    '40', '1.5',
+    '1',  text);
 }
 
 // Attach all feature attributes as XDATA on the entity
