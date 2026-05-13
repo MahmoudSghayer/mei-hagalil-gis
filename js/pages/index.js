@@ -56,6 +56,7 @@ var gCadastralLayer = null, gCadastralVisible = false;
 var gVillages = [], gVillageLayers = {}, gVillageState = {}, gVillageBounds = {};
 var gLastLat=null, gLastLng=null, gFilter='';
 var gUser=null, gProfile=null, gClosingId=null;
+var gSelectedLayer = null;
 
 var PRIORITY_COLORS={high:'#dc2626',medium:'#d97706',low:'#16a34a'};
 var PRIORITY_HE={high:'גבוהה',medium:'בינונית',low:'נמוכה'};
@@ -265,6 +266,22 @@ async function loadAllVillages() {
   renderVillagesList();
 }
 
+function highlightLayer(layer, origStyle) {
+  if (gSelectedLayer && gSelectedLayer !== layer) {
+    gSelectedLayer.setStyle(gSelectedLayer._origStyle);
+    gSelectedLayer = null;
+  }
+  layer._origStyle = origStyle;
+  layer.setStyle({ color: '#ffffff', weight: (origStyle.weight || 2) + 4, opacity: 1, dashArray: null });
+  if (layer.bringToFront) layer.bringToFront();
+  gSelectedLayer = layer;
+}
+
+function unhighlightLayer(layer) {
+  if (layer._origStyle) layer.setStyle(layer._origStyle);
+  if (gSelectedLayer === layer) gSelectedLayer = null;
+}
+
 async function loadVillageData(village) {
   try {
     var urlRes = gSb.storage.from('village-layers').getPublicUrl(village.file_path);
@@ -311,20 +328,29 @@ async function loadVillageData(village) {
           }
         } else if (g.type === 'LineString') {
           var coords = g.coordinates.map(function(c){return [c[1],c[0]];});
-          var line = L.polyline(coords, { color:def.color, weight:def.weight||2, opacity:0.95, dashArray:def.dashArray });
+          var lineStyle = { color:def.color, weight:def.weight||2, opacity:0.95, dashArray:def.dashArray };
+          var line = L.polyline(coords, lineStyle);
           line.bindPopup(buildPopup(p, def, village, catId));
+          line.on('click', function() { highlightLayer(line, lineStyle); });
+          line.on('popupclose', function() { unhighlightLayer(line); });
           line.addTo(group);
         } else if (g.type === 'MultiLineString') {
-          g.coordinates.forEach(function(line) {
-            var c = line.map(function(c){return [c[1],c[0]];});
-            var pl = L.polyline(c, { color:def.color, weight:def.weight||2, opacity:0.95, dashArray:def.dashArray });
+          g.coordinates.forEach(function(seg) {
+            var c = seg.map(function(c){return [c[1],c[0]];});
+            var segStyle = { color:def.color, weight:def.weight||2, opacity:0.95, dashArray:def.dashArray };
+            var pl = L.polyline(c, segStyle);
             pl.bindPopup(buildPopup(p, def, village, catId));
+            pl.on('click', function() { highlightLayer(pl, segStyle); });
+            pl.on('popupclose', function() { unhighlightLayer(pl); });
             pl.addTo(group);
           });
         } else if (g.type === 'Polygon') {
           var coords = g.coordinates[0].map(function(c){return [c[1],c[0]];});
-          var poly = L.polygon(coords, { color:def.color, weight:def.weight||1.5, opacity:0.85, fillOpacity:0.25, fillColor:def.color });
+          var polyStyle = { color:def.color, weight:def.weight||1.5, opacity:0.85, fillOpacity:0.25, fillColor:def.color };
+          var poly = L.polygon(coords, polyStyle);
           poly.bindPopup(buildPopup(p, def, village, catId));
+          poly.on('click', function() { highlightLayer(poly, polyStyle); });
+          poly.on('popupclose', function() { unhighlightLayer(poly); });
           poly.addTo(group);
         }
       });
