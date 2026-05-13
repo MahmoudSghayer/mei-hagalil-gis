@@ -45,13 +45,14 @@ s.textContent =
   '.exp-pill:hover{border-color:#93c5fd;color:#1a7fc1;}' +
   '.exp-pill.active{border-color:#0d3b5e;background:#eff6ff;color:#0d3b5e;}' +
   '.exp-pill-sub{font-size:9px;font-weight:400;display:block;margin-top:2px;opacity:.8;}' +
-  '.exp-cats-list{border:1px solid #e2e8f0;border-radius:9px;overflow:hidden;margin-bottom:20px;max-height:210px;overflow-y:auto;}' +
-  '.exp-cat-row{display:flex;align-items:center;gap:10px;padding:9px 13px;border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background .1s;}' +
-  '.exp-cat-row:last-child{border-bottom:none;}' +
-  '.exp-cat-row:hover{background:#f8fafc;}' +
-  '.exp-cat-row input{margin:0;cursor:pointer;width:15px;height:15px;flex-shrink:0;accent-color:#0d3b5e;}' +
-  '.exp-cat-lbl{flex:1;font-size:13px;color:#1e293b;}' +
-  '.exp-cat-cnt{font-size:11px;color:#94a3b8;background:#f1f5f9;padding:1px 8px;border-radius:10px;font-weight:600;}' +
+  '.exp-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:20px;}' +
+  '.exp-chip{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:2px solid #e2e8f0;border-radius:20px;cursor:pointer;font-size:12px;font-weight:600;color:#94a3b8;background:#f8fafc;transition:all .15s;user-select:none;font-family:inherit;}' +
+  '.exp-chip:hover{border-color:#93c5fd;color:#1a7fc1;background:#eff6ff;}' +
+  '.exp-chip.on{border-color:#0d3b5e;background:#0d3b5e;color:#fff;}' +
+  '.exp-chip.on .exp-chip-cnt{background:rgba(255,255,255,0.18);color:#fff;}' +
+  '.exp-chip.on .exp-chip-chk{opacity:1;}' +
+  '.exp-chip-chk{opacity:0;font-size:10px;transition:opacity .15s;}' +
+  '.exp-chip-cnt{font-size:10px;background:#e2e8f0;color:#64748b;padding:1px 7px;border-radius:10px;font-weight:700;}' +
   '.exp-scope{display:flex;flex-direction:column;gap:7px;margin-bottom:4px;}' +
   '.exp-scope-opt{display:flex;align-items:center;gap:10px;padding:11px 14px;border:2px solid #e2e8f0;border-radius:9px;cursor:pointer;transition:border-color .15s,background .15s;font-size:13px;color:#334155;user-select:none;}' +
   '.exp-scope-opt:hover{border-color:#93c5fd;}' +
@@ -110,7 +111,7 @@ function injectUI() {
           '</div>' +
 
           '<div class="exp-sec">שכבות<div class="exp-sec-acts"><button onclick="expSelectAll()">הכל</button><button onclick="expSelectNone()">נקה</button></div></div>' +
-          '<div class="exp-cats-list" id="exp-cats"></div>' +
+          '<div id="exp-cats"></div>' +
 
           '<div class="exp-sec">אזור</div>' +
           '<div class="exp-scope">' +
@@ -157,17 +158,18 @@ function renderCatsList() {
     el.innerHTML = '<div style="padding:16px;text-align:center;color:#94a3b8;font-size:13px">אין שכבות טעונות במפה</div>';
     return;
   }
-  el.innerHTML = keys.map(function (k) {
-    return '<label class="exp-cat-row">' +
-      '<input type="checkbox" value="' + k + '" checked>' +
-      '<span class="exp-cat-lbl">' + (LABELS[k] || k) + '</span>' +
-      '<span class="exp-cat-cnt">' + counts[k] + '</span>' +
-      '</label>';
-  }).join('');
+  el.innerHTML = '<div class="exp-chips">' + keys.map(function (k) {
+    return '<button class="exp-chip on" data-cat="' + k + '" onclick="expToggleChip(this)">' +
+      '<span class="exp-chip-chk">✓</span>' +
+      '<span>' + (LABELS[k] || k) + '</span>' +
+      '<span class="exp-chip-cnt">' + counts[k] + '</span>' +
+      '</button>';
+  }).join('') + '</div>';
 }
 
-window.expSelectAll  = function () { document.querySelectorAll('#exp-cats input').forEach(function (i) { i.checked = true;  }); };
-window.expSelectNone = function () { document.querySelectorAll('#exp-cats input').forEach(function (i) { i.checked = false; }); };
+window.expToggleChip = function(btn) { btn.classList.toggle('on'); };
+window.expSelectAll  = function () { document.querySelectorAll('#exp-cats .exp-chip').forEach(function (c) { c.classList.add('on'); }); };
+window.expSelectNone = function () { document.querySelectorAll('#exp-cats .exp-chip').forEach(function (c) { c.classList.remove('on'); }); };
 
 window.expSetFmt = function (fmt) {
   gExportFormat = fmt;
@@ -187,7 +189,7 @@ window.expSetScope = function (scope) {
 // ── EXPORT GO ────────────────────────────────────────────────────────────────
 window.expGo = function () {
   var selectedCats = [];
-  document.querySelectorAll('#exp-cats input:checked').forEach(function (i) { selectedCats.push(i.value); });
+  document.querySelectorAll('#exp-cats .exp-chip.on').forEach(function (c) { selectedCats.push(c.getAttribute('data-cat')); });
   if (!selectedCats.length) { alert('בחר לפחות שכבה אחת'); return; }
 
   closeExportModal();
