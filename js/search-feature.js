@@ -349,43 +349,56 @@ function handleGushHelka(gush, helka) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query: query })
   })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
+  .then(function(r) {
+    console.log('[GH] autocomplete HTTP status:', r.status);
+    return r.text();
+  })
+  .then(function(rawText) {
+    console.log('[GH] autocomplete raw response:', rawText.slice(0, 500));
+    var data;
+    try { data = JSON.parse(rawText); } catch(e) { throw new Error('autocomplete not JSON: ' + rawText.slice(0, 100)); }
     var results = Array.isArray(data) ? data : (data.results || data.data || []);
+    console.log('[GH] autocomplete results count:', results.length, 'types:', results.map(function(r){ return r.type; }));
     var match = null;
     for (var i = 0; i < results.length; i++) {
       if (results[i].type === 'parcel') { match = results[i]; break; }
     }
-    if (!match) throw new Error('parcel not found in autocomplete');
+    if (!match) throw new Error('no parcel type in autocomplete results. Got: ' + JSON.stringify(results).slice(0, 300));
 
     // id format: "parcel|LAYER_PARCEL_ALL|424884"
     var parcelId = String(match.id).split('|').pop();
+    console.log('[GH] matched parcel:', match, '=> id:', parcelId);
 
     return fetch(GETSHAPE, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ idType: 'parcel', id: parcelId })
-    }).then(function(r) { return r.json(); });
+    }).then(function(r) {
+      console.log('[GH] getShape HTTP status:', r.status);
+      return r.text();
+    }).then(function(raw) {
+      console.log('[GH] getShape raw response:', raw.slice(0, 300));
+      try { return JSON.parse(raw); } catch(e) { return raw; }
+    });
   })
   .then(function(shapeData) {
-    var wkt = typeof shapeData === 'string' ? shapeData : (shapeData.shape || shapeData.wkt || shapeData.geometry || '');
-    if (!wkt) throw new Error('no WKT in shape response');
+    console.log('[GH] shapeData type:', typeof shapeData, 'keys:', typeof shapeData === 'object' ? Object.keys(shapeData) : 'n/a');
+    var wkt = typeof shapeData === 'string' ? shapeData : (shapeData.shape || shapeData.wkt || shapeData.geometry || shapeData.data || '');
+    if (!wkt) throw new Error('no WKT in shape response: ' + JSON.stringify(shapeData).slice(0, 200));
 
     var rings = wktToLeafletRings(wkt);
-    if (!rings.length) throw new Error('could not parse WKT rings');
+    console.log('[GH] parsed rings count:', rings.length);
+    if (!rings.length) throw new Error('could not parse WKT rings from: ' + wkt.slice(0, 100));
 
     if (gPolygon) { window.gMap.removeLayer(gPolygon); gPolygon = null; }
     gPolygon = L.polygon(rings, {
       color: '#1a7fc1', weight: 2.5, fillColor: '#1a7fc1', fillOpacity: 0.15, interactive: false
     }).addTo(window.gMap);
     window.gMap.flyToBounds(gPolygon.getBounds(), { padding: [60, 60], maxZoom: 18, duration: 1.2 });
-
-    // Estimate area from bounding box (rough fallback — GovMap doesn't return area)
-    var bounds = gPolygon.getBounds();
     showParcelPanel(gush, helka, null);
   })
   .catch(function(e) {
-    console.warn('Gush/Helka search failed:', e.message);
+    console.warn('[GH] Gush/Helka search failed:', e.message);
     showPanel(
       '📐 גוש ' + gush + ' · חלקה ' + helka,
       '❌ לא נמצאה חלקה זו.<br>' +
