@@ -347,7 +347,7 @@ function handleGushHelka(gush, helka) {
   fetch(AUTOCOMPLETE, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ query: query })
+    body: JSON.stringify({ searchText: query })
   })
   .then(function(r) {
     console.log('[GH] autocomplete HTTP status:', r.status);
