@@ -98,7 +98,7 @@ function injectUI() {
     '<div class="exp-bg" id="exp-modal">' +
       '<div class="exp-mod">' +
         '<div class="exp-head">' +
-          '<div class="exp-title">📥 יצוא נתונים <span style="font-size:10px;font-weight:400;opacity:0.45;font-family:monospace">v6</span></div>' +
+          '<div class="exp-title">📥 יצוא נתונים <span style="font-size:10px;font-weight:400;opacity:0.45;font-family:monospace">v7</span></div>' +
           '<button class="exp-close-btn" onclick="closeExportModal()">✕</button>' +
         '</div>' +
         '<div class="exp-body">' +
@@ -446,39 +446,49 @@ function buildDXF(features) {
       var rpt  = ring[Math.floor(ring.length / 2)];
       labelPt = toITM(rpt[0], rpt[1]);
     }
-    // Only write text labels for point features — lines/polygons get XDATA only
-    if (labelPt && g.type === 'Point') dxfAttrLabel(lines, f.properties, labelPt[0], labelPt[1]);
+    // Write labels only for manholes and pipes (skip buildings, parcels, annotations, etc.)
+    if (labelPt) {
+      var lcat = (f.properties && f.properties._category) || '';
+      var wantLabel = lcat === 'sewage_manholes' || lcat === 'manhole' ||
+                      lcat === 'sewage_pipes'    || lcat === 'sewage_pipe' ||
+                      lcat === 'water_pipes'     || lcat === 'main_sewer' || lcat === 'supply_pipe';
+      if (wantLabel) dxfAttrLabel(lines, f.properties, labelPt[0], labelPt[1]);
+    }
   });
   lines.push('0','ENDSEC','0','EOF');
   return lines.join('\r\n');
 }
 
-// Write attribute text labels on the ATTR layer — only for point features with known data
+// Write attribute text labels on the ATTR layer — manholes and pipes only
 function dxfAttrLabel(lines, props, x, y) {
   if (!props) return;
   var cat = props._category || '';
   var rows = [];
 
-  var isManholeType = (cat === 'sewage_manholes' || cat === 'manhole');
-  var isValveType   = (cat === 'valves' || cat === 'control_valves' || cat === 'valve_chamber');
-  var isHydrant     = (cat === 'hydrants');
-  var isMeter       = (cat === 'water_meters');
+  var isManhole = (cat === 'sewage_manholes' || cat === 'manhole');
+  var isPipe    = (cat === 'sewage_pipes' || cat === 'sewage_pipe' ||
+                   cat === 'water_pipes'  || cat === 'main_sewer' || cat === 'supply_pipe');
 
-  if (isManholeType) {
-    if (props.ManholeNum) rows.push(String(props.ManholeNum));
+  if (isManhole) {
+    rows.push(cat);
+    if (props.ManholeNum) rows.push('MH: ' + props.ManholeNum);
     var tl = parseFloat(props.TL);
-    if (!isNaN(tl))    rows.push('TL=' + tl.toFixed(2));
+    if (!isNaN(tl))  rows.push('TL (m): ' + tl.toFixed(2));
     var dep = parseFloat(props.Depth);
-    if (!isNaN(dep))   rows.push('D=' + dep.toFixed(2) + 'm');
-  } else if (isValveType || isHydrant || isMeter) {
-    if (props.ManholeNum) rows.push(String(props.ManholeNum));
-    else if (props.Text)  rows.push(String(props.Text));
+    if (!isNaN(dep)) rows.push('Depth (m): ' + dep.toFixed(2));
+  } else if (isPipe) {
+    rows.push(cat);
+    var rawLen = props.MeasuredLe !== undefined ? props.MeasuredLe
+               : props.Measuredle !== undefined ? props.Measuredle
+               : props.Shape_Leng;
+    var plen = parseFloat(rawLen);
+    if (!isNaN(plen) && plen > 0) rows.push('L: ' + plen.toFixed(1) + ' m');
+    if (props.LineDiamet) rows.push('D (mm): ' + props.LineDiamet);
   }
-  // All other feature types: no label (data is in XDATA)
 
   if (!rows.length) return;
 
-  // Text height 1.5m, 4.5m between baselines, 4m to the right of the point
+  // Text height 1.5m, 4.5m between baselines, 4m to the right of the feature
   var th = 1.5, spacing = 4.5;
   var ox = x + 4.0;
   var oy = y + ((rows.length - 1) * spacing);
