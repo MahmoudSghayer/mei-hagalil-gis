@@ -303,8 +303,8 @@ async function loadVillageData(village) {
           marker.bindPopup(buildPopup(p, def, village, catId));
           marker.addTo(group);
           if (catId === 'sewage_manholes') {
-            var wtl = parseFloat(p.TL), wil = parseFloat(p.LowIL);
-            if (!isNaN(wtl) && !isNaN(wil) && (wtl - wil) < 0.80) {
+            var wDepth = parseFloat(p.Depth);
+            if (!isNaN(wDepth) && wDepth < 0.80) {
               var warnIcon = L.divIcon({ className:'', html:'<div class="manhole-warn-badge" style="pointer-events:none">⚠</div>', iconSize:[18,14], iconAnchor:[9,19] });
               L.marker([g.coordinates[1], g.coordinates[0]], { icon:warnIcon, interactive:false, zIndexOffset:1000 }).addTo(group);
             }
@@ -341,17 +341,20 @@ function buildPopup(props, catDef, village, catId) {
   if (props.Text) html += '<div style="font-weight:700;font-size:14px;color:'+catDef.color+';margin-bottom:4px">'+props.Text+'</div>';
   html += '<div class="popup-row"><span class="popup-key">סוג</span><span class="popup-val">'+catDef.label+'</span></div>';
 
-  // ── שוחות ביוב: TL / LowIL / depth ──────────────────────
+  // ── שוחות ביוב: TL / Depth / IL (calculated) ────────────
   if (catId === 'sewage_manholes') {
-    var manhNum = props.ManholeNum || props.ManholeNum;
+    var manhNum = props.ManholeNum;
     if (manhNum) html += '<div class="popup-row"><span class="popup-key">מספר שוחה</span><span class="popup-val">'+manhNum+'</span></div>';
-    var tl = parseFloat(props.TL), il = parseFloat(props.LowIL);
-    if (!isNaN(tl)) html += '<div class="popup-row"><span class="popup-key">גובה עליון (TL)</span><span class="popup-val">'+tl.toFixed(2)+' מ׳</span></div>';
-    if (!isNaN(il)) html += '<div class="popup-row"><span class="popup-key">גובה תחתון (IL)</span><span class="popup-val">'+il.toFixed(2)+' מ׳</span></div>';
-    if (!isNaN(tl) && !isNaN(il)) {
-      var depth = tl - il;
+    var tl    = parseFloat(props.TL);
+    var depth = parseFloat(props.Depth);
+    if (!isNaN(tl))    html += '<div class="popup-row"><span class="popup-key">גובה עליון (TL)</span><span class="popup-val">'+tl.toFixed(2)+' מ׳</span></div>';
+    if (!isNaN(depth)) html += '<div class="popup-row"><span class="popup-key">עומק</span><span class="popup-val">'+depth.toFixed(2)+' מ׳</span></div>';
+    if (!isNaN(tl) && !isNaN(depth)) {
+      var il = tl - depth;
+      html += '<div class="popup-row"><span class="popup-key">גובה תחתון (IL)</span><span class="popup-val">'+il.toFixed(2)+' מ׳</span></div>';
+    }
+    if (!isNaN(depth)) {
       var shallow = depth < 0.80;
-      html += '<div class="popup-row"><span class="popup-key">גובה שוחה</span><span class="popup-val" style="color:'+(shallow?'#dc2626':'#16a34a')+';font-weight:700">'+depth.toFixed(2)+' מ׳</span></div>';
       if (shallow) html += '<div class="popup-warn-banner">⚠️ עומק נמוך מ-80 ס"מ — נדרש טיפול</div>';
     }
   }
