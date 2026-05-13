@@ -98,7 +98,7 @@ function injectUI() {
     '<div class="exp-bg" id="exp-modal">' +
       '<div class="exp-mod">' +
         '<div class="exp-head">' +
-          '<div class="exp-title">📥 יצוא נתונים <span style="font-size:10px;font-weight:400;opacity:0.45;font-family:monospace">v7</span></div>' +
+          '<div class="exp-title">📥 יצוא נתונים <span style="font-size:10px;font-weight:400;opacity:0.45;font-family:monospace">v8</span></div>' +
           '<button class="exp-close-btn" onclick="closeExportModal()">✕</button>' +
         '</div>' +
         '<div class="exp-body">' +
@@ -459,7 +459,7 @@ function buildDXF(features) {
   return lines.join('\r\n');
 }
 
-// Write attribute text labels on the ATTR layer — manholes and pipes only
+// Write attribute text labels on the ATTR layer — manholes only (3 rows), pipes diameter only (1 row)
 function dxfAttrLabel(lines, props, x, y) {
   if (!props) return;
   var cat = props._category || '';
@@ -470,28 +470,33 @@ function dxfAttrLabel(lines, props, x, y) {
                    cat === 'water_pipes'  || cat === 'main_sewer' || cat === 'supply_pipe');
 
   if (isManhole) {
-    rows.push(cat);
+    // 3 rows max: MH number, TL, Depth
     if (props.ManholeNum) rows.push('MH: ' + props.ManholeNum);
     var tl = parseFloat(props.TL);
-    if (!isNaN(tl))  rows.push('TL (m): ' + tl.toFixed(2));
+    if (!isNaN(tl))  rows.push('TL: ' + tl.toFixed(2));
     var dep = parseFloat(props.Depth);
-    if (!isNaN(dep)) rows.push('Depth (m): ' + dep.toFixed(2));
+    if (!isNaN(dep)) rows.push('D: ' + dep.toFixed(2) + 'm');
   } else if (isPipe) {
-    rows.push(cat);
-    var rawLen = props.MeasuredLe !== undefined ? props.MeasuredLe
-               : props.Measuredle !== undefined ? props.Measuredle
-               : props.Shape_Leng;
-    var plen = parseFloat(rawLen);
-    if (!isNaN(plen) && plen > 0) rows.push('L: ' + plen.toFixed(1) + ' m');
-    if (props.LineDiamet) rows.push('D (mm): ' + props.LineDiamet);
+    // 1 row: diameter only — length can be measured; category is obvious from color
+    if (props.LineDiamet) rows.push('Ø' + props.LineDiamet + 'mm');
   }
 
   if (!rows.length) return;
 
-  // Text height 1.5m, 4.5m between baselines, 4m to the right of the feature
-  var th = 1.5, spacing = 4.5;
-  var ox = x + 4.0;
-  var oy = y + ((rows.length - 1) * spacing);
+  // Manholes: label goes upper-right (+15m, +12m)
+  // Pipes:    label goes lower-right (+15m, -12m)
+  // Leader line connects feature to label so it is clear which feature it belongs to
+  var th = 1.2, spacing = 3.5;
+  var dx = 15.0;
+  var dy = isManhole ? 12.0 : -12.0;
+  var ox = x + dx;
+  var leaderY = y + dy;
+  var oy = leaderY + (rows.length - 1) * spacing; // top row
+
+  lines.push('0','LINE','8','ATTR',
+    '10', String(x),  '20', String(y),      '30', '0',
+    '11', String(ox), '21', String(leaderY), '31', '0');
+
   rows.forEach(function(row, i) {
     lines.push('0','TEXT','8','ATTR',
       '10', String(ox),
