@@ -366,7 +366,7 @@ function buildDXF(features) {
   // LAYER — layer 0 is mandatory in every valid DXF
   lines.push('0','TABLE','2','LAYER','70',String(Object.keys(seen).length + 2));
   lines.push('0','LAYER','2','0','70','0','62','7','6','CONTINUOUS');
-  lines.push('0','LAYER','2','ATTR','70','0','62','3','6','CONTINUOUS');
+  lines.push('0','LAYER','2','ATTR','70','0','62','-3','6','CONTINUOUS'); // off by default, turn on in Layer Manager
   Object.keys(seen).forEach(function (c) {
     lines.push('0','LAYER','2',c,'70','0','62',String(colors[c]||7),'6','CONTINUOUS');
   });
@@ -385,7 +385,7 @@ function buildDXF(features) {
       var p = toITM(g.coordinates[0], g.coordinates[1]);
       lines.push('0','POINT','8',layer,'10',String(p[0]),'20',String(p[1]),'30','0');
       dxfXdata(lines, f.properties);
-      dxfAttrLabel(lines, f.properties, p[0], p[1], layer);
+      dxfAttrLabel(lines, f.properties, p[0], p[1]);
       if (f.properties && f.properties.Text)
         lines.push('0','TEXT','8',layer,'10',String(p[0]),'20',String(p[1]),'30','0','40','1.0','1',String(f.properties.Text));
     } else if (g.type === 'LineString') {
@@ -402,11 +402,11 @@ function buildDXF(features) {
   return lines.join('\r\n');
 }
 
-// Write visible attribute text label on the feature's own layer
-function dxfAttrLabel(lines, props, x, y, layer) {
+// Write attribute text label on the ATTR layer (off by default — toggle in Layer Manager)
+function dxfAttrLabel(lines, props, x, y) {
   if (!props) return;
   var cat = props._category || 'unknown';
-  var lyr = layer || cat;
+  var lyr = 'ATTR';
 
   var parts = [cat];
 
@@ -471,7 +471,7 @@ function dxfPolyline(lines, coords, layer, closed, toITM, props) {
   if (props && coords.length) {
     var mid = coords[Math.floor(coords.length / 2)];
     var mp = toITM(mid[0], mid[1]);
-    dxfAttrLabel(lines, props, mp[0], mp[1], layer);
+    dxfAttrLabel(lines, props, mp[0], mp[1]);
   }
 }
 
