@@ -337,14 +337,40 @@ function finalizeBlob(blob, ts, ext) {
   document.getElementById('exp-done-modal').classList.add('open');
 }
 
-// ── DXF GENERATION (local, free) ──
+// ── DXF GENERATION — coordinates in ITM (Israel Grid, meters) ──
+function makeToITM() {
+  if (window.proj4 && !window.proj4.defs('EPSG:2039')) {
+    window.proj4.defs('EPSG:2039',
+      '+proj=tmerc +lat_0=31.7343936111111 +lon_0=35.2045169444444 ' +
+      '+k=1.0000067 +x_0=219529.584 +y_0=626907.39 +ellps=GRS80 ' +
+      '+towgs84=-48,55,52,0,0,0,0 +units=m +no_defs');
+  }
+  return function(lng, lat) {
+    if (window.proj4) {
+      try { return window.proj4('EPSG:4326', 'EPSG:2039', [lng, lat]); } catch(e) {}
+    }
+    return [lng, lat];
+  };
+}
+
 function buildDXF(features) {
-  var lines = ['0','SECTION','2','HEADER','9','$ACADVER','1','AC1009','0','ENDSEC'];
+  var toITM = makeToITM();
+  var lines = [
+    '0','SECTION','2','HEADER',
+    '9','$ACADVER','1','AC1015',
+    '9','$INSUNITS','70','6',
+    '9','$MEASUREMENT','70','1',
+    '0','ENDSEC'
+  ];
   lines.push('0','SECTION','2','TABLES','0','TABLE','2','LAYER','70','24');
-  var layerColors = { sewage_pipe:2, manhole:4, sleeve:6, control_point:1, water_pipes:5, water_meters:5,
-    hydrants:1, valves:6, control_valves:6, buildings:8, parcels:3, sewage_pipes:42, sewage_manholes:42,
-    reservoirs:3, pump_stations:2, sampling_points:6, connection_points:5, pipe_label:7,
-    elevation_label:7, attribute_label:7, distance_label:7, dimension_line:9, manhole_drawing:8, other:7 };
+  var layerColors = {
+    sewage_pipe:2, manhole:4, sleeve:6, control_point:1,
+    water_pipes:5, water_meters:5, hydrants:1, valves:6, control_valves:6,
+    buildings:8, parcels:3, sewage_pipes:42, sewage_manholes:42,
+    reservoirs:3, pump_stations:2, sampling_points:6, connection_points:5,
+    pipe_label:7, elevation_label:7, attribute_label:7, distance_label:7,
+    dimension_line:9, manhole_drawing:8, other:7
+  };
   var seenLayers = {};
   features.forEach(function(f) {
     var c = (f.properties && f.properties._category) || 'other';
@@ -357,27 +383,32 @@ function buildDXF(features) {
   features.forEach(function(f) {
     var layer = (f.properties && f.properties._category) || 'other';
     var g = f.geometry;
+    if (!g) return;
     if (g.type === 'Point') {
-      lines.push('0','POINT','8',layer,'10',String(g.coordinates[0]),'20',String(g.coordinates[1]),'30','0');
+      var p = toITM(g.coordinates[0], g.coordinates[1]);
+      lines.push('0','POINT','8',layer,'10',String(p[0]),'20',String(p[1]),'30','0');
       if (f.properties && f.properties.Text) {
-        lines.push('0','TEXT','8',layer,'10',String(g.coordinates[0]),'20',String(g.coordinates[1]),'30','0','40','0.0001','1',String(f.properties.Text));
+        lines.push('0','TEXT','8',layer,'10',String(p[0]),'20',String(p[1]),'30','0','40','1.0','1',String(f.properties.Text));
       }
     } else if (g.type === 'LineString') {
-      addPolyline(lines, g.coordinates, layer);
+      addPolylineDXF(lines, g.coordinates, layer, false, toITM);
     } else if (g.type === 'MultiLineString') {
-      g.coordinates.forEach(function(line) { addPolyline(lines, line, layer); });
+      g.coordinates.forEach(function(seg) { addPolylineDXF(lines, seg, layer, false, toITM); });
     } else if (g.type === 'Polygon') {
-      addPolyline(lines, g.coordinates[0], layer, true);
+      addPolylineDXF(lines, g.coordinates[0], layer, true, toITM);
+    } else if (g.type === 'MultiPolygon') {
+      g.coordinates.forEach(function(poly) { addPolylineDXF(lines, poly[0], layer, true, toITM); });
     }
   });
   lines.push('0','ENDSEC','0','EOF');
   return lines.join('\r\n');
 }
 
-function addPolyline(lines, coords, layer, closed) {
-  lines.push('0','POLYLINE','8',layer,'66','1','70', closed?'1':'0','10','0','20','0','30','0');
+function addPolylineDXF(lines, coords, layer, closed, toITM) {
+  lines.push('0','POLYLINE','8',layer,'66','1','70',closed?'1':'0','10','0','20','0','30','0');
   coords.forEach(function(c) {
-    lines.push('0','VERTEX','8',layer,'10',String(c[0]),'20',String(c[1]),'30','0');
+    var p = toITM(c[0], c[1]);
+    lines.push('0','VERTEX','8',layer,'10',String(p[0]),'20',String(p[1]),'30','0');
   });
   lines.push('0','SEQEND','8',layer);
 }
