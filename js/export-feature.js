@@ -385,7 +385,7 @@ function buildDXF(features) {
       var p = toITM(g.coordinates[0], g.coordinates[1]);
       lines.push('0','POINT','8',layer,'10',String(p[0]),'20',String(p[1]),'30','0');
       dxfXdata(lines, f.properties);
-      dxfAttrLabel(lines, f.properties, p[0], p[1]);
+      dxfAttrLabel(lines, f.properties, p[0], p[1], layer);
       if (f.properties && f.properties.Text)
         lines.push('0','TEXT','8',layer,'10',String(p[0]),'20',String(p[1]),'30','0','40','1.0','1',String(f.properties.Text));
     } else if (g.type === 'LineString') {
@@ -402,12 +402,12 @@ function buildDXF(features) {
   return lines.join('\r\n');
 }
 
-// Write visible attribute text label on the ATTR layer
-function dxfAttrLabel(lines, props, x, y) {
+// Write visible attribute text label on the feature's own layer
+function dxfAttrLabel(lines, props, x, y, layer) {
   if (!props) return;
   var cat = props._category || 'unknown';
+  var lyr = layer || cat;
 
-  // Always start with the category so ATTR layer is never empty
   var parts = [cat];
 
   function tryAdd(key, label) {
@@ -432,7 +432,7 @@ function dxfAttrLabel(lines, props, x, y) {
   if (!isNaN(plen) && plen > 0) parts.push('L:' + plen.toFixed(1) + 'm');
 
   var text = parts.join('  ');
-  lines.push('0','TEXT','8','ATTR',
+  lines.push('0','TEXT','8', lyr,
     '10', String(x + 1.5),
     '20', String(y + 1.5),
     '30', '0',
@@ -467,11 +467,11 @@ function dxfPolyline(lines, coords, layer, closed, toITM, props) {
     lines.push('0','VERTEX','8',layer,'10',String(p[0]),'20',String(p[1]),'30','0');
   });
   lines.push('0','SEQEND','8',layer);
-  // Place attribute label at line midpoint
+  // Place attribute label at line midpoint, on same layer as geometry
   if (props && coords.length) {
     var mid = coords[Math.floor(coords.length / 2)];
     var mp = toITM(mid[0], mid[1]);
-    dxfAttrLabel(lines, props, mp[0], mp[1]);
+    dxfAttrLabel(lines, props, mp[0], mp[1], layer);
   }
 }
 
