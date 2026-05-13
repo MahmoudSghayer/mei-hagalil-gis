@@ -98,7 +98,7 @@ function injectUI() {
     '<div class="exp-bg" id="exp-modal">' +
       '<div class="exp-mod">' +
         '<div class="exp-head">' +
-          '<div class="exp-title">📥 יצוא נתונים <span style="font-size:10px;font-weight:400;opacity:0.45;font-family:monospace">v5</span></div>' +
+          '<div class="exp-title">📥 יצוא נתונים <span style="font-size:10px;font-weight:400;opacity:0.45;font-family:monospace">v6</span></div>' +
           '<button class="exp-close-btn" onclick="closeExportModal()">✕</button>' +
         '</div>' +
         '<div class="exp-body">' +
@@ -446,43 +446,42 @@ function buildDXF(features) {
       var rpt  = ring[Math.floor(ring.length / 2)];
       labelPt = toITM(rpt[0], rpt[1]);
     }
-    if (labelPt) dxfAttrLabel(lines, f.properties, labelPt[0], labelPt[1]);
+    // Only write text labels for point features — lines/polygons get XDATA only
+    if (labelPt && g.type === 'Point') dxfAttrLabel(lines, f.properties, labelPt[0], labelPt[1]);
   });
   lines.push('0','ENDSEC','0','EOF');
   return lines.join('\r\n');
 }
 
-// Write attribute text labels on the ATTR layer — one line per attribute, stacked vertically
+// Write attribute text labels on the ATTR layer — only for point features with known data
 function dxfAttrLabel(lines, props, x, y) {
   if (!props) return;
-  var cat = props._category || 'unknown';
-
+  var cat = props._category || '';
   var rows = [];
 
-  function tryAdd(key, label) {
-    var v = props[key];
-    if (v === null || v === undefined || v === '' || v === 0) return;
-    var disp = (typeof v === 'number') ? v.toFixed(2) : String(v);
-    rows.push((label || key) + ': ' + disp);
+  var isManholeType = (cat === 'sewage_manholes' || cat === 'manhole');
+  var isValveType   = (cat === 'valves' || cat === 'control_valves' || cat === 'valve_chamber');
+  var isHydrant     = (cat === 'hydrants');
+  var isMeter       = (cat === 'water_meters');
+
+  if (isManholeType) {
+    if (props.ManholeNum) rows.push(String(props.ManholeNum));
+    var tl = parseFloat(props.TL);
+    if (!isNaN(tl))    rows.push('TL=' + tl.toFixed(2));
+    var dep = parseFloat(props.Depth);
+    if (!isNaN(dep))   rows.push('D=' + dep.toFixed(2) + 'm');
+  } else if (isValveType || isHydrant || isMeter) {
+    if (props.ManholeNum) rows.push(String(props.ManholeNum));
+    else if (props.Text)  rows.push(String(props.Text));
   }
+  // All other feature types: no label (data is in XDATA)
 
-  rows.push(cat); // category header
-  tryAdd('ManholeNum', 'MH');
-  tryAdd('SectionNum', 'Sec');
-  tryAdd('LineDiamet', 'D (mm)');
-  tryAdd('TL',         'TL (m)');
-  tryAdd('Depth',      'Depth (m)');
+  if (!rows.length) return;
 
-  var rawLen = props.MeasuredLe !== undefined ? props.MeasuredLe
-             : props.Measuredle !== undefined ? props.Measuredle
-             : props.Shape_Leng;
-  var plen = parseFloat(rawLen);
-  if (!isNaN(plen) && plen > 0) rows.push('L: ' + plen.toFixed(1) + ' m');
-
-  // Stack rows vertically: text height 1.5m, 5m between baselines, 5m to the right of the point
-  var th = 1.5, spacing = 5.0;
-  var ox = x + 5.0;
-  var oy = y + ((rows.length - 1) * spacing); // top row first, go downward
+  // Text height 1.5m, 4.5m between baselines, 4m to the right of the point
+  var th = 1.5, spacing = 4.5;
+  var ox = x + 4.0;
+  var oy = y + ((rows.length - 1) * spacing);
   rows.forEach(function(row, i) {
     lines.push('0','TEXT','8','ATTR',
       '10', String(ox),
