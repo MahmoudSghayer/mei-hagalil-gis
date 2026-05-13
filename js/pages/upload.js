@@ -163,8 +163,21 @@ function detectVillage(features) {
 
   var bestVillage = VILLAGES.find(function(v) { return v.slug === bestSlug; });
   var percentage = Math.round((bestCount / totalWithGeom) * 100);
+  var numVillages = Object.keys(villageCounts).filter(function(k) { return villageCounts[k] > 0; }).length;
 
-  return { status: 'accepted', bestMatch: bestVillage, percentage: percentage, bestCount: bestCount, villageCounts: villageCounts, outsideCount: outsideCount, totalWithGeom: totalWithGeom, noGeomCount: noGeomCount };
+  return { status: 'accepted', bestMatch: bestVillage, percentage: percentage, bestCount: bestCount, villageCounts: villageCounts, outsideCount: outsideCount, totalWithGeom: totalWithGeom, noGeomCount: noGeomCount, numVillages: numVillages };
+}
+
+function detectFeatureVillage(feature) {
+  if (!feature.geometry) return null;
+  var pt = featureCenter(feature.geometry);
+  if (!pt) return null;
+  var bestV = null, bestDist = Infinity;
+  VILLAGES.forEach(function(v) {
+    var d = Math.sqrt(Math.pow(pt.lat - v.lat, 2) + Math.pow(pt.lng - v.lng, 2));
+    if (d < bestDist) { bestDist = d; bestV = v; }
+  });
+  return (bestV && bestDist <= MAX_VILLAGE_DISTANCE) ? bestV : null;
 }
 
 function featureCenter(geom) {
@@ -225,22 +238,17 @@ function renderDetection(result) {
     return;
   }
 
-  if (result.percentage >= 80) {
-    icon.textContent = '✅';
-    title.textContent = 'זיהוי אוטומטי הצליח';
+  icon.textContent = '✅';
+  if (result.numVillages > 1) {
+    title.textContent = 'הקובץ יחולק ל-' + result.numVillages + ' כפרים';
+    body.innerHTML = 'המערכת תעלה כל כפר בנפרד אוטומטית לפי מיקום כל אובייקט.';
   } else {
-    card.classList.add('warn');
-    icon.textContent = '⚠️';
-    title.textContent = 'זיהוי חלקי';
-    body.innerHTML = 'הקובץ מתפרש על כמה כפרים. בדוק את הפירוט למטה ושקול לחלק לקבצים נפרדים.';
-  }
-
-  if (!body.innerHTML || result.percentage >= 80) {
+    title.textContent = 'זיהוי אוטומטי הצליח';
     body.innerHTML = 'הקובץ זוהה אוטומטית לפי קואורדינטות האובייקטים.';
   }
 
   document.getElementById('d-village-icon').textContent = result.bestMatch.icon;
-  document.getElementById('d-village-name').textContent = result.bestMatch.name;
+  document.getElementById('d-village-name').textContent = result.numVillages > 1 ? 'כפר דומיננטי: ' + result.bestMatch.name : result.bestMatch.name;
   document.getElementById('d-village-pct').textContent = result.percentage + '% (' + result.bestCount + '/' + result.totalWithGeom + ')';
   resultEl.style.display = 'flex';
 
@@ -383,11 +391,7 @@ async function doUpload() {
   if (!gFile || !gFileData) { showToast('אין קובץ', 'error'); return; }
 
   var overrideValue = document.getElementById('village-select-override').value;
-  var finalVillage = gDetectedVillage;
-  if (overrideValue) {
-    finalVillage = VILLAGES.find(function(v) { return v.name === overrideValue; });
-  }
-  if (!finalVillage) { showToast('לא זוהה כפר', 'error'); return; }
+  var overrideVillage = overrideValue ? VILLAGES.find(function(v) { return v.name === overrideValue; }) : null;
 
   var icon = document.getElementById('icon-select').value;
   var saveRules = document.getElementById('save-rules-checkbox').checked;
@@ -405,9 +409,8 @@ async function doUpload() {
     pf.style.width = '15%';
     pt.textContent = 'מתייג אובייקטים...';
 
-    var taggedFeatures = [];
+    var taggedByVillage = {};
     var ignoredCount = 0;
-    var categoryCounts = {};
 
     gFileData.features.forEach(function(f) {
       var props = f.properties || {};
@@ -415,14 +418,21 @@ async function doUpload() {
       layerName = String(layerName).trim() || 'UNKNOWN';
       var stats = gLayerStats[layerName];
       if (!stats || stats.mapping === 'IGNORE') { ignoredCount++; return; }
+
+      var targetVillage = overrideVillage || detectFeatureVillage(f);
+      if (!targetVillage) { ignoredCount++; return; }
+
+      var slug = targetVillage.slug;
+      if (!taggedByVillage[slug]) taggedByVillage[slug] = { village: targetVillage, features: [], categoryCounts: {} };
       var newProps = Object.assign({}, props);
       newProps._category = stats.mapping;
       newProps._original_layer = layerName;
-      categoryCounts[stats.mapping] = (categoryCounts[stats.mapping] || 0) + 1;
-      taggedFeatures.push({ type: 'Feature', geometry: f.geometry, properties: newProps });
+      taggedByVillage[slug].categoryCounts[stats.mapping] = (taggedByVillage[slug].categoryCounts[stats.mapping] || 0) + 1;
+      taggedByVillage[slug].features.push({ type: 'Feature', geometry: f.geometry, properties: newProps });
     });
 
-    if (!taggedFeatures.length) throw new Error('כל האובייקטים סומנו כ-IGNORE');
+    var slugs = Object.keys(taggedByVillage);
+    if (!slugs.length) throw new Error('כל האובייקטים סומנו כ-IGNORE או מחוץ לאזור');
 
     if (saveRules) {
       ps.textContent = 'שלב 2/4: שומר חוקי מיפוי חדשים';
@@ -431,49 +441,57 @@ async function doUpload() {
       await saveLearnedRules();
     }
 
-    ps.textContent = 'שלב 3/4: מעלה GeoJSON';
-    pf.style.width = '60%';
-    pt.textContent = 'מעלה לאחסון...';
+    var ts = Date.now();
+    var totalUploaded = 0;
 
-    var fileName = finalVillage.slug + '_' + Date.now() + '.geojson';
-    var dataToUpload = {
-      type: 'FeatureCollection',
-      features: taggedFeatures,
-      _meta: {
+    for (var vi = 0; vi < slugs.length; vi++) {
+      var slug = slugs[vi];
+      var vData = taggedByVillage[slug];
+      var village = vData.village;
+      var vFeatures = vData.features;
+      var catCounts = vData.categoryCounts;
+
+      ps.textContent = 'מעלה ' + village.name + ' (' + (vi + 1) + '/' + slugs.length + ')';
+      pf.style.width = (55 + Math.round(40 * (vi + 1) / slugs.length)) + '%';
+      pt.textContent = vFeatures.length + ' אובייקטים...';
+
+      var fileName = village.slug + '_' + ts + (slugs.length > 1 ? '_' + vi : '') + '.geojson';
+      var dataToUpload = {
+        type: 'FeatureCollection',
+        features: vFeatures,
+        _meta: {
+          uploaded_at: new Date().toISOString(),
+          original_filename: gFile.name,
+          detected_village: village.name,
+          layer_count: Object.keys(catCounts).length,
+          kept_features: vFeatures.length
+        }
+      };
+      var fileBlob = new Blob([JSON.stringify(dataToUpload)], { type: 'application/json' });
+      var uploadRes = await gSb.storage.from('village-layers').upload(fileName, fileBlob, { upsert: true, contentType: 'application/json' });
+      if (uploadRes.error) throw uploadRes.error;
+
+      var metaId = village.slug + '_' + ts + (slugs.length > 1 ? '_' + vi : '');
+      var displayName = village.name + ' — ' + Object.keys(catCounts).length + ' קטגוריות';
+      var metaRes = await gSb.from('village_layers').upsert({
+        village_id: metaId,
+        village_name: displayName,
+        icon: icon,
+        file_path: fileName,
+        feature_count: vFeatures.length,
+        uploaded_by: gAdminId,
         uploaded_at: new Date().toISOString(),
-        original_filename: gFile.name,
-        detected_village: finalVillage.name,
-        layer_count: Object.keys(gLayerStats).length,
-        ignored_features: ignoredCount,
-        kept_features: taggedFeatures.length
-      }
-    };
-    var fileBlob = new Blob([JSON.stringify(dataToUpload)], {type:'application/json'});
-    var uploadRes = await gSb.storage.from('village-layers').upload(fileName, fileBlob, {upsert:true, contentType:'application/json'});
-    if (uploadRes.error) throw uploadRes.error;
+        is_active: true
+      }, { onConflict: 'village_id' });
+      if (metaRes.error) throw metaRes.error;
 
-    ps.textContent = 'שלב 4/4: שומר נתוני שכבה';
-    pf.style.width = '85%';
-    pt.textContent = 'מעדכן בסיס נתונים...';
-
-    var metaId = finalVillage.slug + '_' + Date.now();
-    var displayName = finalVillage.name + ' — ' + Object.keys(categoryCounts).length + ' קטגוריות';
-
-    var metaRes = await gSb.from('village_layers').upsert({
-      village_id: metaId,
-      village_name: displayName,
-      icon: icon,
-      file_path: fileName,
-      feature_count: taggedFeatures.length,
-      uploaded_by: gAdminId,
-      uploaded_at: new Date().toISOString(),
-      is_active: true
-    }, {onConflict:'village_id'});
-    if (metaRes.error) throw metaRes.error;
+      totalUploaded += vFeatures.length;
+    }
 
     pf.style.width = '100%';
-    pt.textContent = '✅ הועלו ' + taggedFeatures.length + ' אובייקטים';
-    showToast('✅ ' + finalVillage.name + ' הועלה בהצלחה!', 'success');
+    pt.textContent = '✅ הועלו ' + totalUploaded + ' אובייקטים ל-' + slugs.length + ' כפרים';
+    var villageNames = slugs.map(function(s) { return taggedByVillage[s].village.name; }).join(', ');
+    showToast('✅ הועלה ל: ' + villageNames, 'success');
 
     setTimeout(function() {
       clearFile(); btn.disabled = false; btn.textContent = '📤 העלה';
