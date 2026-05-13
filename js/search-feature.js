@@ -309,31 +309,8 @@ function doSearch(raw) {
   }
 }
 
-// ── JSONP helper — bypasses CORS for ArcGIS REST services ──
-function jsonpFetch(url) {
-  return new Promise(function(resolve, reject) {
-    var id  = '_p' + Date.now() + Math.floor(Math.random() * 9999);
-    var tag = document.createElement('script');
-    var timer = setTimeout(function() { cleanup(); reject(new Error('timeout')); }, 12000);
-
-    window[id] = function(data) { cleanup(); resolve(data); };
-
-    function cleanup() {
-      clearTimeout(timer);
-      delete window[id];
-      if (tag.parentNode) tag.parentNode.removeChild(tag);
-    }
-
-    tag.onerror = function() { cleanup(); reject(new Error('load error')); };
-    tag.src = url + '&callback=' + id;
-    document.head.appendChild(tag);
-  });
-}
-
-// ── GUSH/HELKA ────────────────────────────────────────────────
-// Strategy 1 — GovMap geocode API (fetch; they run a web app so CORS is open)
-// Strategy 2 — Survey of Israel ArcGIS REST (JSONP, bypasses CORS)
-// ──────────────────────────────────────────────────────────────
+// ── GUSH/HELKA — proxied through our own Vercel serverless function ──
+// /api/parcel handles CORS + tries multiple Israeli cadastre backends server-side
 function handleGushHelka(gush, helka) {
   clearMapMarker();
   showPanel(
@@ -341,67 +318,22 @@ function handleGushHelka(gush, helka) {
     '<span style="color:#64748b">⏳ מחפש חלקה...</span>'
   );
 
-  // ── Strategy 1: GovMap public geocode API ──
-  var govmapUrl =
-    'https://www.govmap.gov.il/api/data/geolocate?version=1.0&lang=1&types=12' +
-    '&gush=' + encodeURIComponent(gush) +
-    '&helka=' + encodeURIComponent(helka);
-
-  fetch(govmapUrl)
+  fetch('/api/parcel?gush=' + encodeURIComponent(gush) + '&helka=' + encodeURIComponent(helka))
     .then(function(r) {
+      if (r.status === 404) throw new Error('not found');
       if (!r.ok) throw new Error('http ' + r.status);
       return r.json();
     })
-    .then(function(raw) {
-      // GovMap returns either an object or array; extract first result
-      var res = Array.isArray(raw) ? raw[0] : raw;
-      if (!res) throw new Error('empty');
-
-      var x = res.X || res.x || res.Lon || res.lon;
-      var y = res.Y || res.y || res.Lat || res.lat;
-      if (!x || !y) throw new Error('no coords');
-
-      // Coordinates are in ITM (large numbers) — convert to WGS84
-      loadProj4(function() {
-        if (res.Bounds) {
-          var sw = itmToWgs84(res.Bounds.xmin, res.Bounds.ymin);
-          var ne = itmToWgs84(res.Bounds.xmax, res.Bounds.ymax);
-          if (sw && ne) {
-            gPolygon = L.rectangle([[sw.lat, sw.lng], [ne.lat, ne.lng]], {
-              color: '#1a7fc1', weight: 2.5, fillColor: '#1a7fc1',
-              fillOpacity: 0.15, interactive: false
-            }).addTo(window.gMap);
-            window.gMap.flyToBounds(gPolygon.getBounds(), { padding: [60, 60], maxZoom: 18, duration: 1.2 });
-            showParcelPanel(gush, helka, null);
-            return;
-          }
-        }
-        var ctr = itmToWgs84(x, y);
-        if (ctr) {
-          goToLocation(ctr.lat, ctr.lng,
-            ctr.lat.toFixed(5) + '°N, ' + ctr.lng.toFixed(5) + '°E',
-            '📐 גוש ' + gush + ' · חלקה ' + helka, 18);
-        }
-      });
-    })
-    .catch(function() {
-      // ── Strategy 2: SOI ArcGIS via JSONP ──
-      var soiBase =
-        'https://ags.survey.gov.il/arcgis/rest/services/PARCELS/MapServer/0/query';
-      var soiParams =
-        'where=' + encodeURIComponent('GUSH_NUM=' + parseInt(gush) + ' AND PARCEL_NUM=' + parseInt(helka)) +
-        '&outFields=GUSH_NUM,PARCEL_NUM,SHAPE_Area&returnGeometry=true&outSR=4326&f=json';
-
-      jsonpFetch(soiBase + '?' + soiParams)
-        .then(function(data) { renderParcelPolygon(gush, helka, data); })
-        .catch(function(e) {
-          console.error('Gush/Helka — all sources failed:', e);
-          showPanel(
-            '📐 גוש ' + gush + ' · חלקה ' + helka,
-            '❌ לא ניתן לאתר חלקה זו.<br>' +
-            '<span style="font-size:11px;color:#64748b">ודא שמספרי הגוש והחלקה נכונים.</span>'
-          );
-        });
+    .then(function(data) { renderParcelPolygon(gush, helka, data); })
+    .catch(function(e) {
+      console.error('Gush/Helka error:', e.message);
+      showPanel(
+        '📐 גוש ' + gush + ' · חלקה ' + helka,
+        (e.message === 'not found'
+          ? '❌ לא נמצאה חלקה זו במאגר.'
+          : '❌ שגיאה בחיפוש. נסה שוב.') +
+        '<br><span style="font-size:11px;color:#64748b">ודא שמספרי הגוש והחלקה נכונים.</span>'
+      );
     });
 }
 
