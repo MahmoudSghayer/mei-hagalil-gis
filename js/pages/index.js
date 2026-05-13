@@ -359,11 +359,18 @@ function buildPopup(props, catDef, village, catId) {
     }
   }
 
-  // ── קווי ביוב / מים: אורך וקוטר ────────────────────────
+  // ── קווי ביוב / מים: קטע, אורך, קוטר ──────────────────
   if (catId === 'sewage_pipes' || catId === 'water_pipes' || catId === 'sewage_pipe' || catId === 'main_sewer' || catId === 'supply_pipe') {
+    if (props.SectionNum) html += '<div class="popup-row"><span class="popup-key">מספר קטע</span><span class="popup-val">'+props.SectionNum+'</span></div>';
+    if (props.StreetName) html += '<div class="popup-row"><span class="popup-key">רחוב</span><span class="popup-val">'+props.StreetName+'</span></div>';
+    var startH = props.StartHouse, endH = props.EndHouseNu;
+    if (startH || endH) {
+      var range = (startH || '—') + ' ← → ' + (endH || '—');
+      html += '<div class="popup-row"><span class="popup-key">בין מספרים</span><span class="popup-val" style="direction:ltr;text-align:left">'+range+'</span></div>';
+    }
     var rawLen = props.MeasuredLe !== undefined ? props.MeasuredLe : props.Measuredle !== undefined ? props.Measuredle : props.Shape_Leng;
     var pipeLen = parseFloat(rawLen);
-    if (!isNaN(pipeLen) && pipeLen > 0) html += '<div class="popup-row"><span class="popup-key">אורך</span><span class="popup-val">'+pipeLen.toFixed(1)+' מ׳</span></div>';
+    if (!isNaN(pipeLen) && pipeLen > 0) html += '<div class="popup-row"><span class="popup-key">אורך קטע</span><span class="popup-val">'+pipeLen.toFixed(1)+' מ׳</span></div>';
     var diam = props.LineDiamet || props.Diameter;
     if (diam) html += '<div class="popup-row"><span class="popup-key">קוטר</span><span class="popup-val">'+diam+' מ"מ</span></div>';
   }
