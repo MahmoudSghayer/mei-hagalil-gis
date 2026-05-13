@@ -7,6 +7,9 @@
   <link rel="stylesheet" href="../css/shared.css"/>
   <link rel="stylesheet" href="../css/pages/upload.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/shapefile@0.6.6/dist/shapefile.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
   <script src="../js/auth.js"></script>
 </head>
 <body>
@@ -30,9 +33,9 @@
     <div class="card-title">📁 העלאת קובץ חדש</div>
     <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
       <div class="upload-icon">📤</div>
-      <div class="upload-title">גרור GeoJSON לכאן</div>
-      <div class="upload-sub">פורמטים נתמכים: .geojson, .json (עד 50 MB) · WGS 84 בלבד</div>
-      <input type="file" id="file-input" accept=".geojson,.json,application/geo+json,application/json"/>
+      <div class="upload-title">גרור קובץ לכאן</div>
+      <div class="upload-sub">GeoJSON (.geojson / .json) או Shapefile בתוך ZIP (.zip) · עד 100 MB</div>
+      <input type="file" id="file-input" accept=".geojson,.json,.zip,application/geo+json,application/json,application/zip"/>
     </div>
     <div class="file-preview" id="file-preview">
       <div class="file-icon">📄</div>

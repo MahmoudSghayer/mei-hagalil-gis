@@ -77,40 +77,171 @@ function setupDragDrop() {
   });
 }
 
+// ── CRS / COORDINATE UTILITIES ───────────────────────────────────────────────
+
+function ensureITM() {
+  if (window.proj4 && !window.proj4.defs('EPSG:2039')) {
+    window.proj4.defs('EPSG:2039',
+      '+proj=tmerc +lat_0=31.7343936111111 +lon_0=35.2045169444444 ' +
+      '+k=1.0000067 +x_0=219529.584 +y_0=626907.39 +ellps=GRS80 ' +
+      '+towgs84=-48,55,52,0,0,0,0 +units=m +no_defs');
+  }
+}
+
+function detectCRSFromPrj(prj) {
+  if (!prj) return 'unknown';
+  var p = prj.toUpperCase();
+  // WGS84 geographic (no projection wrapper)
+  if (p.indexOf('PROJCS') === -1 && (p.indexOf('WGS_1984') !== -1 || p.indexOf('WGS 1984') !== -1)) return 'WGS84';
+  // Israel ITM — check name or known false-easting/northing
+  if (p.indexOf('ISRAEL_TM_GRID') !== -1 || p.indexOf('ISRAEL TM GRID') !== -1) return 'ITM';
+  if (p.indexOf('219529') !== -1 && p.indexOf('626907') !== -1) return 'ITM';
+  return 'unknown';
+}
+
+function convertCoord(xy, crs) {
+  if (crs !== 'ITM') return xy;
+  var r = window.proj4('EPSG:2039', 'EPSG:4326', [xy[0], xy[1]]);
+  return [r[0], r[1]]; // [lng, lat]
+}
+
+function convertCoords(coords, crs) {
+  if (!Array.isArray(coords)) return coords;
+  if (typeof coords[0] === 'number') return convertCoord(coords, crs);
+  return coords.map(function(c) { return convertCoords(c, crs); });
+}
+
+function convertGeometry(geom, crs) {
+  if (!geom || crs === 'WGS84') return geom;
+  return { type: geom.type, coordinates: convertCoords(geom.coordinates, crs) };
+}
+
+function validateCoord(lng, lat) {
+  // Israel bounding box
+  return lat >= 29 && lat <= 34 && lng >= 34 && lng <= 37;
+}
+
+// ── SHAPEFILE ZIP PROCESSING ──────────────────────────────────────────────────
+
+function processZipFile(file, onDone, onError) {
+  ensureITM();
+
+  JSZip.loadAsync(file).then(function(zip) {
+    var shpPaths = [];
+    zip.forEach(function(path, entry) {
+      if (!entry.dir && path.toLowerCase().endsWith('.shp')) shpPaths.push(path);
+    });
+    if (!shpPaths.length) { onError(new Error('לא נמצאו קבצי .shp בתוך ה-ZIP')); return; }
+
+    var allFeatures = [];
+    var remaining = shpPaths.length;
+    var hasError = false;
+
+    shpPaths.forEach(function(shpPath) {
+      var base = shpPath.replace(/\.shp$/i, '');
+      var layerName = base.split('/').pop().split('\\').pop();
+
+      // Load .shp, .dbf, .prj in parallel
+      var shpPromise  = zip.file(shpPath) ? zip.file(shpPath).async('arraybuffer') : Promise.resolve(null);
+      var dbfFile     = zip.file(base + '.dbf') || zip.file(base + '.DBF');
+      var dbfPromise  = dbfFile ? dbfFile.async('arraybuffer') : Promise.resolve(null);
+      var prjFile     = zip.file(base + '.prj') || zip.file(base + '.PRJ');
+      var prjPromise  = prjFile ? prjFile.async('string') : Promise.resolve(null);
+
+      Promise.all([shpPromise, dbfPromise, prjPromise]).then(function(results) {
+        var shpBuf = results[0], dbfBuf = results[1], prjText = results[2];
+        var crs = detectCRSFromPrj(prjText);
+
+        if (crs === 'unknown') {
+          console.warn('Unknown CRS for ' + layerName + ' — assuming ITM');
+          crs = 'ITM'; // Safe default for Israeli data
+        }
+
+        return window.shapefile.read(shpBuf, dbfBuf).then(function(collection) {
+          var bad = 0;
+          collection.features.forEach(function(f) {
+            if (!f.geometry) return;
+            var converted = convertGeometry(f.geometry, crs);
+
+            // Validate a sample coordinate
+            var sample = converted.coordinates;
+            while (Array.isArray(sample[0])) sample = sample[0];
+            if (!validateCoord(sample[0], sample[1])) { bad++; return; }
+
+            if (!f.properties) f.properties = {};
+            f.properties.Layer = layerName;
+            f.properties._original_layer = layerName;
+            f.geometry = converted;
+            allFeatures.push(f);
+          });
+          if (bad > 0) console.warn(layerName + ': ' + bad + ' features skipped (outside Israel bounds)');
+        });
+      })
+      .catch(function(e) {
+        console.warn('Failed to read ' + layerName + ':', e);
+      })
+      .then(function() {
+        if (--remaining === 0) {
+          if (!allFeatures.length) { onError(new Error('לא נמצאו אובייקטים תקינים בקבצים')); return; }
+          onDone({ type: 'FeatureCollection', features: allFeatures });
+        }
+      });
+    });
+  }).catch(onError);
+}
+
+// ── FILE HANDLING ─────────────────────────────────────────────────────────────
+
 function handleFile(file) {
-  if (!file.name.match(/\.(geojson|json)$/i)) { showToast('רק קבצי GeoJSON או JSON', 'error'); return; }
-  if (file.size > 50*1024*1024) { showToast('גודל מקסימלי 50MB', 'error'); return; }
+  var isZip     = /\.zip$/i.test(file.name);
+  var isGeoJson = /\.(geojson|json)$/i.test(file.name);
+  if (!isZip && !isGeoJson) { showToast('קבצי GeoJSON, JSON, או ZIP בלבד', 'error'); return; }
+  if (file.size > 100*1024*1024) { showToast('גודל מקסימלי 100MB', 'error'); return; }
 
   gFile = file;
   document.getElementById('fp-name').textContent = file.name;
   document.getElementById('fp-size').textContent = formatSize(file.size);
   document.getElementById('file-preview').classList.add('show');
 
-  var reader = new FileReader();
-  reader.onload = function(e) {
-    try {
-      var data = JSON.parse(e.target.result);
-      if (data.type !== 'FeatureCollection' || !Array.isArray(data.features)) {
-        showToast('הקובץ אינו GeoJSON תקין', 'error'); clearFile(); return;
-      }
-      gFileData = data;
-      document.getElementById('fp-size').textContent = formatSize(file.size) + ' · ' + data.features.length + ' אובייקטים';
+  if (isZip) {
+    showToast('⏳ מעבד Shapefile...', 'info');
+    processZipFile(file, function(data) {
+      finishFileLoad(data);
+    }, function(err) {
+      showToast('שגיאה: ' + err.message, 'error');
+      clearFile();
+    });
+  } else {
+    var reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        var data = JSON.parse(e.target.result);
+        if (data.type !== 'FeatureCollection' || !Array.isArray(data.features)) {
+          showToast('הקובץ אינו GeoJSON תקין', 'error'); clearFile(); return;
+        }
+        finishFileLoad(data);
+      } catch(err) { showToast('שגיאה: ' + err.message, 'error'); clearFile(); }
+    };
+    reader.readAsText(file);
+  }
+}
 
-      var detectionResult = detectVillage(data.features);
-      renderDetection(detectionResult);
+function finishFileLoad(data) {
+  gFileData = data;
+  document.getElementById('fp-size').textContent = formatSize(gFile.size) + ' · ' + data.features.length + ' אובייקטים';
 
-      if (detectionResult.status === 'rejected') {
-        document.getElementById('meta-form').style.display = 'none';
-        document.getElementById('mapping-section').classList.remove('show');
-        return;
-      }
+  var detectionResult = detectVillage(data.features);
+  renderDetection(detectionResult);
 
-      gDetectedVillage = detectionResult.bestMatch;
-      document.getElementById('meta-form').style.display = 'grid';
-      analyzeAndDisplayLayers();
-    } catch(err) { showToast('שגיאה: ' + err.message, 'error'); clearFile(); }
-  };
-  reader.readAsText(file);
+  if (detectionResult.status === 'rejected') {
+    document.getElementById('meta-form').style.display = 'none';
+    document.getElementById('mapping-section').classList.remove('show');
+    return;
+  }
+
+  gDetectedVillage = detectionResult.bestMatch;
+  document.getElementById('meta-form').style.display = 'grid';
+  analyzeAndDisplayLayers();
 }
 
 function detectVillage(features) {
