@@ -653,6 +653,12 @@ async function doUpload() {
       pf.style.width = (55 + Math.round(40 * (vi + 1) / slugs.length)) + '%';
       pt.textContent = vFeatures.length + ' אובייקטים...';
 
+      // Deactivate all previous uploads for this village before inserting the new one
+      await gSb.from('village_layers')
+        .update({ is_active: false })
+        .eq('is_active', true)
+        .like('village_id', village.slug + '_%');
+
       var fileName = village.slug + '_' + ts + (slugs.length > 1 ? '_' + vi : '') + '.geojson';
       var dataToUpload = {
         type: 'FeatureCollection',
