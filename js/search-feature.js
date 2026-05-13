@@ -89,7 +89,7 @@ function injectUI() {
     '<div class="help-row"><span class="help-icon">📍</span><span class="help-text"><strong>קואורדינטות WGS84</strong> (גוגל מפס): <code>32.9485, 35.2617</code></span></div>' +
     '<div class="help-row"><span class="help-icon">🇮🇱</span><span class="help-text"><strong>קואורדינטות ITM</strong> (רשת ישראל): <code>222000, 758500</code> או <code>222000 758500</code></span></div>' +
     '<div class="help-row"><span class="help-icon">🏠</span><span class="help-text"><strong>כתובת</strong>: <code>רחוב הרצל 5, סחנין</code></span></div>' +
-    '<div class="help-row"><span class="help-icon">📐</span><span class="help-text"><strong>גוש/חלקה</strong>: <code>19012/35</code> או <code>גוש 19012 חלקה 35</code></span></div>' +
+    '<div class="help-row"><span class="help-icon">📐</span><span class="help-text"><strong>גוש/חלקה</strong>: <code>19012/35</code> או <code>גוש 19012 חלקה 35</code> — מציג גבולות החלקה ישירות על המפה</span></div>' +
     '<div style="font-size:11px;color:#64748b;margin-top:10px;padding-top:8px;border-top:1px solid #e2e8f0">💡 הקש Enter לחיפוש או בחר תוצאה מהרשימה</div>';
   mw.appendChild(help);
 
@@ -186,7 +186,7 @@ function showSuggestions(raw) {
     html = '<div class="sr-section">📐 גוש / חלקה</div>' +
       '<div class="sr-item" onclick="window.searchExecute()">' +
         '<div class="sr-title"><span class="sr-icon">📐</span>גוש ' + parsed.gush + ', חלקה ' + parsed.helka + '</div>' +
-        '<div class="sr-sub">פותח ב-Govmap (חלון חדש) — קואורדינטות יוחזרו לכאן</div>' +
+        '<div class="sr-sub">לחץ Enter להצגת גבולות החלקה על המפה</div>' +
       '</div>';
   } else if (parsed.type === 'address') {
     html = '<div class="sr-section">🏠 חיפוש כתובת</div>' +
@@ -309,22 +309,82 @@ function doSearch(raw) {
   }
 }
 
-// ── GUSH/HELKA — Open Govmap ──
+// ── GUSH/HELKA — query Survey of Israel cadastre API ──
 function handleGushHelka(gush, helka) {
-  var url = 'https://www.govmap.gov.il/?gush=' + gush + '&helka=' + helka;
-  // Open Govmap in new tab
-  var w = window.open(url, '_blank', 'noopener,noreferrer');
-
-  // Also show a hint panel with option to manually enter coords later
+  clearMapMarker();
   showPanel(
-    '📐 גוש ' + gush + ', חלקה ' + helka,
-    'נפתח חלון חדש ל-Govmap עם החלקה מסומנת.<br><br>' +
-    '<strong>איך להחזיר את המיקום לכאן:</strong><br>' +
-    '1. ב-Govmap, לחץ על החלקה<br>' +
-    '2. הקש על אייקון 📋 לקבלת הקואורדינטות<br>' +
-    '3. העתק את ה-X,Y והדבק כאן<br><br>' +
-    '<a href="' + url + '" target="_blank" rel="noopener" style="color:#1a7fc1;font-weight:600">↗ פתח שוב ב-Govmap</a>'
+    '📐 גוש ' + gush + ' · חלקה ' + helka,
+    '<span style="color:#64748b">⏳ מחפש חלקה...</span>'
   );
+
+  var url =
+    'https://ags.survey.gov.il/arcgis/rest/services/PARCELS/MapServer/0/query' +
+    '?where=' + encodeURIComponent('GUSH_NUM=' + parseInt(gush) + ' AND PARCEL_NUM=' + parseInt(helka)) +
+    '&outFields=GUSH_NUM,PARCEL_NUM,SHAPE_Area' +
+    '&returnGeometry=true' +
+    '&outSR=4326' +
+    '&f=json';
+
+  fetch(url)
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(data) {
+      if (!data.features || !data.features.length) {
+        showPanel(
+          '📐 גוש ' + gush + ' · חלקה ' + helka,
+          '❌ לא נמצאה חלקה זו במאגר הקדסטר.'
+        );
+        return;
+      }
+
+      var feat  = data.features[0];
+      var rings = feat.geometry && feat.geometry.rings;
+      if (!rings || !rings.length) {
+        showPanel(
+          '📐 גוש ' + gush + ' · חלקה ' + helka,
+          '⚠️ נמצאה חלקה אך חסרים נתוני גבולות.'
+        );
+        return;
+      }
+
+      // ArcGIS rings: [[lng, lat], ...] → Leaflet: [[lat, lng], ...]
+      var latlngs = rings.map(function(ring) {
+        return ring.map(function(pt) { return [pt[1], pt[0]]; });
+      });
+
+      gPolygon = L.polygon(latlngs, {
+        color: '#1a7fc1',
+        weight: 2.5,
+        fillColor: '#1a7fc1',
+        fillOpacity: 0.15,
+        interactive: false
+      }).addTo(window.gMap);
+
+      window.gMap.flyToBounds(gPolygon.getBounds(), { padding: [60, 60], maxZoom: 18, duration: 1.2 });
+
+      var attrs = feat.attributes || {};
+      var area  = attrs.SHAPE_Area
+        ? (attrs.SHAPE_Area / 1000).toFixed(3) + ' דונם (' + Math.round(attrs.SHAPE_Area) + ' מ"ר)'
+        : '—';
+
+      showPanel(
+        '📐 גוש ' + gush + ' · חלקה ' + helka,
+        'שטח: ' + area + '<br>' +
+        '<span style="font-size:11px;color:#64748b;display:block;margin-top:6px">' +
+          '<span style="cursor:pointer;color:#dc2626" onclick="window.searchClearMarker()">✖ הסר סימון</span>' +
+        '</span>'
+      );
+    })
+    .catch(function(e) {
+      console.error('Gush/Helka fetch error:', e);
+      showPanel(
+        '📐 גוש ' + gush + ' · חלקה ' + helka,
+        '❌ שגיאה בטעינת נתוני החלקה.<br>' +
+        '<span style="font-size:11px;color:#64748b">בדוק חיבור לאינטרנט ונסה שוב.</span>'
+      );
+    });
 }
 
 // ── DISPLAY MARKER + ZOOM ──
