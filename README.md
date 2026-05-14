@@ -276,7 +276,3 @@ UPDATE profiles SET role = 'admin' WHERE email = 'your@email.com';
 
 ---
 
-## תמיכה
-
-* **באגים / הצעות**: פתח issue ב-GitHub
-* **תמיכה תפעולית**: פנה למנהל המערכת בתאגיד
