@@ -29,13 +29,25 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# Restrict which sites may call this service.
+# Set ALLOWED_ORIGINS in Render (comma-separated) to your real domain(s),
+# e.g. "https://mei-hagalil-gis.vercel.app,https://gis.mei-hagalil.co.il".
+# Defaults to "*" only so first-time testing works before you lock it down.
+_origins = os.getenv("ALLOWED_ORIGINS", "*")
+ALLOWED_ORIGINS: list[str] = (
+    ["*"] if _origins.strip() == "*"
+    else [o.strip() for o in _origins.split(",") if o.strip()]
+)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
 
+# Auth token the frontend sends in X-Api-Token. ALWAYS override this in Render
+# via the API_TOKEN env var — the value below is only a fallback for local dev.
 API_TOKEN: str = os.getenv("API_TOKEN", "7bnNTN5T70qMRGp75AnrWe5NwaQFawG6tUmi35mz")
 
 
