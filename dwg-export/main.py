@@ -17,7 +17,7 @@ import subprocess
 import tempfile
 from typing import Any
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -150,6 +150,32 @@ def _dxf_to_dwg(dxf_bytes: bytes) -> bytes | None:
     return dwg
 
 
+def _dwg_to_dxf(dwg_bytes: bytes) -> bytes | None:
+    """Convert DWG bytes → DXF bytes via ODA File Converter (reverse direction)."""
+    oda = _find_oda()
+    if not oda:
+        return None
+    with tempfile.TemporaryDirectory() as tmp:
+        in_dir = os.path.join(tmp, "in")
+        out_dir = os.path.join(tmp, "out")
+        os.makedirs(in_dir)
+        os.makedirs(out_dir)
+        with open(os.path.join(in_dir, "input.dwg"), "wb") as fh:
+            fh.write(dwg_bytes)
+        cmd = [oda, in_dir, out_dir, "ACAD2018", "DXF", "0", "0"]
+        if shutil.which("xvfb-run"):
+            cmd = ["xvfb-run", "-a", *cmd]
+        try:
+            subprocess.run(cmd, capture_output=True, timeout=120)
+        except (subprocess.TimeoutExpired, OSError):
+            return None
+        produced = os.path.join(out_dir, "input.dxf")
+        if os.path.exists(produced):
+            with open(produced, "rb") as fh:
+                return fh.read()
+    return None
+
+
 # ── routes ────────────────────────────────────────────────────────────────────
 
 @app.get("/health")
@@ -204,5 +230,23 @@ async def export_dwg(
             "Content-Disposition": f'attachment; filename="{fname}"',
             "X-Fallback-Format": "dxf",
         },
+    )
+
+
+@app.post("/api/convert/dwg-to-dxf")
+async def convert_dwg_to_dxf(
+    file: UploadFile = File(...),
+    x_api_token: str | None = Header(None),
+) -> StreamingResponse:
+    """Convert an uploaded DWG file to DXF (for inspection / round-tripping)."""
+    _require_auth(x_api_token)
+    dwg_bytes = await file.read()
+    dxf_bytes = _dwg_to_dxf(dwg_bytes)
+    if not dxf_bytes:
+        raise HTTPException(status_code=500, detail="DWG→DXF conversion failed")
+    return StreamingResponse(
+        io.BytesIO(dxf_bytes),
+        media_type="application/dxf",
+        headers={"Content-Disposition": 'attachment; filename="converted.dxf"'},
     )
 
