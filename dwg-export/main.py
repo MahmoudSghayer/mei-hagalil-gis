@@ -68,11 +68,17 @@ def _require_auth(token: str | None) -> None:
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 def _build_dxf_bytes(features: list[dict]) -> bytes:
+    # ezdxf writes to a *text* stream and handles DXF encoding itself, so we
+    # save to a temp .dxf file and read the bytes back.
     doc = build_dxf(features)
-    buf = io.BytesIO()
-    doc.write(buf)
-    buf.seek(0)
-    return buf.read()
+    with tempfile.NamedTemporaryFile(suffix=".dxf", delete=False) as tf:
+        tmp_path = tf.name
+    try:
+        doc.saveas(tmp_path)
+        with open(tmp_path, "rb") as fh:
+            return fh.read()
+    finally:
+        os.unlink(tmp_path)
 
 
 def _find_oda() -> str | None:
