@@ -14,6 +14,7 @@ revised requirements (June 2026):
 
 from __future__ import annotations
 
+import math
 from typing import Any
 
 import ezdxf
@@ -233,10 +234,21 @@ def _add_polyline(
     closed: bool,
     t: Transformer,
     props: dict,
+    bounds: list[float] | None = None,
 ) -> None:
     pts = [_to_itm(c[0], c[1], t) for c in raw_coords]
     poly = msp.add_lwpolyline(pts, dxfattribs={"layer": layer}, close=closed)
     _attach_xdata(poly, props)
+    if bounds is not None:
+        for px, py in pts:
+            _grow_bounds(bounds, px, py)
+
+
+def _grow_bounds(b: list[float], x: float, y: float) -> None:
+    if x < b[0]: b[0] = x
+    if y < b[1]: b[1] = y
+    if x > b[2]: b[2] = x
+    if y > b[3]: b[3] = y
 
 
 # ── main builder ─────────────────────────────────────────────────────────────
@@ -270,6 +282,9 @@ def build_dxf(features: list[dict]) -> Drawing:
     _ensure_manhole_block(doc)
     msp = doc.modelspace()
 
+    # [xmin, ymin, xmax, ymax] — to set the initial view to the data
+    bounds: list[float] = [math.inf, math.inf, -math.inf, -math.inf]
+
     for f in features:
         props = f.get("properties") or {}
         layer = props.get("_category", "other")
@@ -283,6 +298,7 @@ def build_dxf(features: list[dict]) -> Drawing:
 
         if gtype == "Point":
             x, y = _to_itm(coords[0], coords[1], t)
+            _grow_bounds(bounds, x, y)
             if layer in MANHOLE_CATS:
                 _add_manhole(msp, props, x, y)
             else:
@@ -298,26 +314,26 @@ def build_dxf(features: list[dict]) -> Drawing:
                     )
 
         elif gtype == "LineString":
-            _add_polyline(msp, coords, layer, False, t, props)
+            _add_polyline(msp, coords, layer, False, t, props, bounds)
             mid = coords[len(coords) // 2]
             label_pt = _to_itm(mid[0], mid[1], t)
 
         elif gtype == "MultiLineString":
             for seg in coords:
-                _add_polyline(msp, seg, layer, False, t, props)
+                _add_polyline(msp, seg, layer, False, t, props, bounds)
             mid_seg = coords[len(coords) // 2]
             mid_pt = mid_seg[len(mid_seg) // 2]
             label_pt = _to_itm(mid_pt[0], mid_pt[1], t)
 
         elif gtype == "Polygon":
-            _add_polyline(msp, coords[0], layer, True, t, props)
+            _add_polyline(msp, coords[0], layer, True, t, props, bounds)
             ring = coords[0]
             mid = ring[len(ring) // 2]
             label_pt = _to_itm(mid[0], mid[1], t)
 
         elif gtype == "MultiPolygon":
             for poly in coords:
-                _add_polyline(msp, poly[0], layer, True, t, props)
+                _add_polyline(msp, poly[0], layer, True, t, props, bounds)
             ring = coords[0][0]
             mid = ring[len(ring) // 2]
             label_pt = _to_itm(mid[0], mid[1], t)
@@ -326,4 +342,21 @@ def build_dxf(features: list[dict]) -> Drawing:
         if label_pt and layer in PIPE_CATS:
             _add_pipe_label(msp, props, label_pt[0], label_pt[1])
 
+    _set_initial_view(doc, bounds)
     return doc
+
+
+def _set_initial_view(doc: Drawing, bounds: list[float]) -> None:
+    """Point the modelspace view + drawing extents at the data, so the file
+    opens showing the geometry instead of a blank view at the origin."""
+    xmin, ymin, xmax, ymax = bounds
+    if not all(math.isfinite(v) for v in bounds) or xmax <= xmin or ymax <= ymin:
+        return
+    cx, cy = (xmin + xmax) / 2.0, (ymin + ymax) / 2.0
+    height = max(ymax - ymin, xmax - xmin, 1.0) * 1.15
+    doc.header["$EXTMIN"] = (xmin, ymin, 0.0)
+    doc.header["$EXTMAX"] = (xmax, ymax, 0.0)
+    try:
+        doc.set_modelspace_vport(height=height, center=(cx, cy))
+    except Exception:
+        pass
