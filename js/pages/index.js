@@ -54,6 +54,12 @@ var gCurrentBasemap = 'satellite';
 var gActiveBasemapLayers = [];
 var gCadastralLayer = null, gCadastralVisible = false;
 var gVillages = [], gVillageLayers = {}, gVillageState = {}, gVillageBounds = {}, gVillageFeatures = {}, gVillageById = {};
+var gVillageLoading = {}, gVillagePins = null;
+var LOAD_ZOOM = 13;   // below this zoom = overview (village pins only; heavy data not loaded)
+var VILLAGE_CENTERS = {
+  majd:[32.9189,35.2456], biina:[32.9485,35.2617], deir_al_asad:[32.9356,35.2697],
+  nahf:[32.9344,35.3025], sakhnin:[32.8650,35.2978], deir_hanna:[32.8631,35.3589], arrabeh:[32.8514,35.3339]
+};
 var gLastLat=null, gLastLng=null, gFilter='';
 var gUser=null, gProfile=null, gClosingId=null;
 var gSelectedLayer = null;
@@ -374,8 +380,77 @@ async function loadAllVillages() {
   });
   gVillages = Object.keys(latestBySlug).map(function(k) { return latestBySlug[k]; });
   document.getElementById('layer-count').textContent = gVillages.length;
-  await Promise.all(gVillages.map(function(v) { return loadVillageData(v); }));  // load in parallel
-  renderVillagesList();
+  renderVillagesList();      // list every village (unloaded ones show a "zoom/click to load" hint)
+  renderVillagePins();       // lightweight pins at village centers for the overview
+  gMap.on('moveend', loadVisibleVillages);
+  gMap.on('zoomend', updatePinsVisibility);
+  loadVisibleVillages();     // load whatever is already in view (startup zoom 11 → nothing loads)
+}
+
+// ── Viewport-driven loading ───────────────────────────────────────────────────
+// Heavy village GeoJSON (tens of MB, ~50k features each) is fetched/built only
+// when a village enters the viewport at detail zoom — not all 7 up front.
+function villageSlug(vid) { return String(vid).replace(/_\d+(_\d+)?$/, ''); }
+function villageCenterOf(v) { return VILLAGE_CENTERS[villageSlug(v.village_id)] || null; }
+function shortVillageName(v) { return String(v.village_name || '').split(' — ')[0]; }
+
+function renderVillagePins() {
+  if (gVillagePins) gMap.removeLayer(gVillagePins);
+  gVillagePins = L.layerGroup();
+  gVillages.forEach(function(v) {
+    if (gVillageState[v.village_id]) return;        // already loaded → no pin
+    var c = villageCenterOf(v);
+    if (!c) return;
+    var html = '<div class="village-pin" style="background:#0d3b5e;color:#fff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:12px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.35);cursor:pointer;border:1.5px solid #fff">' + (v.icon || '📍') + ' ' + shortVillageName(v) + '</div>';
+    var m = L.marker(c, { icon: L.divIcon({ className:'', html:html, iconSize:null, iconAnchor:[0,0] }) });
+    m.on('click', function() { flyToVillage(v); });
+    m.addTo(gVillagePins);
+  });
+  updatePinsVisibility();
+}
+
+function updatePinsVisibility() {
+  if (!gVillagePins) return;
+  var show = gMap.getZoom() < LOAD_ZOOM;
+  if (show && !gMap.hasLayer(gVillagePins)) gVillagePins.addTo(gMap);
+  else if (!show && gMap.hasLayer(gVillagePins)) gMap.removeLayer(gVillagePins);
+}
+
+function loadVisibleVillages() {
+  if (!gVillages.length || gMap.getZoom() < LOAD_ZOOM) return;   // overview → load nothing
+  var b = gMap.getBounds().pad(0.2);
+  gVillages.forEach(function(v) {
+    if (gVillageState[v.village_id] || gVillageLoading[v.village_id]) return;
+    var c = villageCenterOf(v);
+    if (!c || b.contains(L.latLng(c[0], c[1]))) ensureVillageLoaded(v);  // unknown center → load (fallback)
+  });
+}
+
+function ensureVillageLoaded(v) {
+  var vid = v.village_id;
+  if (gVillageState[vid] || gVillageLoading[vid]) return;
+  gVillageLoading[vid] = true;
+  renderVillagesList();                 // reflect "loading…"
+  loadVillageData(v).then(function() {
+    delete gVillageLoading[vid];
+    renderVillagesList();               // now show its categories
+    renderVillagePins();                // drop this village's pin
+  }, function(e) {
+    delete gVillageLoading[vid];
+    renderVillagesList();
+    console.error('village load failed', vid, e);
+  });
+}
+function ensureVillageLoadedById(vid) {
+  var v = gVillages.find(function(x) { return x.village_id === vid; });
+  if (v) ensureVillageLoaded(v);
+}
+window.ensureVillageLoadedById = ensureVillageLoadedById;
+
+function flyToVillage(v) {
+  var c = villageCenterOf(v);
+  if (c) gMap.flyTo(c, Math.max(LOAD_ZOOM + 1, 15), { duration: 1.2 });  // moveend then loads it
+  else ensureVillageLoaded(v);
 }
 
 function highlightLayer(layer, origStyle) {
@@ -554,7 +629,17 @@ function renderVillagesList() {
   if (!gVillages.length) { el.innerHTML = '<div class="empty-msg" style="font-size:11px">אין שכבות עדיין</div>'; return; }
   el.innerHTML = gVillages.map(function(v) {
     var state = gVillageState[v.village_id];
-    if (!state) return '';
+    if (!state) {
+      // Not loaded yet — lightweight header; clicking (or zooming in) loads it.
+      var hint = gVillageLoading[v.village_id] ? 'טוען…' : 'התקרב או לחץ לטעינה';
+      return '<div class="village-group collapsed" id="vg-'+v.village_id+'">'+
+        '<div class="village-header" onclick="ensureVillageLoadedById(\''+v.village_id+'\')">'+
+          '<span class="village-icon">'+v.icon+'</span>'+
+          '<span class="village-name">'+shortVillageName(v)+'</span>'+
+          '<span class="zoom-link" onclick="event.stopPropagation();zoomToVillage(\''+v.village_id+'\')">🎯</span>'+
+          '<span style="font-size:10px;color:#94a3b8;margin-inline-start:auto;white-space:nowrap">'+hint+'</span>'+
+        '</div></div>';
+    }
     var subsHtml = Object.keys(state.cats).map(function(catId) {
       var def = SUB_LAYERS[catId] || SUB_LAYERS.other;
       var on = state.cats[catId];
@@ -635,7 +720,9 @@ function toggleSubLayer(villageId, catId) {
 
 function zoomToVillage(villageId) {
   var bounds = gVillageBounds[villageId];
-  if (bounds && bounds.isValid()) gMap.flyToBounds(bounds, {padding:[50,50], duration:1.2, maxZoom:18});
+  if (bounds && bounds.isValid()) { gMap.flyToBounds(bounds, {padding:[50,50], duration:1.2, maxZoom:18}); return; }
+  var v = gVillages.find(function(x) { return x.village_id === villageId; });  // not loaded yet → fly to center
+  if (v) flyToVillage(v);
 }
 
 // ════════════════════════════════════════════════════════════
