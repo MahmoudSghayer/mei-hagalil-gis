@@ -18,7 +18,7 @@ var BACKEND_URL = 'https://mei-hagalil-gis-backend.onrender.com';      // ← e.
 var BACKEND_TOKEN = '7bnNTN5T70qMRGp75AnrWe5NwaQFawG6tUmi35mz'; // ← Render auto-generated this for you
 
 var DWG_EXPORT_URL   = 'https://mei-hagalil-gis-dwg-export.onrender.com'; // ← DWG export microservice
-var DWG_EXPORT_TOKEN = '7bnNTN5T70qMRGp75AnrWe5NwaQFawG6tUmi35mz';       // ← set after deploying
+var DWG_EXPORT_TOKEN = '2y/jBAb6PXwVdKoSq0hYpLTuFcWWk11BbSMXxHNyeZY=';   // ← matches Render API_TOKEN
 
 // ════════════════════════════════════════════════════════════════
 //  PUBLIC API

@@ -206,17 +206,3 @@ async def export_dwg(
         },
     )
 
-
-@app.post("/api/debug/dwg")
-async def debug_dwg(
-    body: ExportRequest,
-    x_api_token: str | None = Header(None),
-) -> dict:
-    """TEMPORARY: returns ODA converter diagnostics instead of a file.
-    Remove once DWG conversion is confirmed working."""
-    _require_auth(x_api_token)
-    dxf_bytes = _build_dxf_bytes(body.features)
-    dwg_bytes, diag = _convert_dxf_to_dwg(dxf_bytes)
-    diag["dwg_produced"] = bool(dwg_bytes)
-    diag["dwg_size"] = len(dwg_bytes) if dwg_bytes else 0
-    return diag
