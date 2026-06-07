@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: mei-hagalil-gis-dwg-export
+    runtime: docker
+    rootDir: dwg-export
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    plan: starter          # upgrade to standard for larger exports
+    envVars:
+      - key: API_TOKEN
+        generateValue: true   # Render auto-generates a secure token
