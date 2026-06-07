@@ -672,7 +672,8 @@ async function doUpload() {
         }
       };
       var fileBlob = new Blob([JSON.stringify(dataToUpload)], { type: 'application/json' });
-      var uploadRes = await gSb.storage.from('village-layers').upload(fileName, fileBlob, { upsert: true, contentType: 'application/json' });
+      // filenames are unique per upload (slug_timestamp), so cache immutably for a year
+      var uploadRes = await gSb.storage.from('village-layers').upload(fileName, fileBlob, { upsert: true, contentType: 'application/json', cacheControl: '31536000' });
       if (uploadRes.error) throw uploadRes.error;
 
       var metaId = village.slug + '_' + ts + (slugs.length > 1 ? '_' + vi : '');

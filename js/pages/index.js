@@ -290,6 +290,73 @@ function switchBasemap(key) { applyBasemap(key); }
 window.switchBasemap = switchBasemap;
 
 // ════════════════════════════════════════════════════════════
+//  VILLAGE GEOJSON CACHE (IndexedDB, keyed by immutable file_path)
+// ════════════════════════════════════════════════════════════
+// file_path is unique per upload (slug_timestamp.geojson), so a cached entry
+// is never stale: a re-upload produces a new path → cache miss → fresh fetch.
+var IDB_NAME = 'mgis-cache', IDB_STORE = 'villages', _idbPromise = null;
+
+function idbOpen() {
+  if (_idbPromise) return _idbPromise;
+  _idbPromise = new Promise(function(resolve) {
+    try {
+      var req = indexedDB.open(IDB_NAME, 1);
+      req.onupgradeneeded = function() { req.result.createObjectStore(IDB_STORE); };
+      req.onsuccess = function() { resolve(req.result); };
+      req.onerror   = function() { resolve(null); };   // no IDB → degrade to network
+    } catch(e) { resolve(null); }
+  });
+  return _idbPromise;
+}
+
+function idbGet(key) {
+  return idbOpen().then(function(db) {
+    if (!db) return null;
+    return new Promise(function(resolve) {
+      try {
+        var rq = db.transaction(IDB_STORE, 'readonly').objectStore(IDB_STORE).get(key);
+        rq.onsuccess = function() { resolve(rq.result || null); };
+        rq.onerror   = function() { resolve(null); };
+      } catch(e) { resolve(null); }
+    });
+  });
+}
+
+function villageSlugFromPath(p) { return String(p).replace(/\.geojson$/, '').replace(/_\d+(_\d+)?$/, ''); }
+
+// Store text, then drop any older cached uploads of the same village. Fire-and-forget:
+// quota errors are swallowed (the fetch already succeeded).
+function idbPutAndPrune(key, val) {
+  idbOpen().then(function(db) {
+    if (!db) return;
+    try {
+      var tx = db.transaction(IDB_STORE, 'readwrite');
+      var store = tx.objectStore(IDB_STORE);
+      store.put(val, key);
+      var slug = villageSlugFromPath(key);
+      var allKeys = store.getAllKeys();
+      allKeys.onsuccess = function() {
+        (allKeys.result || []).forEach(function(k) {
+          if (k !== key && villageSlugFromPath(k) === slug) store.delete(k);
+        });
+      };
+    } catch(e) { /* ignore */ }
+  });
+}
+
+// Returns parsed GeoJSON for a village, from IndexedDB if present, else network (then caches).
+async function fetchVillageGeoJSON(village) {
+  var cached = await idbGet(village.file_path);
+  if (cached) { try { return JSON.parse(cached); } catch(e) { /* corrupt → refetch */ } }
+  var urlRes = gSb.storage.from('village-layers').getPublicUrl(village.file_path);
+  var res = await fetch(urlRes.data.publicUrl);
+  if (!res.ok) throw new Error('Failed: ' + village.file_path);
+  var text = await res.text();
+  idbPutAndPrune(village.file_path, text);
+  return JSON.parse(text);
+}
+
+// ════════════════════════════════════════════════════════════
 //  LOAD VILLAGES
 // ════════════════════════════════════════════════════════════
 async function loadAllVillages() {
@@ -329,11 +396,7 @@ function unhighlightLayer(layer) {
 
 async function loadVillageData(village) {
   try {
-    var urlRes = gSb.storage.from('village-layers').getPublicUrl(village.file_path);
-    var publicUrl = urlRes.data.publicUrl;
-    var res = await fetch(publicUrl);
-    if (!res.ok) throw new Error('Failed: ' + village.file_path);
-    var data = await res.json();
+    var data = await fetchVillageGeoJSON(village);   // IndexedDB-cached by immutable file_path
     var categories = {};
     var bounds = L.latLngBounds([]);
     data.features.forEach(function(f) {
