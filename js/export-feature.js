@@ -106,6 +106,7 @@ function injectUI() {
           '<div class="exp-sec">פורמט</div>' +
           '<div class="exp-pills">' +
             '<button class="exp-pill active" data-fmt="dxf" onclick="expSetFmt(\'dxf\')">📐 DXF<span class="exp-pill-sub">AutoCAD · ITM</span></button>' +
+            '<button class="exp-pill" data-fmt="dwg" onclick="expSetFmt(\'dwg\')">🏗️ DWG<span class="exp-pill-sub">AutoCAD · ITM</span></button>' +
             '<button class="exp-pill" data-fmt="geojson" onclick="expSetFmt(\'geojson\')">🗺️ GeoJSON<span class="exp-pill-sub">GIS סטנדרט</span></button>' +
             '<button class="exp-pill" data-fmt="csv" onclick="expSetFmt(\'csv\')">📊 CSV<span class="exp-pill-sub">Excel</span></button>' +
           '</div>' +
@@ -297,22 +298,49 @@ window.cancelDrawing = cancelDrawing;
 // ── GENERATE & DOWNLOAD ───────────────────────────────────────────────────────
 function generateAndDownload(features) {
   var ts = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+  var filename = 'mei-hagalil-' + ts;
+
+  if (gExportFormat === 'dwg') {
+    _exportDWG(features, filename);
+    return;
+  }
+
   var blob, name;
   if (gExportFormat === 'dxf') {
     blob = new Blob([buildDXF(features)], { type: 'application/dxf' });
-    name = 'mei-hagalil-' + ts + '.dxf';
+    name = filename + '.dxf';
   } else if (gExportFormat === 'geojson') {
     blob = new Blob([JSON.stringify({ type: 'FeatureCollection', features: features }, null, 2)], { type: 'application/geo+json' });
-    name = 'mei-hagalil-' + ts + '.geojson';
+    name = filename + '.geojson';
   } else {
     blob = new Blob(['﻿' + buildCSV(features)], { type: 'text/csv;charset=utf-8' });
-    name = 'mei-hagalil-' + ts + '.csv';
+    name = filename + '.csv';
   }
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
   a.href = url; a.download = name;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
   setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+}
+
+function _exportDWG(features, filename) {
+  if (typeof window.geoJSONtoDWG !== 'function') {
+    alert('שגיאה: backend-client.js לא נטען. ודא שהקובץ כלול ב-HTML.');
+    return;
+  }
+  var banner = document.getElementById('exp-banner');
+  banner.textContent = '⏳ מייצא DWG...';
+  banner.classList.add('show');
+
+  window.geoJSONtoDWG(features, { filename: filename }, function(stage, pct, msg) {
+    banner.textContent = msg;
+    if (stage === 'done' || pct === 100) {
+      setTimeout(function() { banner.classList.remove('show'); }, 3000);
+    }
+  }).catch(function(err) {
+    banner.classList.remove('show');
+    alert('שגיאה ביצוא DWG:\n' + err.message);
+  });
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────

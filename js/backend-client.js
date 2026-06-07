@@ -17,6 +17,9 @@
 var BACKEND_URL = 'https://mei-hagalil-gis-backend.onrender.com';      // ← e.g. https://mei-hagalil-gis-backend.onrender.com
 var BACKEND_TOKEN = '7bnNTN5T70qMRGp75AnrWe5NwaQFawG6tUmi35mz'; // ← Render auto-generated this for you
 
+var DWG_EXPORT_URL   = 'https://mei-hagalil-gis-dwg-export.onrender.com'; // ← DWG export microservice
+var DWG_EXPORT_TOKEN = '7bnNTN5T70qMRGp75AnrWe5NwaQFawG6tUmi35mz';       // ← set after deploying
+
 // ════════════════════════════════════════════════════════════════
 //  PUBLIC API
 // ════════════════════════════════════════════════════════════════
@@ -184,6 +187,75 @@ function validateConfig() {
     throw new Error('Backend Token לא הוגדר. ערוך את backend-client.js');
   }
 }
+
+/**
+ * Export GeoJSON features → DWG (or DXF fallback) download.
+ * Calls the DWG export microservice and triggers a browser download.
+ *
+ * @param {Array}    features   GeoJSON Feature array (with _category property)
+ * @param {Object}   options    { filename: string }
+ * @param {Function} onProgress callback(stage, percent, message)
+ */
+window.geoJSONtoDWG = async function(features, options, onProgress) {
+  if (typeof options === 'function') { onProgress = options; options = {}; }
+  options = options || {};
+  var filename = options.filename || 'mei-hagalil-export';
+
+  if (!DWG_EXPORT_URL || DWG_EXPORT_URL === 'YOUR_DWG_EXPORT_URL') {
+    throw new Error('DWG Export URL לא הוגדר. ערוך את backend-client.js');
+  }
+
+  if (onProgress) onProgress('upload', 10, 'שולח נתונים לשרת...');
+
+  var startedAt = Date.now();
+  var pollProgress = setInterval(function() {
+    if (!onProgress) return;
+    var elapsed = (Date.now() - startedAt) / 1000;
+    if      (elapsed <  5) onProgress('process', 25, 'בונה DXF...');
+    else if (elapsed < 15) onProgress('process', 50, 'ממיר ל-DWG...');
+    else if (elapsed < 40) onProgress('process', 75, 'מסיים (' + Math.round(elapsed) + 'ש)...');
+    else                   onProgress('process', 90, 'עוד רגע... (' + Math.round(elapsed) + 'ש)');
+  }, 2000);
+
+  try {
+    var res = await fetch(DWG_EXPORT_URL + '/api/export/dwg', {
+      method: 'POST',
+      headers: {
+        'X-Api-Token': DWG_EXPORT_TOKEN,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ features: features, filename: filename }),
+    });
+
+    clearInterval(pollProgress);
+
+    if (!res.ok) {
+      var errText = await res.text();
+      throw new Error('Export error: ' + errText.substring(0, 200));
+    }
+
+    var isFallback = res.headers.get('X-Fallback-Format') === 'dxf';
+    var ext  = isFallback ? '.dxf' : '.dwg';
+    var mime = isFallback ? 'application/dxf' : 'application/octet-stream';
+
+    var blob = await res.blob();
+    var url  = URL.createObjectURL(blob);
+    var a    = document.createElement('a');
+    a.href = url; a.download = filename + ext;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+
+    var elapsed = (Date.now() - startedAt) / 1000;
+    if (onProgress) onProgress('done', 100,
+      (isFallback ? '⚠️ DXF (ODA לא מותקן)' : '✅ DWG') +
+      ' — הורד ב-' + Math.round(elapsed) + 'ש');
+
+    return { format: isFallback ? 'dxf' : 'dwg' };
+  } catch(e) {
+    clearInterval(pollProgress);
+    throw e;
+  }
+};
 
 // Backwards-compatible alias for existing code that calls asposeStatus()
 window.asposeStatus = async function() {
