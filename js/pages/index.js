@@ -502,8 +502,33 @@ async function loadVillageData(village) {
   } catch(e) { console.error('Failed to load ' + village.village_id, e); }
 }
 
+// ── Cluster badge styling — clean brand-blue, replaces markercluster's default bubbles ──
+(function injectClusterCSS() {
+  var st = document.createElement('style');
+  st.textContent =
+    '.mgis-cluster-wrap{background:transparent;}' +
+    '.mgis-cluster{width:100%;height:100%;display:flex;align-items:center;justify-content:center;' +
+      'border-radius:50%;background:#0d3b5e;color:#fff;font-family:\'Segoe UI\',Tahoma,Arial,sans-serif;' +
+      'font-weight:700;border:2px solid #fff;box-shadow:0 0 0 4px rgba(13,59,94,0.22),0 2px 6px rgba(0,0,0,0.35);}' +
+    '.mgis-cluster.s{font-size:11px;}.mgis-cluster.m{font-size:12px;}.mgis-cluster.l{font-size:12.5px;}';
+  document.head.appendChild(st);
+})();
+
+// Compact, professional cluster icon: single brand colour, size by magnitude, "18.1k" style labels.
+function clusterIcon(cluster) {
+  var n = cluster.getChildCount();
+  var size = n < 100 ? 32 : n < 1000 ? 40 : 48;
+  var tier = n < 100 ? 's' : n < 1000 ? 'm' : 'l';
+  var label = n >= 1000 ? (Math.round(n / 100) / 10) + 'k' : n;
+  return L.divIcon({
+    html: '<div class="mgis-cluster ' + tier + '"><span>' + label + '</span></div>',
+    className: 'mgis-cluster-wrap',
+    iconSize: L.point(size, size)
+  });
+}
+
 // Tunables for point clustering (markercluster). Falls back to plain circles if absent.
-var CLUSTER_OPTS = { chunkedLoading: true, maxClusterRadius: 50, spiderfyOnMaxZoom: true, disableClusteringAtZoom: 19, removeOutsideVisibleBounds: true };
+var CLUSTER_OPTS = { chunkedLoading: true, maxClusterRadius: 50, spiderfyOnMaxZoom: true, disableClusteringAtZoom: 19, removeOutsideVisibleBounds: true, iconCreateFunction: clusterIcon };
 
 // Build (and memoize) the Leaflet layer for one village category from its stored raw
 // features. Point categories are clustered; popups are bound lazily (built on open).
