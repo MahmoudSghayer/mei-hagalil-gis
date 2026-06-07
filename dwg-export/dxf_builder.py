@@ -1,8 +1,15 @@
 """
-DXF builder — exact Python port of buildDXF() from js/export-feature.js.
+DXF builder — GeoJSON features → ezdxf Drawing (R2018, ITM coordinates).
 
-Input : list of GeoJSON Feature dicts (WGS84, with _category property)
-Output: ezdxf Drawing object (R2000, ITM coordinates, MGIS XDATA)
+Mirrors the original buildDXF() from js/export-feature.js, plus the CEO's
+revised requirements (June 2026):
+  1. Point features are drawn as CIRCLES (radius 0.65), not POINTs.
+  2. Sewage manholes are drawn as a block ("שוחת-ביוב") that contains the
+     circle + a diagonal mark + invisible block ATTRIBUTES carrying the data,
+     matching the customer's reference DWG.
+  3. Water-pipe diameters are labelled in INCHES (the GIS stores them in inch);
+     sewage-pipe diameters stay in millimetres.
+  4. Every entity also carries all of its source attributes as MGIS XDATA.
 """
 
 from __future__ import annotations
@@ -36,10 +43,27 @@ XDATA_SKIP: frozenset[str] = frozenset({
 })
 
 MANHOLE_CATS: frozenset[str] = frozenset({"sewage_manholes", "manhole"})
-PIPE_CATS: frozenset[str] = frozenset({
-    "sewage_pipes", "sewage_pipe", "water_pipes", "main_sewer", "supply_pipe",
-})
-LABEL_CATS: frozenset[str] = MANHOLE_CATS | PIPE_CATS
+WATER_PIPE_CATS: frozenset[str] = frozenset({"water_pipes", "supply_pipe"})
+SEWAGE_PIPE_CATS: frozenset[str] = frozenset({"sewage_pipes", "sewage_pipe", "main_sewer"})
+PIPE_CATS: frozenset[str] = WATER_PIPE_CATS | SEWAGE_PIPE_CATS
+
+# Circle radius for point features (CEO instruction)
+POINT_RADIUS = 0.65
+
+# Manhole block — recreated from the customer's reference DWG.
+MANHOLE_BLOCK = "שוחת-ביוב"
+# (tag, insert_x, insert_y) for the 7 invisible block attributes
+MANHOLE_ATTDEFS: list[tuple[str, float, float]] = [
+    ("תאור",        6.589, -0.647),
+    ("גובה_מכסה",   3.150,  2.738),
+    ("גובה_כניסה",  3.130,  1.361),
+    ("גובה_יציאה",  3.070, -4.804),
+    ("עומק_שוחה",   3.070, -2.277),
+    ("קוטר_שוחה",   3.130, -3.466),
+    ("הערות",       3.130, -6.252),
+]
+ATTDEF_HEIGHT = 1.35
+
 
 # ── coordinate conversion ─────────────────────────────────────────────────────
 
@@ -50,6 +74,21 @@ def _make_transformer() -> Transformer:
 def _to_itm(lon: float, lat: float, t: Transformer) -> tuple[float, float]:
     x, y = t.transform(lon, lat)
     return float(x), float(y)
+
+
+# ── formatting helpers ─────────────────────────────────────────────────────────
+
+def _fmt_num(v: Any, decimals: int | None = None) -> str:
+    """Format a numeric-ish value: drop trailing zeros, optional fixed decimals."""
+    try:
+        fv = float(v)
+    except (TypeError, ValueError):
+        return str(v).strip()
+    if decimals is not None:
+        return f"{fv:.{decimals}f}"
+    if fv == int(fv):
+        return str(int(fv))
+    return f"{fv:g}"
 
 
 # ── deduplication ─────────────────────────────────────────────────────────────
@@ -114,52 +153,75 @@ def _attach_xdata(entity: Any, props: dict) -> None:
         entity.set_xdata("MGIS", tags)
 
 
-# ── attribute label helper ────────────────────────────────────────────────────
+# ── manhole block ──────────────────────────────────────────────────────────────
 
-def _add_label(msp: Any, props: dict, x: float, y: float) -> None:
-    if not props:
+def _ensure_manhole_block(doc: Drawing) -> None:
+    """Define the שוחת-ביוב block: circle (r=0.65) + diagonal mark + invisible
+    attribute definitions — recreated from the customer's reference DWG."""
+    if MANHOLE_BLOCK in doc.blocks:
         return
+    blk = doc.blocks.new(name=MANHOLE_BLOCK)
+    blk.add_circle((0.0, 0.0), radius=POINT_RADIUS)
+    blk.add_line((-0.48, -0.475), (0.48, 0.475))
+    for tag, ax, ay in MANHOLE_ATTDEFS:
+        blk.add_attdef(
+            tag=tag,
+            insert=(ax, ay),
+            height=ATTDEF_HEIGHT,
+            dxfattribs={"flags": 1},  # 1 = invisible
+        )
+
+
+def _manhole_attrib_values(props: dict) -> dict[str, str]:
+    """Map GIS manhole fields → the block's Hebrew attribute tags."""
+    vals = {tag: "" for tag, _, _ in MANHOLE_ATTDEFS}
+    vals["תאור"] = "שוחת ביוב"
+    if props.get("TL") not in (None, ""):
+        vals["גובה_מכסה"] = _fmt_num(props["TL"], 2)
+    # No dedicated inlet-IL field in the source data → גובה_כניסה stays empty
+    if props.get("HighIL") not in (None, ""):
+        vals["גובה_כניסה"] = _fmt_num(props["HighIL"], 2)
+    if props.get("LowIL") not in (None, ""):
+        vals["גובה_יציאה"] = _fmt_num(props["LowIL"], 2)
+    if props.get("Depth") not in (None, ""):
+        vals["עומק_שוחה"] = _fmt_num(props["Depth"], 2)
+    if props.get("ManholeDia") not in (None, ""):
+        vals["קוטר_שוחה"] = _fmt_num(props["ManholeDia"])
+    if props.get("Comment") not in (None, ""):
+        vals["הערות"] = str(props["Comment"])[:100]
+    return vals
+
+
+def _add_manhole(msp: Any, props: dict, x: float, y: float) -> None:
+    ref = msp.add_blockref(MANHOLE_BLOCK, (x, y, 0.0), dxfattribs={
+        "layer": props.get("_category", "sewage_manholes"),
+    })
+    ref.add_auto_attribs(_manhole_attrib_values(props))
+    for att in ref.attribs:               # invisible, like the reference DWG
+        att.dxf.flags = att.dxf.flags | 1
+    _attach_xdata(ref, props)
+
+
+# ── pipe label helper ──────────────────────────────────────────────────────────
+
+def _add_pipe_label(msp: Any, props: dict, x: float, y: float) -> None:
     cat = props.get("_category", "")
-    rows: list[str] = []
-
-    if cat in MANHOLE_CATS:
-        if props.get("ManholeNum"):
-            rows.append(f"MH: {props['ManholeNum']}")
-        try:
-            rows.append(f"TL: {float(props['TL']):.2f}")
-        except (KeyError, TypeError, ValueError):
-            pass
-        try:
-            rows.append(f"D: {float(props['Depth']):.2f}m")
-        except (KeyError, TypeError, ValueError):
-            pass
-    elif cat in PIPE_CATS:
-        if props.get("LineDiamet"):
-            rows.append(f"Ø{props['LineDiamet']}mm")
-
-    if not rows:
+    diam = props.get("LineDiamet")
+    if diam in (None, ""):
         return
+    if cat in WATER_PIPE_CATS:
+        row = f'Ø{_fmt_num(diam)}"'        # inches (water)
+    else:
+        row = f"Ø{_fmt_num(diam)}mm"        # millimetres (sewage)
 
     th = 1.2
-    spacing = 3.5
-    dx = 15.0
-    dy = 12.0 if cat in MANHOLE_CATS else -12.0
-    ox = x + dx
-    leader_y = y + dy
-    oy = leader_y + (len(rows) - 1) * spacing
-
-    # Leader line: feature point → label anchor
+    ox = x + 15.0
+    leader_y = y - 12.0
     msp.add_line((x, y, 0.0), (ox, leader_y, 0.0), dxfattribs={"layer": "ATTR"})
-
-    for i, row in enumerate(rows):
-        msp.add_text(
-            row,
-            dxfattribs={
-                "layer": "ATTR",
-                "insert": (ox, oy - i * spacing, 0.0),
-                "height": th,
-            },
-        )
+    msp.add_text(
+        row,
+        dxfattribs={"layer": "ATTR", "insert": (ox, leader_y, 0.0), "height": th},
+    )
 
 
 # ── polyline helper ───────────────────────────────────────────────────────────
@@ -173,7 +235,7 @@ def _add_polyline(
     props: dict,
 ) -> None:
     pts = [_to_itm(c[0], c[1], t) for c in raw_coords]
-    poly = msp.add_polyline2d(pts, dxfattribs={"layer": layer, "closed": closed})
+    poly = msp.add_lwpolyline(pts, dxfattribs={"layer": layer}, close=closed)
     _attach_xdata(poly, props)
 
 
@@ -189,23 +251,23 @@ def build_dxf(features: list[dict]) -> Drawing:
         props = f.get("properties") or {}
         seen_cats.add(props.get("_category", "other"))
 
-    doc = ezdxf.new("R2000")
-    doc.header["$INSUNITS"] = 6    # meters
+    doc = ezdxf.new("R2018")        # UTF-8 text → clean Hebrew
+    doc.header["$INSUNITS"] = 6     # meters
     doc.header["$MEASUREMENT"] = 1  # metric
 
-    # Register app ID so XDATA round-trips cleanly
     doc.appids.new("MGIS")
 
-    # Ensure CONTINUOUS linetype exists (required by AutoCAD validators)
     if "Continuous" not in doc.linetypes:
         doc.linetypes.new("Continuous", dxfattribs={"description": "Solid line"})
 
-    # Layer 0 is always present; add ATTR (off by default) + one per category
-    doc.layers.new("ATTR", dxfattribs={"color": -3, "linetype": "Continuous"})
+    # ATTR layer (off by default) + one layer per category
+    attr_layer = doc.layers.new("ATTR", dxfattribs={"linetype": "Continuous"})
+    attr_layer.off()
     for cat in seen_cats:
-        color = COLORS.get(cat, 7)
-        doc.layers.new(cat, dxfattribs={"color": color, "linetype": "Continuous"})
+        doc.layers.new(cat, dxfattribs={"color": COLORS.get(cat, 7),
+                                        "linetype": "Continuous"})
 
+    _ensure_manhole_block(doc)
     msp = doc.modelspace()
 
     for f in features:
@@ -221,14 +283,19 @@ def build_dxf(features: list[dict]) -> Drawing:
 
         if gtype == "Point":
             x, y = _to_itm(coords[0], coords[1], t)
-            pt = msp.add_point((x, y, 0.0), dxfattribs={"layer": layer})
-            _attach_xdata(pt, props)
-            if props.get("Text"):
-                msp.add_text(
-                    str(props["Text"]),
-                    dxfattribs={"layer": layer, "insert": (x, y, 0.0), "height": 1.0},
-                )
-            label_pt = (x, y)
+            if layer in MANHOLE_CATS:
+                _add_manhole(msp, props, x, y)
+            else:
+                # CEO: points become circles (r=0.65)
+                circ = msp.add_circle((x, y, 0.0), radius=POINT_RADIUS,
+                                      dxfattribs={"layer": layer})
+                _attach_xdata(circ, props)
+                if props.get("Text"):
+                    msp.add_text(
+                        str(props["Text"]),
+                        dxfattribs={"layer": layer, "insert": (x, y, 0.0),
+                                    "height": 1.0},
+                    )
 
         elif gtype == "LineString":
             _add_polyline(msp, coords, layer, False, t, props)
@@ -255,7 +322,8 @@ def build_dxf(features: list[dict]) -> Drawing:
             mid = ring[len(ring) // 2]
             label_pt = _to_itm(mid[0], mid[1], t)
 
-        if label_pt and layer in LABEL_CATS:
-            _add_label(msp, props, label_pt[0], label_pt[1])
+        # Pipe diameter labels (water = inch, sewage = mm)
+        if label_pt and layer in PIPE_CATS:
+            _add_pipe_label(msp, props, label_pt[0], label_pt[1])
 
     return doc
