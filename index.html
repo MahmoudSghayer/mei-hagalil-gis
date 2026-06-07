@@ -4,11 +4,18 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>מי הגליל | מערכת GIS</title>
+  <!-- Warm up TLS to the origins we hit on load: data (Supabase), libs, default basemap tiles -->
+  <link rel="preconnect" href="https://hlbogufrdxpviyxlwqtf.supabase.co" crossorigin/>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin/>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin/>
+  <link rel="preconnect" href="https://server.arcgisonline.com"/>
+  <link rel="dns-prefetch" href="https://basemaps.cartocdn.com"/>
+  <link rel="dns-prefetch" href="https://mt0.google.com"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
   <link rel="stylesheet" href="css/shared.css"/>
   <link rel="stylesheet" href="css/pages/index.css"/>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-  <script src="js/auth.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script defer src="js/auth.js"></script>
 </head>
 <body>
 <div id="app">
@@ -181,14 +188,14 @@
 
 <div id="toast"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
-<script src="js/motion-utils.js"></script>
-<script src="js/measure-tools.js"></script>
-<script src="js/pages/index.js?v=2"></script>
-<script src="js/export-feature.js?v=9"></script>
-<script src="js/search-feature.js"></script>
-<script src="js/backend-client.js?v=2"></script>
-<script src="js/stats-feature.js?v=1"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
+<script defer src="js/motion-utils.js"></script>
+<script defer src="js/measure-tools.js"></script>
+<script defer src="js/pages/index.js?v=3"></script>
+<script defer src="js/export-feature.js?v=9"></script>
+<script defer src="js/search-feature.js"></script>
+<script defer src="js/backend-client.js?v=2"></script>
+<script defer src="js/stats-feature.js?v=1"></script>
 </body>
 </html>

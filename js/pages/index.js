@@ -53,7 +53,7 @@ var gMap, gIncidentsLayer, gIncidents=[], gMarkers={};
 var gCurrentBasemap = 'satellite';
 var gActiveBasemapLayers = [];
 var gCadastralLayer = null, gCadastralVisible = false;
-var gVillages = [], gVillageLayers = {}, gVillageState = {}, gVillageBounds = {};
+var gVillages = [], gVillageLayers = {}, gVillageState = {}, gVillageBounds = {}, gVillageFeatures = {}, gVillageById = {};
 var gLastLat=null, gLastLng=null, gFilter='';
 var gUser=null, gProfile=null, gClosingId=null;
 var gSelectedLayer = null;
@@ -71,9 +71,9 @@ window.addEventListener('load', async function() {
   if (!gProfile) return;
   setUserUI(gProfile);
   initMap();
+  document.getElementById('app').classList.add('ready');  // reveal shell + map immediately
   initSB();
-  await loadAllVillages();
-  document.getElementById('app').classList.add('ready');
+  loadAllVillages();                                       // non-blocking: villages stream in afterward
 });
 
 function setUserUI(p) {
@@ -117,7 +117,7 @@ async function changePass(){var p=document.getElementById('p-new').value,c=docum
 //  MAP (FIXED ZOOM: 20 max, 19 native)
 // ════════════════════════════════════════════════════════════
 function initMap() {
-  gMap = L.map('map', { zoomControl:false, attributionControl:false, maxZoom:20 }).setView([32.91,35.30],11);
+  gMap = L.map('map', { zoomControl:false, attributionControl:false, maxZoom:20, preferCanvas:true }).setView([32.91,35.30],11);
   L.control.zoom({ position: 'topright' }).addTo(gMap);
   applyBasemap(gCurrentBasemap);
   gMap.on('mousemove', function(e) {
@@ -307,7 +307,7 @@ async function loadAllVillages() {
   });
   gVillages = Object.keys(latestBySlug).map(function(k) { return latestBySlug[k]; });
   document.getElementById('layer-count').textContent = gVillages.length;
-  for (var i = 0; i < gVillages.length; i++) await loadVillageData(gVillages[i]);
+  await Promise.all(gVillages.map(function(v) { return loadVillageData(v); }));  // load in parallel
   renderVillagesList();
 }
 
@@ -347,64 +347,79 @@ async function loadVillageData(village) {
       else if (g.type === 'MultiLineString') g.coordinates.forEach(function(line){line.forEach(function(c){bounds.extend([c[1],c[0]]);});});
       else if (g.type === 'Polygon') g.coordinates[0].forEach(function(c){bounds.extend([c[1],c[0]]);});
     });
-    gVillageBounds[village.village_id] = bounds;
-    gVillageLayers[village.village_id] = {};
-    gVillageState[village.village_id] = { masterOn: true, cats: {}, counts: {}, collapsed: false };
+    var vid = village.village_id;
+    gVillageById[vid]     = village;
+    gVillageBounds[vid]   = bounds;
+    gVillageFeatures[vid] = categories;   // keep raw features for lazy layer building
+    gVillageLayers[vid]   = {};
+    gVillageState[vid]    = { masterOn: true, cats: {}, counts: {}, collapsed: false };
     Object.keys(categories).forEach(function(catId) {
       var def = SUB_LAYERS[catId] || SUB_LAYERS.other;
-      var group = L.layerGroup();
-      categories[catId].forEach(function(feat) {
-        var p = feat.properties || {};
-        var g = feat.geometry;
-        if (!g) return;
-        if (def.type === 'label' && g.type === 'Point' && p.Text) {
-          var icon = L.divIcon({ className:'map-label', html:'<span style="color:'+def.color+'">'+p.Text+'</span>', iconSize:null, iconAnchor:[0,0] });
-          L.marker([g.coordinates[1], g.coordinates[0]], { icon:icon }).addTo(group);
-        } else if (g.type === 'Point') {
-          var marker = L.circleMarker([g.coordinates[1], g.coordinates[0]], { radius:def.radius||4, color:'#fff', weight:1.5, fillColor:def.color, fillOpacity:0.9 });
-          marker.bindPopup(buildPopup(p, def, village, catId));
-          marker.addTo(group);
-          if (catId === 'sewage_manholes') {
-            var wDepth = parseFloat(p.Depth);
-            if (!isNaN(wDepth) && wDepth < 0.80) {
-              var warnIcon = L.divIcon({ className:'', html:'<div class="manhole-warn-badge" style="pointer-events:none">⚠</div>', iconSize:[18,14], iconAnchor:[9,19] });
-              L.marker([g.coordinates[1], g.coordinates[0]], { icon:warnIcon, interactive:false, zIndexOffset:1000 }).addTo(group);
-            }
-          }
-        } else if (g.type === 'LineString') {
-          var coords = g.coordinates.map(function(c){return [c[1],c[0]];});
-          var lineStyle = { color:def.color, weight:def.weight||2, opacity:0.95, dashArray:def.dashArray };
-          var line = L.polyline(coords, lineStyle);
-          line.bindPopup(buildPopup(p, def, village, catId));
-          line.on('click', function() { highlightLayer(line, lineStyle); });
-          line.on('popupclose', function() { unhighlightLayer(line); });
-          line.addTo(group);
-        } else if (g.type === 'MultiLineString') {
-          g.coordinates.forEach(function(seg) {
-            var c = seg.map(function(c){return [c[1],c[0]];});
-            var segStyle = { color:def.color, weight:def.weight||2, opacity:0.95, dashArray:def.dashArray };
-            var pl = L.polyline(c, segStyle);
-            pl.bindPopup(buildPopup(p, def, village, catId));
-            pl.on('click', function() { highlightLayer(pl, segStyle); });
-            pl.on('popupclose', function() { unhighlightLayer(pl); });
-            pl.addTo(group);
-          });
-        } else if (g.type === 'Polygon') {
-          var coords = g.coordinates[0].map(function(c){return [c[1],c[0]];});
-          var polyStyle = { color:def.color, weight:def.weight||1.5, opacity:0.85, fillOpacity:0.25, fillColor:def.color };
-          var poly = L.polygon(coords, polyStyle);
-          poly.bindPopup(buildPopup(p, def, village, catId));
-          poly.on('click', function() { highlightLayer(poly, polyStyle); });
-          poly.on('popupclose', function() { unhighlightLayer(poly); });
-          poly.addTo(group);
-        }
-      });
-      gVillageLayers[village.village_id][catId] = group;
-      gVillageState[village.village_id].cats[catId] = !!def.defaultOn;
-      gVillageState[village.village_id].counts[catId] = categories[catId].length;
-      if (def.defaultOn) group.addTo(gMap);
+      gVillageState[vid].cats[catId]   = !!def.defaultOn;
+      gVillageState[vid].counts[catId] = categories[catId].length;
+      // Only build the Leaflet layer for categories shown by default; the rest
+      // are built lazily on first toggle-on (saves rendering thousands of hidden features).
+      if (def.defaultOn) buildCategoryLayer(vid, catId).addTo(gMap);
     });
   } catch(e) { console.error('Failed to load ' + village.village_id, e); }
+}
+
+// Build (and memoize) the Leaflet layerGroup for one village category from its
+// stored raw features. Popups are bound lazily — the HTML is built on open, not here.
+function buildCategoryLayer(vid, catId) {
+  if (gVillageLayers[vid] && gVillageLayers[vid][catId]) return gVillageLayers[vid][catId];
+  var village = gVillageById[vid];
+  var def     = SUB_LAYERS[catId] || SUB_LAYERS.other;
+  var feats   = (gVillageFeatures[vid] && gVillageFeatures[vid][catId]) || [];
+  var group   = L.layerGroup();
+  feats.forEach(function(feat) {
+    var p = feat.properties || {};
+    var g = feat.geometry;
+    if (!g) return;
+    if (def.type === 'label' && g.type === 'Point' && p.Text) {
+      var icon = L.divIcon({ className:'map-label', html:'<span style="color:'+def.color+'">'+p.Text+'</span>', iconSize:null, iconAnchor:[0,0] });
+      L.marker([g.coordinates[1], g.coordinates[0]], { icon:icon }).addTo(group);
+    } else if (g.type === 'Point') {
+      var marker = L.circleMarker([g.coordinates[1], g.coordinates[0]], { radius:def.radius||4, color:'#fff', weight:1.5, fillColor:def.color, fillOpacity:0.9 });
+      marker.bindPopup(function(){ return buildPopup(p, def, village, catId); });
+      marker.addTo(group);
+      if (catId === 'sewage_manholes') {
+        var wDepth = parseFloat(p.Depth);
+        if (!isNaN(wDepth) && wDepth < 0.80) {
+          var warnIcon = L.divIcon({ className:'', html:'<div class="manhole-warn-badge" style="pointer-events:none">⚠</div>', iconSize:[18,14], iconAnchor:[9,19] });
+          L.marker([g.coordinates[1], g.coordinates[0]], { icon:warnIcon, interactive:false, zIndexOffset:1000 }).addTo(group);
+        }
+      }
+    } else if (g.type === 'LineString') {
+      var coords = g.coordinates.map(function(c){return [c[1],c[0]];});
+      var lineStyle = { color:def.color, weight:def.weight||2, opacity:0.95, dashArray:def.dashArray };
+      var line = L.polyline(coords, lineStyle);
+      line.bindPopup(function(){ return buildPopup(p, def, village, catId); });
+      line.on('click', function() { highlightLayer(line, lineStyle); });
+      line.on('popupclose', function() { unhighlightLayer(line); });
+      line.addTo(group);
+    } else if (g.type === 'MultiLineString') {
+      g.coordinates.forEach(function(seg) {
+        var c = seg.map(function(c){return [c[1],c[0]];});
+        var segStyle = { color:def.color, weight:def.weight||2, opacity:0.95, dashArray:def.dashArray };
+        var pl = L.polyline(c, segStyle);
+        pl.bindPopup(function(){ return buildPopup(p, def, village, catId); });
+        pl.on('click', function() { highlightLayer(pl, segStyle); });
+        pl.on('popupclose', function() { unhighlightLayer(pl); });
+        pl.addTo(group);
+      });
+    } else if (g.type === 'Polygon') {
+      var coords = g.coordinates[0].map(function(c){return [c[1],c[0]];});
+      var polyStyle = { color:def.color, weight:def.weight||1.5, opacity:0.85, fillOpacity:0.25, fillColor:def.color };
+      var poly = L.polygon(coords, polyStyle);
+      poly.bindPopup(function(){ return buildPopup(p, def, village, catId); });
+      poly.on('click', function() { highlightLayer(poly, polyStyle); });
+      poly.on('popupclose', function() { unhighlightLayer(poly); });
+      poly.addTo(group);
+    }
+  });
+  gVillageLayers[vid][catId] = group;
+  return group;
 }
 
 function buildPopup(props, catDef, village, catId) {
@@ -515,19 +530,25 @@ function toggleVillage(villageId) {
   state.masterOn = !state.masterOn;
   document.getElementById('master-tog-'+villageId).classList.toggle('on', state.masterOn);
   Object.keys(state.cats).forEach(function(catId) {
-    var layer = gVillageLayers[villageId][catId];
-    if (state.masterOn && state.cats[catId]) gMap.addLayer(layer);
-    else if (!state.masterOn) gMap.removeLayer(layer);
+    if (state.masterOn && state.cats[catId]) {
+      gMap.addLayer(buildCategoryLayer(villageId, catId));   // build lazily on first show
+    } else {
+      var layer = gVillageLayers[villageId][catId];
+      if (layer) gMap.removeLayer(layer);
+    }
   });
 }
 
 function toggleSubLayer(villageId, catId) {
   var state = gVillageState[villageId];
-  var layer = gVillageLayers[villageId][catId];
   state.cats[catId] = !state.cats[catId];
   document.getElementById('sub-tog-'+villageId+'-'+catId).classList.toggle('on', state.cats[catId]);
-  if (state.cats[catId] && state.masterOn) gMap.addLayer(layer);
-  else gMap.removeLayer(layer);
+  if (state.cats[catId] && state.masterOn) {
+    gMap.addLayer(buildCategoryLayer(villageId, catId));     // build lazily on first show
+  } else {
+    var layer = gVillageLayers[villageId][catId];
+    if (layer) gMap.removeLayer(layer);
+  }
 }
 
 function zoomToVillage(villageId) {
