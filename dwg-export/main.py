@@ -75,10 +75,24 @@ def _build_dxf_bytes(features: list[dict]) -> bytes:
     return buf.read()
 
 
+def _find_oda() -> str | None:
+    """Locate the ODA File Converter binary (PATH or common install dirs)."""
+    found = shutil.which("ODAFileConverter")
+    if found:
+        return found
+    for cand in ("/usr/bin/ODAFileConverter", "/usr/local/bin/ODAFileConverter"):
+        if os.path.exists(cand):
+            return cand
+    return None
+
+
 def _dxf_to_dwg(dxf_bytes: bytes) -> bytes | None:
     """Convert DXF bytes → DWG bytes via ODA File Converter CLI.
-    Returns None if ODA is not available or conversion fails."""
-    oda = shutil.which("ODAFileConverter")
+    Returns None if ODA is not available or conversion fails.
+
+    ODA File Converter is a Qt GUI app; even in batch mode it needs a display,
+    so it is launched under xvfb-run (with an offscreen Qt fallback)."""
+    oda = _find_oda()
     if not oda:
         return None
 
@@ -89,19 +103,27 @@ def _dxf_to_dwg(dxf_bytes: bytes) -> bytes | None:
         os.makedirs(out_dir)
 
         dxf_path = os.path.join(in_dir, "export.dxf")
-        dwg_path = os.path.join(out_dir, "export.dwg")
 
         with open(dxf_path, "wb") as fh:
             fh.write(dxf_bytes)
 
-        result = subprocess.run(
-            [oda, in_dir, out_dir, "ACAD2018", "DWG", "0", "0"],
-            capture_output=True,
-            timeout=120,
-        )
+        # ODAFileConverter <inDir> <outDir> <version> <type> <recurse> <audit>
+        oda_cmd = [oda, in_dir, out_dir, "ACAD2018", "DWG", "0", "0"]
+        cmd = oda_cmd
+        if shutil.which("xvfb-run"):
+            cmd = ["xvfb-run", "-a", *oda_cmd]
 
-        if result.returncode == 0 and os.path.exists(dwg_path):
-            with open(dwg_path, "rb") as fh:
+        env = {**os.environ, "QT_QPA_PLATFORM": "offscreen"}
+
+        try:
+            subprocess.run(cmd, capture_output=True, timeout=120, env=env)
+        except (subprocess.TimeoutExpired, OSError):
+            return None
+
+        # ODA writes <basename>.dwg into the output dir
+        produced = os.path.join(out_dir, "export.dwg")
+        if os.path.exists(produced):
+            with open(produced, "rb") as fh:
                 return fh.read()
 
     return None
@@ -111,7 +133,7 @@ def _dxf_to_dwg(dxf_bytes: bytes) -> bytes | None:
 
 @app.get("/health")
 def health() -> dict:
-    oda = shutil.which("ODAFileConverter")
+    oda = _find_oda()
     return {
         "status": "ok",
         "dwg_export": bool(oda),
