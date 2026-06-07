@@ -427,14 +427,19 @@ async function loadVillageData(village) {
   } catch(e) { console.error('Failed to load ' + village.village_id, e); }
 }
 
-// Build (and memoize) the Leaflet layerGroup for one village category from its
-// stored raw features. Popups are bound lazily — the HTML is built on open, not here.
+// Tunables for point clustering (markercluster). Falls back to plain circles if absent.
+var CLUSTER_OPTS = { chunkedLoading: true, maxClusterRadius: 50, spiderfyOnMaxZoom: true, disableClusteringAtZoom: 19, removeOutsideVisibleBounds: true };
+
+// Build (and memoize) the Leaflet layer for one village category from its stored raw
+// features. Point categories are clustered; popups are bound lazily (built on open).
 function buildCategoryLayer(vid, catId) {
   if (gVillageLayers[vid] && gVillageLayers[vid][catId]) return gVillageLayers[vid][catId];
   var village = gVillageById[vid];
   var def     = SUB_LAYERS[catId] || SUB_LAYERS.other;
   var feats   = (gVillageFeatures[vid] && gVillageFeatures[vid][catId]) || [];
-  var group   = L.layerGroup();
+  var isCluster = (def.type === 'point') && (typeof L.markerClusterGroup === 'function');
+  var group   = isCluster ? L.markerClusterGroup(CLUSTER_OPTS) : L.layerGroup();
+  var clusterMarkers = isCluster ? [] : null;   // batch-added at the end (much faster)
   feats.forEach(function(feat) {
     var p = feat.properties || {};
     var g = feat.geometry;
@@ -443,14 +448,27 @@ function buildCategoryLayer(vid, catId) {
       var icon = L.divIcon({ className:'map-label', html:'<span style="color:'+def.color+'">'+p.Text+'</span>', iconSize:null, iconAnchor:[0,0] });
       L.marker([g.coordinates[1], g.coordinates[0]], { icon:icon }).addTo(group);
     } else if (g.type === 'Point') {
-      var marker = L.circleMarker([g.coordinates[1], g.coordinates[0]], { radius:def.radius||4, color:'#fff', weight:1.5, fillColor:def.color, fillOpacity:0.9 });
-      marker.bindPopup(function(){ return buildPopup(p, def, village, catId); });
-      marker.addTo(group);
-      if (catId === 'sewage_manholes') {
-        var wDepth = parseFloat(p.Depth);
-        if (!isNaN(wDepth) && wDepth < 0.80) {
-          var warnIcon = L.divIcon({ className:'', html:'<div class="manhole-warn-badge" style="pointer-events:none">⚠</div>', iconSize:[18,14], iconAnchor:[9,19] });
-          L.marker([g.coordinates[1], g.coordinates[0]], { icon:warnIcon, interactive:false, zIndexOffset:1000 }).addTo(group);
+      var ll = [g.coordinates[1], g.coordinates[0]];
+      if (isCluster) {
+        var d = (def.radius || 4) * 2;
+        var circle = '<div style="width:'+d+'px;height:'+d+'px;background:'+def.color+';border:1.5px solid #fff;border-radius:50%;opacity:0.9;box-sizing:border-box"></div>';
+        var shallow = (catId === 'sewage_manholes') && (parseFloat(p.Depth) < 0.80);
+        var html = shallow
+          ? '<div style="position:relative;width:'+d+'px;height:'+d+'px">'+circle+'<div class="manhole-warn-badge" style="position:absolute;top:-13px;left:50%;transform:translateX(-50%);pointer-events:none">⚠</div></div>'
+          : circle;
+        var pm = L.marker(ll, { icon: L.divIcon({ className:'', html:html, iconSize:[d,d], iconAnchor:[d/2,d/2] }) });
+        pm.bindPopup(function(){ return buildPopup(p, def, village, catId); });
+        clusterMarkers.push(pm);
+      } else {
+        var marker = L.circleMarker(ll, { radius:def.radius||4, color:'#fff', weight:1.5, fillColor:def.color, fillOpacity:0.9 });
+        marker.bindPopup(function(){ return buildPopup(p, def, village, catId); });
+        marker.addTo(group);
+        if (catId === 'sewage_manholes') {
+          var wDepth = parseFloat(p.Depth);
+          if (!isNaN(wDepth) && wDepth < 0.80) {
+            var warnIcon = L.divIcon({ className:'', html:'<div class="manhole-warn-badge" style="pointer-events:none">⚠</div>', iconSize:[18,14], iconAnchor:[9,19] });
+            L.marker(ll, { icon:warnIcon, interactive:false, zIndexOffset:1000 }).addTo(group);
+          }
         }
       }
     } else if (g.type === 'LineString') {
@@ -481,6 +499,7 @@ function buildCategoryLayer(vid, catId) {
       poly.addTo(group);
     }
   });
+  if (isCluster) group.addLayers(clusterMarkers);   // batch add → one clustering pass
   gVillageLayers[vid][catId] = group;
   return group;
 }
