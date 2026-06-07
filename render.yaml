@@ -5,7 +5,7 @@ services:
     rootDir: dwg-export
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
-    plan: starter          # upgrade to standard for larger exports
+    plan: free             # upgrade to starter ($7/mo) to avoid sleep/wake delay
     envVars:
       - key: API_TOKEN
         generateValue: true   # Render auto-generates a secure token
