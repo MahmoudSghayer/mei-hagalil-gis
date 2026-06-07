@@ -12,6 +12,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates xvfb \
         libglib2.0-0 libgl1 libxkbcommon0 libxkbcommon-x11-0 \
         libdbus-1-3 libfontconfig1 libfreetype6 \
+        libsm6 libice6 \
+        libxcb1 libxcb-cursor0 libxcb-icccm4 libxcb-image0 \
+        libxcb-keysyms1 libxcb-randr0 libxcb-render0 libxcb-render-util0 \
+        libxcb-shape0 libxcb-shm0 libxcb-sync1 libxcb-util1 \
+        libxcb-xfixes0 libxcb-xinerama0 libxcb-xkb1 libxcb-glx0 \
         proj-bin libproj-dev \
     && rm -rf /var/lib/apt/lists/*
 
