@@ -4,12 +4,14 @@ ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# Python + runtime deps for ODA (Qt + PROJ) + xvfb for headless GUI
+# Python + runtime deps for ODA (Qt6 + PROJ) + xvfb for headless GUI.
+# The ODA .deb declares its own Qt6 dependencies, which `apt-get install ./*.deb`
+# resolves automatically; we pre-install the common X/GL/font libs it needs.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         python3.11 python3-pip python3.11-dev \
         ca-certificates xvfb \
-        libqt5widgets5 libqt5gui5 libqt5core5a libqt5xml5 \
-        libglib2.0-0 libgl1 libxkbcommon-x11-0 libdbus-1-3 \
+        libglib2.0-0 libgl1 libxkbcommon0 libxkbcommon-x11-0 \
+        libdbus-1-3 libfontconfig1 libfreetype6 \
         proj-bin libproj-dev \
     && rm -rf /var/lib/apt/lists/*
 
