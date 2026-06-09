@@ -328,19 +328,99 @@ function _exportDWG(features, filename) {
     alert('שגיאה: backend-client.js לא נטען. ודא שהקובץ כלול ב-HTML.');
     return;
   }
-  var banner = document.getElementById('exp-banner');
-  banner.textContent = '⏳ מייצא DWG...';
-  banner.classList.add('show');
+  var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  var wait = showDwgWait(function onCancel() { if (ctrl) ctrl.abort(); });
 
-  window.geoJSONtoDWG(features, { filename: filename }, function(stage, pct, msg) {
-    banner.textContent = msg;
-    if (stage === 'done' || pct === 100) {
-      setTimeout(function() { banner.classList.remove('show'); }, 3000);
-    }
+  window.geoJSONtoDWG(features, { filename: filename, signal: ctrl ? ctrl.signal : undefined }, function(stage, pct, msg) {
+    wait.setMsg(msg);
+  }).then(function() {
+    wait.close();
   }).catch(function(err) {
-    banner.classList.remove('show');
-    alert('שגיאה ביצוא DWG:\n' + err.message);
+    wait.close();
+    var aborted = err && (err.name === 'AbortError' || /abort/i.test(err.message || ''));
+    if (aborted) { if (window.showToast) window.showToast('היצוא בוטל'); return; }   // user cancelled — not an error
+    alert('שגיאה ביצוא DWG:\n' + (err && err.message ? err.message : err));
   });
+}
+
+// ── DWG wait modal (spinner + status; reveals a Cancel button after 30s) ──────
+var _dwgWaitEl = null, _dwgCancelTimer = null, _dwgElapsedTimer = null, _dwgWaitStart = 0;
+
+function injectDwgWaitStyles() {
+  if (document.getElementById('dwg-wait-styles')) return;
+  var st = document.createElement('style');
+  st.id = 'dwg-wait-styles';
+  st.textContent =
+    '.dwg-wait-bg{display:none;position:fixed;inset:0;background:rgba(15,23,42,0.55);z-index:2000;align-items:center;justify-content:center;}' +
+    '.dwg-wait-bg.open{display:flex;}' +
+    '.dwg-wait-mod{background:#fff;border-radius:14px;padding:26px 28px;width:340px;max-width:92vw;text-align:center;direction:rtl;font-family:\'Segoe UI\',Tahoma,Arial,sans-serif;box-shadow:0 12px 40px rgba(0,0,0,0.3);}' +
+    '.dwg-wait-spin{width:42px;height:42px;margin:0 auto 14px;border:4px solid #e2e8f0;border-top-color:#0d3b5e;border-radius:50%;animation:dwgspin .9s linear infinite;}' +
+    '@keyframes dwgspin{to{transform:rotate(360deg);}}' +
+    '.dwg-wait-title{font-size:16px;font-weight:700;color:#0d3b5e;margin-bottom:6px;}' +
+    '.dwg-wait-msg{font-size:13px;color:#334155;margin-bottom:4px;min-height:18px;}' +
+    '.dwg-wait-elapsed{font-size:12px;color:#94a3b8;margin-bottom:10px;}' +
+    '.dwg-wait-hint{font-size:11px;color:#94a3b8;line-height:1.5;margin-bottom:14px;}' +
+    '.dwg-wait-cancel{width:100%;padding:11px;border:none;border-radius:8px;background:#dc2626;color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;}' +
+    '.dwg-wait-cancel:hover{background:#b91c1c;}.dwg-wait-cancel:disabled{opacity:.6;cursor:default;}';
+  document.head.appendChild(st);
+}
+
+function showDwgWait(onCancel) {
+  injectDwgWaitStyles();
+  if (!_dwgWaitEl) {
+    var bg = document.createElement('div');
+    bg.className = 'dwg-wait-bg';
+    bg.innerHTML =
+      '<div class="dwg-wait-mod">' +
+        '<div class="dwg-wait-spin"></div>' +
+        '<div class="dwg-wait-title">מייצא DWG…</div>' +
+        '<div class="dwg-wait-msg" id="dwg-wait-msg">שולח נתונים לשרת…</div>' +
+        '<div class="dwg-wait-elapsed" id="dwg-wait-elapsed">0 שניות</div>' +
+        '<div class="dwg-wait-hint" id="dwg-wait-hint">השרת עשוי להתעורר ממצב שינה — ההמרה עשויה להימשך עד דקה.</div>' +
+        '<button class="dwg-wait-cancel" id="dwg-wait-cancel" style="display:none">ביטול היצוא</button>' +
+      '</div>';
+    document.body.appendChild(bg);
+    _dwgWaitEl = bg;
+  }
+  var bgEl = _dwgWaitEl;
+  var msgEl = bgEl.querySelector('#dwg-wait-msg');
+  var elapsedEl = bgEl.querySelector('#dwg-wait-elapsed');
+  var hintEl = bgEl.querySelector('#dwg-wait-hint');
+  var cancelBtn = bgEl.querySelector('#dwg-wait-cancel');
+
+  cancelBtn.style.display = 'none';
+  cancelBtn.disabled = false;
+  cancelBtn.textContent = 'ביטול היצוא';
+  hintEl.textContent = 'השרת עשוי להתעורר ממצב שינה — ההמרה עשויה להימשך עד דקה.';
+  elapsedEl.textContent = '0 שניות';
+  bgEl.classList.add('open');
+  _dwgWaitStart = Date.now();
+
+  if (_dwgElapsedTimer) clearInterval(_dwgElapsedTimer);
+  _dwgElapsedTimer = setInterval(function() {
+    elapsedEl.textContent = Math.round((Date.now() - _dwgWaitStart) / 1000) + ' שניות';
+  }, 1000);
+
+  if (_dwgCancelTimer) clearTimeout(_dwgCancelTimer);
+  _dwgCancelTimer = setTimeout(function() {   // reveal Cancel only after 30s
+    cancelBtn.style.display = 'block';
+    hintEl.textContent = 'לוקח יותר מהצפוי. ניתן לבטל ולנסות שוב.';
+  }, 30000);
+
+  cancelBtn.onclick = function() {
+    cancelBtn.disabled = true;
+    cancelBtn.textContent = 'מבטל…';
+    if (onCancel) onCancel();
+  };
+
+  return {
+    setMsg: function(m) { if (m) msgEl.textContent = m; },
+    close: function() {
+      if (_dwgCancelTimer) { clearTimeout(_dwgCancelTimer); _dwgCancelTimer = null; }
+      if (_dwgElapsedTimer) { clearInterval(_dwgElapsedTimer); _dwgElapsedTimer = null; }
+      bgEl.classList.remove('open');
+    }
+  };
 }
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────

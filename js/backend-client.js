@@ -225,6 +225,7 @@ window.geoJSONtoDWG = async function(features, options, onProgress) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ features: features, filename: filename }),
+      signal: options.signal,   // lets the caller cancel a stuck request
     });
 
     clearInterval(pollProgress);
