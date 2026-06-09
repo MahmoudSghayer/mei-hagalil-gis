@@ -28,6 +28,14 @@ ALTER TABLE public.profiles
   ADD CONSTRAINT profiles_role_check
   CHECK (role IN ('admin', 'engineer', 'office', 'user'));
 
+-- is_admin() — defined here so the engine schema is self-contained even if the
+-- app's original db/schema.sql has not been applied to this project. Idempotent.
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER STABLE AS $$
+  SELECT EXISTS (SELECT 1 FROM public.profiles
+    WHERE id = auth.uid() AND role = 'admin' AND is_active = true);
+$$;
+
 -- admin → edit GIS + meters | engineer → edit GIS, read meters | office/user → read-only
 CREATE OR REPLACE FUNCTION public.can_edit_gis()
 RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER STABLE AS $$
