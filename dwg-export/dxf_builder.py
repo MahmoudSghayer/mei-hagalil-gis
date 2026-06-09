@@ -51,19 +51,29 @@ PIPE_CATS: frozenset[str] = WATER_PIPE_CATS | SEWAGE_PIPE_CATS
 # Circle radius for point features (CEO instruction)
 POINT_RADIUS = 0.65
 
-# Manhole block — recreated from the customer's reference DWG.
+# Manhole block — visible annotation stack matching the CEO's reference picture:
+#
+#     TL=253.79
+#     IL1=
+#     IL2=0.00
+#     H=1.53
+#     100
+#
+# Attributes are stacked top→bottom in this exact order, to the right of the
+# manhole circle, and are VISIBLE (the customer reads the levels off the block).
 MANHOLE_BLOCK = "שוחת-ביוב"
-# (tag, insert_x, insert_y) for the 7 invisible block attributes
-MANHOLE_ATTDEFS: list[tuple[str, float, float]] = [
-    ("תאור",        6.589, -0.647),
-    ("גובה_מכסה",   3.150,  2.738),
-    ("גובה_כניסה",  3.130,  1.361),
-    ("גובה_יציאה",  3.070, -4.804),
-    ("עומק_שוחה",   3.070, -2.277),
-    ("קוטר_שוחה",   3.130, -3.466),
-    ("הערות",       3.130, -6.252),
-]
 ATTDEF_HEIGHT = 1.35
+_ATT_LINE = 1.9          # vertical spacing between the stacked rows
+_ATT_X = 3.0             # horizontal offset from the manhole centre
+_ATT_Y0 = 3.0            # y of the top (TL) row
+# (tag, insert_x, insert_y) — order matters: TL, IL1, IL2, H, DIA top→bottom
+MANHOLE_ATTDEFS: list[tuple[str, float, float]] = [
+    ("TL",  _ATT_X, _ATT_Y0 - 0 * _ATT_LINE),
+    ("IL1", _ATT_X, _ATT_Y0 - 1 * _ATT_LINE),
+    ("IL2", _ATT_X, _ATT_Y0 - 2 * _ATT_LINE),
+    ("H",   _ATT_X, _ATT_Y0 - 3 * _ATT_LINE),
+    ("DIA", _ATT_X, _ATT_Y0 - 4 * _ATT_LINE),
+]
 
 
 # ── coordinate conversion ─────────────────────────────────────────────────────
@@ -75,6 +85,28 @@ def _make_transformer() -> Transformer:
 def _to_itm(lon: float, lat: float, t: Transformer) -> tuple[float, float]:
     x, y = t.transform(lon, lat)
     return float(x), float(y)
+
+
+def _line_midpoint(raw_coords: list, t: Transformer) -> tuple[float, float]:
+    """ITM point at half the polyline's length — the AutoCAD MIDpoint of the
+    line, not an end vertex. For a straight 2-vertex pipe this is exactly the
+    centre of the segment."""
+    pts = [_to_itm(c[0], c[1], t) for c in raw_coords]
+    if len(pts) == 1:
+        return pts[0]
+    seglens = [math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1])
+               for i in range(len(pts) - 1)]
+    total = sum(seglens)
+    if total == 0:
+        return pts[0]
+    half, acc = total / 2.0, 0.0
+    for i, d in enumerate(seglens):
+        if acc + d >= half:
+            r = (half - acc) / d if d else 0.0
+            return (pts[i][0] + r * (pts[i + 1][0] - pts[i][0]),
+                    pts[i][1] + r * (pts[i + 1][1] - pts[i][1]))
+        acc += d
+    return pts[-1]
 
 
 # ── formatting helpers ─────────────────────────────────────────────────────────
@@ -157,8 +189,8 @@ def _attach_xdata(entity: Any, props: dict) -> None:
 # ── manhole block ──────────────────────────────────────────────────────────────
 
 def _ensure_manhole_block(doc: Drawing) -> None:
-    """Define the שוחת-ביוב block: circle (r=0.65) + diagonal mark + invisible
-    attribute definitions — recreated from the customer's reference DWG."""
+    """Define the שוחת-ביוב block: circle (r=0.65) + diagonal mark + the visible
+    TL / IL1 / IL2 / H / DIA attribute rows (in that order, top→bottom)."""
     if MANHOLE_BLOCK in doc.blocks:
         return
     blk = doc.blocks.new(name=MANHOLE_BLOCK)
@@ -169,28 +201,31 @@ def _ensure_manhole_block(doc: Drawing) -> None:
             tag=tag,
             insert=(ax, ay),
             height=ATTDEF_HEIGHT,
-            dxfattribs={"flags": 1},  # 1 = invisible
+            dxfattribs={"flags": 0},  # 0 = visible
         )
 
 
 def _manhole_attrib_values(props: dict) -> dict[str, str]:
-    """Map GIS manhole fields → the block's Hebrew attribute tags."""
-    vals = {tag: "" for tag, _, _ in MANHOLE_ATTDEFS}
-    vals["תאור"] = "שוחת ביוב"
-    if props.get("TL") not in (None, ""):
-        vals["גובה_מכסה"] = _fmt_num(props["TL"], 2)
-    # No dedicated inlet-IL field in the source data → גובה_כניסה stays empty
-    if props.get("HighIL") not in (None, ""):
-        vals["גובה_כניסה"] = _fmt_num(props["HighIL"], 2)
-    if props.get("LowIL") not in (None, ""):
-        vals["גובה_יציאה"] = _fmt_num(props["LowIL"], 2)
-    if props.get("Depth") not in (None, ""):
-        vals["עומק_שוחה"] = _fmt_num(props["Depth"], 2)
-    if props.get("ManholeDia") not in (None, ""):
-        vals["קוטר_שוחה"] = _fmt_num(props["ManholeDia"])
-    if props.get("Comment") not in (None, ""):
-        vals["הערות"] = str(props["Comment"])[:100]
-    return vals
+    """Map GIS manhole fields → the visible TL / IL1 / IL2 / H / DIA rows.
+
+    Field map (matches the CEO's reference picture):
+      TL  = Top Level        ← props["TL"]
+      IL1 = Invert Level 1   ← props["HighIL"]  (inlet; empty when absent)
+      IL2 = Invert Level 2   ← props["LowIL"]   (outlet)
+      H   = Height (depth)   ← props["Depth"]
+      DIA = manhole diameter ← props["ManholeDia"]   (shown bare, e.g. "100")
+    """
+    def num(key: str, decimals: int | None = 2) -> str:
+        v = props.get(key)
+        return _fmt_num(v, decimals) if v not in (None, "") else ""
+
+    return {
+        "TL":  f"TL={num('TL')}",
+        "IL1": f"IL1={num('HighIL')}",
+        "IL2": f"IL2={num('LowIL')}",
+        "H":   f"H={num('Depth')}",
+        "DIA": num("ManholeDia", None),
+    }
 
 
 def _add_manhole(msp: Any, props: dict, x: float, y: float) -> None:
@@ -198,8 +233,6 @@ def _add_manhole(msp: Any, props: dict, x: float, y: float) -> None:
         "layer": props.get("_category", "sewage_manholes"),
     })
     ref.add_auto_attribs(_manhole_attrib_values(props))
-    for att in ref.attribs:               # invisible, like the reference DWG
-        att.dxf.flags = att.dxf.flags | 1
     _attach_xdata(ref, props)
 
 
@@ -315,15 +348,15 @@ def build_dxf(features: list[dict]) -> Drawing:
 
         elif gtype == "LineString":
             _add_polyline(msp, coords, layer, False, t, props, bounds)
-            mid = coords[len(coords) // 2]
-            label_pt = _to_itm(mid[0], mid[1], t)
+            label_pt = _line_midpoint(coords, t)        # midpoint, not end
 
         elif gtype == "MultiLineString":
             for seg in coords:
                 _add_polyline(msp, seg, layer, False, t, props, bounds)
-            mid_seg = coords[len(coords) // 2]
-            mid_pt = mid_seg[len(mid_seg) // 2]
-            label_pt = _to_itm(mid_pt[0], mid_pt[1], t)
+            # label the midpoint of the longest segment
+            longest = max((s for s in coords if s), key=len, default=None)
+            if longest:
+                label_pt = _line_midpoint(longest, t)
 
         elif gtype == "Polygon":
             _add_polyline(msp, coords[0], layer, True, t, props, bounds)
