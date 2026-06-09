@@ -262,7 +262,8 @@ function processZipFile(file, onDone, onError) {
 function handleFile(file) {
   var isZip     = /\.zip$/i.test(file.name);
   var isGeoJson = /\.(geojson|json)$/i.test(file.name);
-  if (!isZip && !isGeoJson) { showToast('קבצי GeoJSON, JSON, או ZIP בלבד', 'error'); return; }
+  var isDwg     = /\.dwg$/i.test(file.name);
+  if (!isZip && !isGeoJson && !isDwg) { showToast('קבצי GeoJSON, JSON, ZIP או DWG בלבד', 'error'); return; }
   if (file.size > 100*1024*1024) { showToast('גודל מקסימלי 100MB', 'error'); return; }
 
   gFile = file;
@@ -276,6 +277,24 @@ function handleFile(file) {
       finishFileLoad(data);
     }, function(err) {
       showToast('שגיאה: ' + err.message, 'error');
+      clearFile();
+    });
+  } else if (isDwg) {
+    // DWG → GeoJSON via the conversion backend, then the same village/upload pipeline.
+    if (typeof window.dwgToGeoJSON !== 'function') {
+      showToast('שירות המרת DWG לא נטען', 'error'); clearFile(); return;
+    }
+    showToast('⏳ ממיר DWG בשרת (עשוי להימשך עד דקה)...', 'info');
+    var dwgStatusEl = document.getElementById('fp-size');
+    window.dwgToGeoJSON(file, {}, function(stage, pct, msg) {
+      if (dwgStatusEl && msg) dwgStatusEl.textContent = msg;
+    }).then(function(data) {
+      if (!data || !Array.isArray(data.features) || !data.features.length) {
+        showToast('לא נמצאו אובייקטים בקובץ ה-DWG', 'error'); clearFile(); return;
+      }
+      finishFileLoad(data);
+    }).catch(function(err) {
+      showToast('שגיאת המרת DWG: ' + (err && err.message ? err.message : err), 'error');
       clearFile();
     });
   } else {
