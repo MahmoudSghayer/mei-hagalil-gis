@@ -17,6 +17,7 @@ import subprocess
 import tempfile
 from typing import Any
 
+import jwt
 from fastapi import FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -46,9 +47,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Auth token the frontend sends in X-Api-Token. ALWAYS override this in Render
-# via the API_TOKEN env var — the value below is only a fallback for local dev.
+# Legacy auth token the frontend sends in X-Api-Token. Kept only as a transitional
+# fallback — the preferred auth is a Supabase session JWT (see SUPABASE_JWT_SECRET).
 API_TOKEN: str = os.getenv("API_TOKEN", "7bnNTN5T70qMRGp75AnrWe5NwaQFawG6tUmi35mz")
+
+# Supabase project JWT secret (Dashboard → Settings → API → JWT Secret).
+# When set, the service accepts a logged-in user's "Authorization: Bearer <access_token>"
+# and no static token needs to live in the browser. Leave unset to keep token-only auth.
+SUPABASE_JWT_SECRET: str = os.getenv("SUPABASE_JWT_SECRET", "")
 
 
 # ── models ────────────────────────────────────────────────────────────────────
@@ -60,9 +66,33 @@ class ExportRequest(BaseModel):
 
 # ── auth ──────────────────────────────────────────────────────────────────────
 
-def _require_auth(token: str | None) -> None:
-    if token != API_TOKEN:
-        raise HTTPException(status_code=401, detail="Unauthorized")
+def _valid_supabase_jwt(authorization: str | None) -> bool:
+    """True if `authorization` is 'Bearer <token>' carrying a valid Supabase JWT."""
+    if not SUPABASE_JWT_SECRET or not authorization:
+        return False
+    parts = authorization.split()
+    if len(parts) != 2 or parts[0].lower() != "bearer":
+        return False
+    try:
+        jwt.decode(
+            parts[1],
+            SUPABASE_JWT_SECRET,
+            algorithms=["HS256"],
+            audience="authenticated",
+        )
+        return True
+    except Exception:
+        return False
+
+
+def _require_auth(x_api_token: str | None, authorization: str | None = None) -> None:
+    # Preferred: a valid Supabase session JWT — no shared secret lives in the client.
+    if _valid_supabase_jwt(authorization):
+        return
+    # Transitional fallback: the static token (drop once all clients send a JWT).
+    if x_api_token and x_api_token == API_TOKEN:
+        return
+    raise HTTPException(status_code=401, detail="Unauthorized")
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -192,8 +222,9 @@ def health() -> dict:
 async def export_dxf(
     body: ExportRequest,
     x_api_token: str | None = Header(None),
+    authorization: str | None = Header(None),
 ) -> StreamingResponse:
-    _require_auth(x_api_token)
+    _require_auth(x_api_token, authorization)
     dxf_bytes = _build_dxf_bytes(body.features)
     fname = f"{body.filename}.dxf"
     return StreamingResponse(
@@ -207,8 +238,9 @@ async def export_dxf(
 async def export_dwg(
     body: ExportRequest,
     x_api_token: str | None = Header(None),
+    authorization: str | None = Header(None),
 ) -> StreamingResponse:
-    _require_auth(x_api_token)
+    _require_auth(x_api_token, authorization)
 
     dxf_bytes = _build_dxf_bytes(body.features)
     dwg_bytes = _dxf_to_dwg(dxf_bytes)
@@ -237,9 +269,10 @@ async def export_dwg(
 async def convert_dwg_to_dxf(
     file: UploadFile = File(...),
     x_api_token: str | None = Header(None),
+    authorization: str | None = Header(None),
 ) -> StreamingResponse:
     """Convert an uploaded DWG file to DXF (for inspection / round-tripping)."""
-    _require_auth(x_api_token)
+    _require_auth(x_api_token, authorization)
     dwg_bytes = await file.read()
     dxf_bytes = _dwg_to_dxf(dwg_bytes)
     if not dxf_bytes:

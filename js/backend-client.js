@@ -217,13 +217,20 @@ window.geoJSONtoDWG = async function(features, options, onProgress) {
     else                   onProgress('process', 90, 'עוד רגע... (' + Math.round(elapsed) + 'ש)');
   }, 2000);
 
+  // Prefer the logged-in user's Supabase JWT; keep the static token as a fallback.
+  var dwgHeaders = { 'X-Api-Token': DWG_EXPORT_TOKEN, 'Content-Type': 'application/json' };
+  try {
+    if (window.gSb) {
+      var _sess = await window.gSb.auth.getSession();
+      var _at = _sess && _sess.data && _sess.data.session && _sess.data.session.access_token;
+      if (_at) dwgHeaders['Authorization'] = 'Bearer ' + _at;
+    }
+  } catch (e) { /* fall back to static token */ }
+
   try {
     var res = await fetch(DWG_EXPORT_URL + '/api/export/dwg', {
       method: 'POST',
-      headers: {
-        'X-Api-Token': DWG_EXPORT_TOKEN,
-        'Content-Type': 'application/json',
-      },
+      headers: dwgHeaders,
       body: JSON.stringify({ features: features, filename: filename }),
       signal: options.signal,   // lets the caller cancel a stuck request
     });
