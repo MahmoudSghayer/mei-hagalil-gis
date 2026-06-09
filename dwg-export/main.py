@@ -46,7 +46,13 @@ app.add_middleware(
     allow_origins=ALLOWED_ORIGINS,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["X-Fallback-Format", "X-Fallback-Reason"],
 )
+
+# Above this feature count, skip the memory-heavy ODA DWG conversion and return
+# DXF instead — large exports OOM-crash the converter on small instances (502).
+# Raise this if you move to an instance with more RAM.
+MAX_DWG_FEATURES: int = int(os.getenv("MAX_DWG_FEATURES", "8000"))
 
 # Legacy auth token the frontend sends in X-Api-Token. Kept only as a transitional
 # fallback — the preferred auth is a Supabase session JWT (see SUPABASE_JWT_SECRET).
@@ -244,7 +250,10 @@ async def export_dwg(
     _require_auth(x_api_token, authorization)
 
     dxf_bytes = _build_dxf_bytes(body.features)
-    dwg_bytes = _dxf_to_dwg(dxf_bytes)
+
+    # Skip the OOM-prone ODA step for very large exports → return DXF, don't 502.
+    too_large = len(body.features) > MAX_DWG_FEATURES
+    dwg_bytes = None if too_large else _dxf_to_dwg(dxf_bytes)
 
     if dwg_bytes:
         fname = f"{body.filename}.dwg"
@@ -254,7 +263,8 @@ async def export_dwg(
             headers={"Content-Disposition": f'attachment; filename="{fname}"'},
         )
 
-    # ODA not available — return DXF so the user still gets their data
+    # Fall back to DXF (still opens in AutoCAD) — either ODA is unavailable, or the
+    # export is too large to convert to DWG on this instance without crashing.
     fname = f"{body.filename}.dxf"
     return StreamingResponse(
         io.BytesIO(dxf_bytes),
@@ -262,6 +272,7 @@ async def export_dwg(
         headers={
             "Content-Disposition": f'attachment; filename="{fname}"',
             "X-Fallback-Format": "dxf",
+            "X-Fallback-Reason": "too_large" if too_large else "oda_unavailable",
         },
     )
 

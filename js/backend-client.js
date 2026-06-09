@@ -254,6 +254,7 @@ window.geoJSONtoDWG = async function(features, options, onProgress) {
     }
 
     var isFallback = res.headers.get('X-Fallback-Format') === 'dxf';
+    var fbReason   = res.headers.get('X-Fallback-Reason') || '';
     var ext  = isFallback ? '.dxf' : '.dwg';
     var mime = isFallback ? 'application/dxf' : 'application/octet-stream';
 
@@ -265,9 +266,11 @@ window.geoJSONtoDWG = async function(features, options, onProgress) {
     setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
 
     var elapsed = (Date.now() - startedAt) / 1000;
-    if (onProgress) onProgress('done', 100,
-      (isFallback ? '⚠️ DXF (ODA לא מותקן)' : '✅ DWG') +
-      ' — הורד ב-' + Math.round(elapsed) + 'ש');
+    var doneMsg = !isFallback ? '✅ DWG'
+      : (fbReason === 'too_large'
+          ? '⚠️ ייצוא גדול — הוחזר DXF (אפשר לפתוח ולשמור כ-DWG ב-AutoCAD)'
+          : '⚠️ הוחזר DXF (ODA לא זמין)');
+    if (onProgress) onProgress('done', 100, doneMsg + ' — הורד ב-' + Math.round(elapsed) + 'ש');
 
     return { format: isFallback ? 'dxf' : 'dwg' };
   } catch(e) {
