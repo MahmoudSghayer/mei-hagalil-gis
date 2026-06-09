@@ -383,7 +383,7 @@ async function loadAllVillages() {
   renderVillagesList();      // list every village (unloaded ones show a "zoom/click to load" hint)
   renderVillagePins();       // lightweight pins at village centers for the overview
   gMap.on('moveend', loadVisibleVillages);
-  gMap.on('zoomend', updatePinsVisibility);
+  gMap.on('zoomend', function() { updatePinsVisibility(); applyDetailVisibility(); });
   loadVisibleVillages();     // load whatever is already in view (startup zoom 11 → nothing loads)
 }
 
@@ -398,7 +398,6 @@ function renderVillagePins() {
   if (gVillagePins) gMap.removeLayer(gVillagePins);
   gVillagePins = L.layerGroup();
   gVillages.forEach(function(v) {
-    if (gVillageState[v.village_id]) return;        // already loaded → no pin
     var c = villageCenterOf(v);
     if (!c) return;
     var html = '<div class="village-pin" style="background:#0d3b5e;color:#fff;font-size:11px;font-weight:700;padding:3px 9px;border-radius:12px;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.35);cursor:pointer;border:1.5px solid #fff">' + (v.icon || '📍') + ' ' + shortVillageName(v) + '</div>';
@@ -434,7 +433,6 @@ function ensureVillageLoaded(v) {
   loadVillageData(v).then(function() {
     delete gVillageLoading[vid];
     renderVillagesList();               // now show its categories
-    renderVillagePins();                // drop this village's pin
   }, function(e) {
     delete gVillageLoading[vid];
     renderVillagesList();
@@ -451,6 +449,24 @@ function flyToVillage(v) {
   var c = villageCenterOf(v);
   if (c) gMap.flyTo(c, Math.max(LOAD_ZOOM + 1, 15), { duration: 1.2 });  // moveend then loads it
   else ensureVillageLoaded(v);
+}
+
+function inDetail() { return gMap.getZoom() >= LOAD_ZOOM; }
+
+// At overview zoom, hide loaded village layers (their pins stand in); restore on zoom-in.
+function applyDetailVisibility() {
+  var detail = inDetail();
+  gVillages.forEach(function(v) {
+    var state = gVillageState[v.village_id];
+    if (!state) return;
+    var layers = gVillageLayers[v.village_id] || {};
+    Object.keys(state.cats).forEach(function(catId) {
+      var layer = layers[catId];
+      if (!layer) return;
+      if (!detail) gMap.removeLayer(layer);
+      else if (state.masterOn && state.cats[catId]) gMap.addLayer(layer);
+    });
+  });
 }
 
 function highlightLayer(layer, origStyle) {
@@ -497,7 +513,7 @@ async function loadVillageData(village) {
       gVillageState[vid].counts[catId] = categories[catId].length;
       // Only build the Leaflet layer for categories shown by default; the rest
       // are built lazily on first toggle-on (saves rendering thousands of hidden features).
-      if (def.defaultOn) buildCategoryLayer(vid, catId).addTo(gMap);
+      if (def.defaultOn) { var grp = buildCategoryLayer(vid, catId); if (inDetail()) grp.addTo(gMap); }
     });
   } catch(e) { console.error('Failed to load ' + village.village_id, e); }
 }
@@ -658,7 +674,7 @@ function renderVillagesList() {
       // Not loaded yet — lightweight header; clicking (or zooming in) loads it.
       var hint = gVillageLoading[v.village_id] ? 'טוען…' : 'התקרב או לחץ לטעינה';
       return '<div class="village-group collapsed" id="vg-'+v.village_id+'">'+
-        '<div class="village-header" onclick="ensureVillageLoadedById(\''+v.village_id+'\')">'+
+        '<div class="village-header" onclick="zoomToVillage(\''+v.village_id+'\')">'+
           '<span class="village-icon">'+v.icon+'</span>'+
           '<span class="village-name">'+shortVillageName(v)+'</span>'+
           '<span class="zoom-link" onclick="event.stopPropagation();zoomToVillage(\''+v.village_id+'\')">🎯</span>'+
@@ -723,10 +739,11 @@ function toggleVillage(villageId) {
   document.getElementById('master-tog-'+villageId).classList.toggle('on', state.masterOn);
   Object.keys(state.cats).forEach(function(catId) {
     if (state.masterOn && state.cats[catId]) {
-      gMap.addLayer(buildCategoryLayer(villageId, catId));   // build lazily on first show
+      var on = buildCategoryLayer(villageId, catId);         // build lazily on first show
+      if (inDetail()) gMap.addLayer(on);                     // shown only at detail zoom
     } else {
-      var layer = gVillageLayers[villageId][catId];
-      if (layer) gMap.removeLayer(layer);
+      var off = gVillageLayers[villageId][catId];
+      if (off) gMap.removeLayer(off);
     }
   });
 }
@@ -736,10 +753,11 @@ function toggleSubLayer(villageId, catId) {
   state.cats[catId] = !state.cats[catId];
   document.getElementById('sub-tog-'+villageId+'-'+catId).classList.toggle('on', state.cats[catId]);
   if (state.cats[catId] && state.masterOn) {
-    gMap.addLayer(buildCategoryLayer(villageId, catId));     // build lazily on first show
+    var on = buildCategoryLayer(villageId, catId);           // build lazily on first show
+    if (inDetail()) gMap.addLayer(on);                       // shown only at detail zoom
   } else {
-    var layer = gVillageLayers[villageId][catId];
-    if (layer) gMap.removeLayer(layer);
+    var off = gVillageLayers[villageId][catId];
+    if (off) gMap.removeLayer(off);
   }
 }
 
