@@ -18,12 +18,13 @@ import tempfile
 from typing import Any
 
 import jwt
-from fastapi import FastAPI, File, Header, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from dxf_builder import build_dxf
+from dxf_to_geojson import dxf_to_geojson
 
 app = FastAPI(
     title="Mei HaGalil GIS — DWG Export Service",
@@ -263,6 +264,26 @@ async def export_dwg(
             "X-Fallback-Format": "dxf",
         },
     )
+
+
+@app.post("/api/convert/dwg-to-geojson")
+async def convert_dwg_to_geojson(
+    file: UploadFile = File(...),
+    source_crs: str = Form("EPSG:2039"),
+    x_api_token: str | None = Header(None),
+    authorization: str | None = Header(None),
+) -> JSONResponse:
+    """Convert an uploaded DWG → WGS84 GeoJSON (for importing into the map)."""
+    _require_auth(x_api_token, authorization)
+    dwg_bytes = await file.read()
+    dxf_bytes = _dwg_to_dxf(dwg_bytes)
+    if not dxf_bytes:
+        raise HTTPException(status_code=500, detail="DWG→DXF conversion failed (ODA unavailable?)")
+    try:
+        geojson = dxf_to_geojson(dxf_bytes, source_crs=source_crs or "EPSG:2039")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"DXF parse failed: {e}")
+    return JSONResponse(geojson)
 
 
 @app.post("/api/convert/dwg-to-dxf")

@@ -64,10 +64,21 @@ window.dwgToGeoJSON = async function(dwgFile, options, onProgress) {
     else onProgress('process', 90, 'עוד רגע... (' + Math.round(elapsed) + 'ש)');
   }, 2000);
 
+  // Routed through the live DWG-export service (the old converter backend is gone).
+  // Auth: prefer the logged-in user's Supabase JWT; static token as fallback.
+  var convHeaders = { 'X-Api-Token': DWG_EXPORT_TOKEN };
   try {
-    var res = await fetch(BACKEND_URL + '/api/convert/dwg', {
+    if (window.gSb) {
+      var _s = await window.gSb.auth.getSession();
+      var _t = _s && _s.data && _s.data.session && _s.data.session.access_token;
+      if (_t) convHeaders['Authorization'] = 'Bearer ' + _t;
+    }
+  } catch (e) { /* fall back to static token */ }
+
+  try {
+    var res = await fetch(DWG_EXPORT_URL + '/api/convert/dwg-to-geojson', {
       method: 'POST',
-      headers: { 'X-API-Token': BACKEND_TOKEN },
+      headers: convHeaders,
       body: formData,
     });
 
