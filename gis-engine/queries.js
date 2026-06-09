@@ -60,6 +60,33 @@
     return tokens;
   }
 
+  // Evaluate one { field, op, value } condition against a properties object.
+  function evalCond(props, c) {
+    var left = c.field === 'asset_code' ? props.asset_code : props[c.field];
+    var right = c.value;
+    if (typeof right === 'number') {
+      var ln = parseFloat(left);
+      if (isNaN(ln)) return false;
+      switch (c.op) {
+        case '=': return ln === right; case '!=': case '<>': return ln !== right;
+        case '<': return ln < right; case '<=': return ln <= right;
+        case '>': return ln > right; case '>=': return ln >= right;
+        default: return false;
+      }
+    }
+    if (c.op === 'like') {
+      var pat = String(right).toLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/%/g, '.*');
+      return new RegExp('^' + pat + '$').test(String(left == null ? '' : left).toLowerCase());
+    }
+    var ls = String(left == null ? '' : left), rs = String(right);
+    switch (c.op) {
+      case '=': return ls === rs; case '!=': case '<>': return ls !== rs;
+      case '<': return ls < rs; case '<=': return ls <= rs;
+      case '>': return ls > rs; case '>=': return ls >= rs;
+      default: return false;
+    }
+  }
+
   GIS.queries = {
 
     // Parse a filter string into { logic:'and'|'or', conditions:[{field,op,value}] }.
@@ -93,6 +120,21 @@
       }
       if (peek().t !== 'eof') throw new Error('Unexpected trailing tokens in filter');
       return { logic: logic || 'and', conditions: conditions };
+    },
+
+    // Evaluate a parsed filter against an in-memory feature array (client-side).
+    // Used for data that isn't in PostGIS (e.g. the uploaded village GeoJSON
+    // served as flat files). Same operators as the server-side RPC.
+    applyFilter: function (features, filter) {
+      var parsed = (filter && typeof filter === 'object' && filter.conditions)
+        ? filter : GIS.queries.parseFilterToSQL(filter);
+      if (!parsed.conditions.length) return features || [];
+      var test = function (f) {
+        var props = (f && f.properties) || {};
+        var results = parsed.conditions.map(function (c) { return evalCond(props, c); });
+        return parsed.logic === 'or' ? results.some(Boolean) : results.every(Boolean);
+      };
+      return (features || []).filter(test);
     },
 
     // Filter a layer's features. `filter` may be a string ("diameter > 100")

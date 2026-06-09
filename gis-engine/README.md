@@ -26,6 +26,7 @@ No build step, no framework. Plain `<script>` files attaching to a global
   queries.js      GIS.queries   — SQL-like attribute filtering
   spatial.js      GIS.spatial   — distance / buffer / intersects / withinRadius
   meters.js       GIS.meters    — ARad meter integration (admin only)
+  villages.js     GIS.villages  — adapter for ALREADY-UPLOADED village GeoJSON
   /sql
     schema.sql    tables, RPCs, triggers, RLS   (run once in Supabase)
     seed.sql      example dataset
@@ -147,6 +148,34 @@ const anomalies = await GIS.meters.getAnomalies();   // consumption > 1.5× avg
 
 // future-ready: pull from ARad API (set GIS.config.aradSyncUrl first)
 await GIS.meters.syncMeters();
+```
+
+## Example — work with already-uploaded village data (no migration)
+
+The 7 villages were uploaded as flat GeoJSON in Storage (indexed by
+`village_layers`, categorised by `properties._category`). `GIS.villages` brings
+them under the engine without moving them into PostGIS. It reuses the features
+`index.js` already loaded (`window.gVillageFeatures`) or fetches from Storage,
+and synthesises a stable `asset_code` on read. Filtering + the calculator run
+client-side (this data isn't in PostGIS).
+
+```js
+const villages = await GIS.villages.getVillages();          // village_layers rows
+const cats = await GIS.villages.getCategories(villages[0].village_id);
+// → [{ category:'water_pipes', count: 18121 }, ...]
+
+// all features (asset_code synthesised), or just one category
+const fc   = await GIS.villages.getFeatures(vid);
+const pipes = await GIS.villages.getFeatures(vid, { category: 'water_pipes' });
+
+// same SQL-like filter syntax, evaluated client-side
+const old = await GIS.villages.query(vid, "install_year < 2000", { category: 'water_pipes' });
+
+// same field calculator
+const ages = await GIS.villages.calculate(vid, '2026 - install_year', { category: 'water_pipes' });
+
+// click a village feature → shared attribute panel
+GIS.villages.openInPanel(fc.features[0]);
 ```
 
 ---
