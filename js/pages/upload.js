@@ -497,6 +497,51 @@ function toggleOverride() {
   document.getElementById('d-override-form').classList.toggle('show');
 }
 
+// ── Merge-upload dedup ────────────────────────────────────────────────────────
+// A new feature is a duplicate of an existing one iff it has the same geometry
+// (coordinates rounded to ~1cm to absorb float noise) AND the same real
+// attributes. Internal bookkeeping fields (prefixed "_": _category, _village,
+// _original_layer) are ignored — the source attributes (Layer, lengths, depths,
+// diameters, etc.) are what define identity.
+function _roundCoord(c) {
+  if (typeof c === 'number') return Math.round(c * 1e7) / 1e7;
+  if (Array.isArray(c)) { var out = []; for (var i = 0; i < c.length; i++) out.push(_roundCoord(c[i])); return out; }
+  return c;
+}
+
+function featureSignature(f) {
+  var g = (f && f.geometry) || {};
+  var geom = (g.type || '') + ':' + JSON.stringify(_roundCoord(g.coordinates));
+  var p = (f && f.properties) || {};
+  var keys = [];
+  for (var k in p) { if (Object.prototype.hasOwnProperty.call(p, k) && k.charAt(0) !== '_') keys.push(k); }
+  keys.sort();
+  var parts = [];
+  for (var i = 0; i < keys.length; i++) {
+    var v = p[keys[i]];
+    parts.push(keys[i] + '=' + (v == null ? '' : String(v)));
+  }
+  return geom + '' + parts.join('');
+}
+
+// Read the village's current active GeoJSON features (the data we must keep).
+async function fetchActiveVillageFeatures(slug) {
+  try {
+    var res = await gSb.from('village_layers')
+      .select('file_path')
+      .like('village_id', slug + '_%')
+      .eq('is_active', true)
+      .order('uploaded_at', { ascending: false })
+      .limit(1);
+    if (res.error || !res.data || !res.data.length) return [];
+    var url = gSb.storage.from('village-layers').getPublicUrl(res.data[0].file_path).data.publicUrl;
+    var resp = await fetch(url);
+    if (!resp.ok) return [];
+    var data = await resp.json();
+    return (data && data.features) || [];
+  } catch (e) { console.warn('merge: failed to read existing village data', e); return []; }
+}
+
 function analyzeAndDisplayLayers() {
   gLayerStats = {};
   gFileData.features.forEach(function(f) {
@@ -659,7 +704,7 @@ async function doUpload() {
     }
 
     var ts = Date.now();
-    var totalUploaded = 0;
+    var totalAdded = 0, totalSkipped = 0;
 
     for (var vi = 0; vi < slugs.length; vi++) {
       var slug = slugs[vi];
@@ -672,7 +717,26 @@ async function doUpload() {
       pf.style.width = (55 + Math.round(40 * (vi + 1) / slugs.length)) + '%';
       pt.textContent = vFeatures.length + ' אובייקטים...';
 
-      // Deactivate all previous uploads for this village before inserting the new one
+      // MERGE with existing data — keep both. Skip new features that already exist
+      // (same geometry + same real attributes), so re-uploading the same data is safe.
+      pt.textContent = 'בודק כפילויות מול הנתונים הקיימים...';
+      var existing = await fetchActiveVillageFeatures(village.slug);
+      var seen = {};
+      for (var ei = 0; ei < existing.length; ei++) seen[featureSignature(existing[ei])] = true;
+      var merged = existing.slice();
+      var addedCount = 0, skippedCount = 0;
+      for (var ni = 0; ni < vFeatures.length; ni++) {
+        var sig = featureSignature(vFeatures[ni]);
+        if (seen[sig]) { skippedCount++; continue; }
+        seen[sig] = true;
+        merged.push(vFeatures[ni]);
+        addedCount++;
+      }
+      totalAdded += addedCount;
+      totalSkipped += skippedCount;
+      pt.textContent = 'נוספו ' + addedCount + ' · דולגו ' + skippedCount + ' כפולים · סה"כ ' + merged.length;
+
+      // Deactivate previous uploads for this village; the new file holds the merged set.
       await gSb.from('village_layers')
         .update({ is_active: false })
         .eq('is_active', true)
@@ -681,13 +745,15 @@ async function doUpload() {
       var fileName = village.slug + '_' + ts + (slugs.length > 1 ? '_' + vi : '') + '.geojson';
       var dataToUpload = {
         type: 'FeatureCollection',
-        features: vFeatures,
+        features: merged,
         _meta: {
           uploaded_at: new Date().toISOString(),
           original_filename: gFile.name,
           detected_village: village.name,
           layer_count: Object.keys(catCounts).length,
-          kept_features: vFeatures.length
+          kept_features: merged.length,
+          added: addedCount,
+          skipped_duplicates: skippedCount
         }
       };
       var fileBlob = new Blob([JSON.stringify(dataToUpload)], { type: 'application/json' });
@@ -702,18 +768,17 @@ async function doUpload() {
         village_name: displayName,
         icon: icon,
         file_path: fileName,
-        feature_count: vFeatures.length,
+        feature_count: merged.length,
         uploaded_by: gAdminId,
         uploaded_at: new Date().toISOString(),
         is_active: true
       }, { onConflict: 'village_id' });
       if (metaRes.error) throw metaRes.error;
 
-      totalUploaded += vFeatures.length;
     }
 
     pf.style.width = '100%';
-    pt.textContent = '✅ הועלו ' + totalUploaded + ' אובייקטים ל-' + slugs.length + ' כפרים';
+    pt.textContent = '✅ נוספו ' + totalAdded + ' · דולגו ' + totalSkipped + ' כפולים · ' + slugs.length + ' כפרים';
     var villageNames = slugs.map(function(s) { return taggedByVillage[s].village.name; }).join(', ');
     showToast('✅ הועלה ל: ' + villageNames, 'success');
 
