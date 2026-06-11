@@ -5,6 +5,7 @@
 // ════════════════════════════════════════════════════════════════
 
 var gRows = null;   // הרשומות המנותחות
+var MAX_FILE_MB = 8;   // גודל קובץ מרבי לייבוא
 
 window.addEventListener('load', async function () {
   var res = await gSb.auth.getSession();
@@ -42,9 +43,19 @@ function clearFile() {
 function handleFile(file) {
   document.getElementById('file-preview').style.display = 'flex';
   document.getElementById('fp-name').textContent = file.name;
-  document.getElementById('fp-size').textContent = (file.size / 1024).toFixed(1) + ' KB';
+  document.getElementById('fp-size').textContent = fmtSize(file.size);
   document.getElementById('mi-result').style.display = 'none';
   document.getElementById('mi-err').textContent = '';
+
+  if (file.size > MAX_FILE_MB * 1024 * 1024) {
+    gRows = null;
+    document.getElementById('mi-preview-wrap').style.display = 'block';
+    document.getElementById('mi-table').innerHTML = '';
+    document.getElementById('mi-count').textContent = '0';
+    document.getElementById('mi-err').textContent =
+      'הקובץ גדול מדי (' + fmtSize(file.size) + '). הגודל המרבי לייבוא הוא ' + MAX_FILE_MB + ' MB.';
+    return;
+  }
 
   var reader = new FileReader();
   reader.onload = function () {
@@ -155,6 +166,10 @@ function downloadSample() {
   a.download = 'meters-sample.csv';
   a.click();
   URL.revokeObjectURL(a.href);
+}
+
+function fmtSize(bytes) {
+  return bytes >= 1048576 ? (bytes / 1048576).toFixed(2) + ' MB' : (bytes / 1024).toFixed(1) + ' KB';
 }
 
 function esc(x) { return String(x == null ? '' : x).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
