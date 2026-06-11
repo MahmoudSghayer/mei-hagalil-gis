@@ -49,10 +49,29 @@
   // raw_data, which import_meters merges and meters_geojson spreads back into
   // the map properties — so no schema change is needed to surface them.
   function normalize(raw) {
+    // Header keys in ARad/Excel exports often carry invisible bidi marks
+    // (RLM/LRM), zero-width chars, NBSP or gershayim, so a literal lookup of a
+    // Hebrew column name can miss. Build a cleaned-key index and fall back to
+    // it, so "מספר מונה" matches regardless of such noise.
+    var cleanKey = function (k) {
+      return String(k == null ? '' : k)
+        .replace(/[‎‏‪-‮⁦-⁩﻿​-‍]/g, '') // bidi / zero-width
+        .replace(/['"׳״’`]/g, '')   // geresh / gershayim / quotes
+        .replace(/ /g, ' ')     // NBSP → space
+        .replace(/\s+/g, ' ')
+        .trim();
+    };
+    var byClean = {};
+    Object.keys(raw).forEach(function (k) {
+      var ck = cleanKey(k);
+      if (byClean[ck] === undefined) byClean[ck] = raw[k];
+    });
     var pick = function () {
       for (var i = 0; i < arguments.length; i++) {
         var k = arguments[i];
-        if (raw[k] !== undefined && raw[k] !== null && raw[k] !== '') return raw[k];
+        var v = raw[k];
+        if (v === undefined || v === null || v === '') v = byClean[cleanKey(k)];
+        if (v !== undefined && v !== null && v !== '') return v;
       }
       return null;
     };
@@ -70,7 +89,7 @@
       raw_data: raw.raw_data || {}
     };
     if (lng !== null && lat !== null) { out.lng = Number(lng); out.lat = Number(lat); }
-    if (!out.arad_meter_id) throw new Error('[GIS.meters] record is missing arad_meter_id (מספר מונה)');
+    if (!out.arad_meter_id) throw new Error('[GIS.meters] record is missing arad_meter_id (מספר מונה). עמודות שזוהו: ' + Object.keys(raw).map(cleanKey).join(' | '));
 
     // Hebrew-file extras → raw_data (only when present, never clobber existing).
     var extra = {};
