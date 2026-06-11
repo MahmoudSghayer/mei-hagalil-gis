@@ -396,6 +396,19 @@ function toolbar(o) {
 function invalidateMap() { if (window.gMap) setTimeout(function () { gMap.invalidateSize(); }, 260); }
 
 // ── חיבור: עטיפת buildPopup ─────────────────────────────────────────────────────
+// לחיצה על פיצ'ר כפר → פותח קודם את פאנל המאפיינים (כולל מדים מקושרים
+// וחריגות), וממנו אפשר לפתוח את טבלת העריכה.
+var _ctxReg = {}, _ctxN = 0;
+function openPanelForVillage(vid, catId, props) {
+  var feats = window.gVillageFeatures && gVillageFeatures[vid] && gVillageFeatures[vid][catId];
+  var feat = (feats && props) ? feats.find(function (f) { return f.properties === props; }) : null;
+  if (!feat) feat = { type: 'Feature', properties: props || {}, geometry: null };
+  var village = (window.gVillageById && gVillageById[vid]) || {};
+  if (window.GISPanel) window.GISPanel.open(feat, { vid: vid, catId: catId, sub: village.village_name });
+  else open(vid, catId, props);   // נפילה אחורה לטבלה אם אין פאנל
+}
+window.__gisOpenPanelTok = function (tok) { var c = _ctxReg[tok]; if (c) openPanelForVillage(c.vid, c.catId, c.props); };
+
 function wirePopup() {
   if (typeof window.buildPopup !== 'function' || window.buildPopup.__gisWrapped) return false;
   var orig = window.buildPopup;
@@ -403,9 +416,11 @@ function wirePopup() {
     var html = orig.apply(this, arguments);
     var vid = village && village.village_id;
     if (vid && catId) {
-      if (GISTable.autoOpen) setTimeout(function () { open(vid, catId, props); }, 0);
-      html += '<button onclick="window.GISTable&&GISTable.open(\'' + esc(vid) + '\',\'' + esc(catId) + '\')" ' +
-        'style="margin-top:7px;width:100%;background:#0d3b5e;color:#fff;border:none;border-radius:7px;padding:7px;font-size:12px;font-weight:600;cursor:pointer">📋 טבלת מאפיינים</button>';
+      if (GISTable.autoOpen) setTimeout(function () { openPanelForVillage(vid, catId, props); }, 0);
+      var tok = 'c' + (_ctxN++); _ctxReg[tok] = { vid: vid, catId: catId, props: props };
+      if (_ctxN > 80) { var ks = Object.keys(_ctxReg); for (var i = 0; i < ks.length - 40; i++) delete _ctxReg[ks[i]]; }
+      html += '<button onclick="window.__gisOpenPanelTok&&window.__gisOpenPanelTok(\'' + tok + '\')" ' +
+        'style="margin-top:7px;width:100%;background:#0d3b5e;color:#fff;border:none;border-radius:7px;padding:7px;font-size:12px;font-weight:600;cursor:pointer">📋 מאפיינים ומדים</button>';
     }
     return html;
   };

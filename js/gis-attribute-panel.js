@@ -104,9 +104,13 @@ var GISPanel = {
 window.GISPanel = GISPanel;
 
 // ── פתיחה ─────────────────────────────────────────────────────────────────────
-async function open(feature) {
+// opts (אופציונלי) קובע איך ייפתח לחצן "טבלת עריכה":
+//   { layerId }            → GISTable.openLayer
+//   { vid, catId }         → GISTable.open (נתוני כפר; יציע ייבוא אם צריך)
+async function open(feature, opts) {
   if (!feature) return;
   state.feature = feature;
+  state.tableCtx = opts || null;
   state.editing = false;
   state.filter = '';
   var code = (feature.properties && feature.properties.asset_code) || feature.id || '—';
@@ -244,20 +248,33 @@ async function loadMeters(assetCode) {
 function renderFooter() {
   var foot = document.getElementById('gp-foot');
   var canEdit = GIS.permissions.canEditGis(state.role);
-  if (!canEdit) {
-    foot.innerHTML = '<div class="gp-note" style="text-align:center;width:100%">תצוגה בלבד (תפקיד: ' + esc(state.role || 'אורח') + ')</div>';
-    return;
-  }
+
   if (state.editing) {
     foot.innerHTML =
       '<button class="gp-btn primary" id="gp-save">שמירה</button>' +
       '<button class="gp-btn ghost" id="gp-cancel">ביטול</button>';
     document.getElementById('gp-save').onclick = save;
     document.getElementById('gp-cancel').onclick = function () { state.editing = false; render(); };
-  } else {
-    foot.innerHTML = '<button class="gp-btn primary" id="gp-editbtn">✎ עריכה</button>';
-    document.getElementById('gp-editbtn').onclick = function () { state.editing = true; render(); };
+    return;
   }
+
+  var html = '';
+  if (state.tableCtx && window.GISTable) html += '<button class="gp-btn primary" id="gp-table">📋 טבלת עריכה</button>';
+  if (canEdit) html += '<button class="gp-btn ghost" id="gp-editbtn">✎ עריכה מהירה</button>';
+  if (!html) html = '<div class="gp-note" style="text-align:center;width:100%">תצוגה בלבד (תפקיד: ' + esc(state.role || 'אורח') + ')</div>';
+  foot.innerHTML = html;
+
+  if (document.getElementById('gp-table')) document.getElementById('gp-table').onclick = openTable;
+  if (document.getElementById('gp-editbtn')) document.getElementById('gp-editbtn').onclick = function () { state.editing = true; render(); };
+}
+
+// פותח את טבלת העריכה (SQL) עבור הפיצ'ר/השכבה שנבחרו.
+function openTable() {
+  var ctx = state.tableCtx;
+  if (!ctx || !window.GISTable) return;
+  var code = state.feature.properties && state.feature.properties.asset_code;
+  if (ctx.layerId) window.GISTable.openLayer(ctx.layerId, code, { title: '📋 ' + (code || ''), sub: ctx.sub || '' });
+  else if (ctx.vid && ctx.catId) window.GISTable.open(ctx.vid, ctx.catId, state.feature.properties);
 }
 
 async function save() {
