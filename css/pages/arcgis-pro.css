@@ -161,14 +161,15 @@
 /* ArcGIS Contents pane has a thin title strip at the very top of the pane */
 #sidebar.ags-contents { box-shadow: -2px 0 8px rgba(13,59,94,0.06); }
 
-/* ── Hide the floating FABs the ribbon now replaces ───────────────────────── */
-#exp-fab, #stats-fab, #measure-toolbar { display: none !important; }
+/* ── Original floating controls are KEPT VISIBLE (measure toolbar, export &
+   stats FABs). The ribbon ADDS access to the same actions — it does not
+   replace them. Nothing is removed. ──────────────────────────────────────── */
 
 /* ══════════════════════════════════════════════════════════════════════════
    Network trace (Phase 2): arm banner, valve markers, results card
    ══════════════════════════════════════════════════════════════════════════ */
 #gis-trace-banner {
-  position: absolute; top: 112px; left: 50%; transform: translateX(-50%);
+  position: absolute; top: 166px; left: 50%; transform: translateX(-50%);
   z-index: 820; background: rgba(13,27,46,0.93); color: #fff;
   border: 1px solid rgba(220,38,38,0.45); border-radius: 9999px;
   padding: 8px 22px; font-size: 12.5px; font-family: 'Rubik', sans-serif;
@@ -192,7 +193,7 @@
 }
 
 #gis-trace-card {
-  position: absolute; top: 112px; left: 14px; z-index: 815; width: 290px;
+  position: absolute; top: 166px; left: 14px; z-index: 815; width: 290px;
   background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 14px;
   box-shadow: 0 12px 40px rgba(13,59,94,0.22); direction: rtl;
   font-family: 'Rubik', 'Segoe UI', sans-serif; overflow: hidden;
@@ -237,7 +238,7 @@
 body.dark-basemap .gis-sym-label { color: #fff; text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000; }
 
 #gis-legend {
-  position: absolute; bottom: 80px; left: 14px; z-index: 410; width: 192px;
+  position: absolute; bottom: 140px; left: 14px; z-index: 410; width: 192px;
   background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 12px;
   box-shadow: 0 8px 28px rgba(13,59,94,0.16); direction: rtl;
   font-family: 'Rubik', sans-serif; overflow: hidden;

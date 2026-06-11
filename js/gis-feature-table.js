@@ -231,7 +231,10 @@ function renderBody(scrollToSel) {
     state.cols.forEach(function (c) {
       var calc = state.fieldDefs[c] && state.fieldDefs[c].is_calculated;
       var editable = state.editable && !calc && !READONLY[c];
-      html += '<td' + (editable ? ' class="editable" data-col="' + esc(c) + '"' : '') + '>' + esc(p[c] == null ? '' : p[c]) + '</td>';
+      var raw = p[c], DM = window.GISDomains;
+      var hasDom = DM && DM.has(c), disp = hasDom ? DM.label(c, raw) : raw;
+      var titleAttr = (hasDom && disp !== raw && raw != null && raw !== '') ? ' title="קוד ' + esc(raw) + '"' : '';
+      html += '<td' + (editable ? ' class="editable" data-col="' + esc(c) + '"' : '') + titleAttr + '>' + esc(disp == null ? '' : disp) + '</td>';
     });
     if (state.pendingCol) html += '<td></td>';
     html += '<td class="gt-aud">' + esc(p.__edited_by || '') + '</td><td class="gt-aud">' + esc(fmtDate(p.__edited_at)) + '</td>';
@@ -289,20 +292,32 @@ function fmtDate(s) {
 
 // ── עריכת ערך תא ────────────────────────────────────────────────────────────────
 function editCell(td, feature, col) {
-  if (td.querySelector('input')) return;
+  if (td.querySelector('input,select')) return;
   var orig = feature.properties[col];
-  var input = document.createElement('input');
-  input.className = 'gt-cell-input';
-  input.value = orig == null ? '' : orig;
-  td.innerHTML = ''; td.appendChild(input); input.focus(); input.select();
+  var DM = window.GISDomains, hasDom = DM && DM.has(col);
+  var input;
+  function origDisp() { return hasDom ? (DM.label(col, orig)) : (orig == null ? '' : orig); }
+  if (hasDom) {
+    input = document.createElement('select');
+    input.className = 'gt-cell-input';
+    input.innerHTML = DM.options(col, orig).map(function (o) {
+      return '<option value="' + esc(o.code) + '"' + (String(orig) === String(o.code) ? ' selected' : '') + '>' + esc(o.label) + '</option>';
+    }).join('');
+  } else {
+    input = document.createElement('input');
+    input.className = 'gt-cell-input';
+    input.value = orig == null ? '' : orig;
+  }
+  td.innerHTML = ''; td.appendChild(input); input.focus(); if (input.select) input.select();
   var done = false;
   var commit = async function (save) {
     if (done) return; done = true;
-    if (!save) { td.textContent = orig == null ? '' : orig; return; }
+    if (!save) { td.textContent = origDisp(); return; }
     var val = input.value;
     var def = state.fieldDefs[col];
     if (def && (def.type === 'int' || def.type === 'float')) val = val === '' ? null : Number(val);
     else if (def && def.type === 'bool') val = /^(true|1|כן|yes)$/i.test(val);
+    else if (hasDom && DM.numeric(col)) val = val === '' ? null : Number(val);
     td.textContent = '⏳';
     try {
       var props = {};
@@ -315,11 +330,12 @@ function editCell(td, feature, col) {
       if (window.GISEngineSidebar) GISEngineSidebar.reload(state.layerId);  // עדכן את המפה
 
     } catch (e) {
-      td.textContent = orig == null ? '' : orig;
+      td.textContent = origDisp();
       footer('<span class="er">✕ ' + esc(e.message) + '</span>');
     }
   };
   input.onkeydown = function (e) { if (e.key === 'Enter') commit(true); else if (e.key === 'Escape') commit(false); };
+  if (input.tagName === 'SELECT') input.onchange = function () { commit(true); };
   input.onblur = function () { commit(true); };
 }
 

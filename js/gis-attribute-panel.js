@@ -164,14 +164,24 @@ function render() {
             '<th data-sort="v">ערך <span class="arr">' + arr('v') + '</span></th>' +
           '</tr></thead><tbody>';
   if (!rows.length) html += '<tr><td colspan="2" class="gp-empty">אין שדות</td></tr>';
+  var DM = window.GISDomains;
   rows.forEach(function (r) {
+    var hasDom = DM && DM.has(r.k);
     html += '<tr class="' + (r.calc ? 'calc' : '') + '">';
     html += '<td class="k">' + esc(r.k) + '</td>';
     if (state.editing && !r.calc) {
-      var ro = '';
-      html += '<td class="v"><input class="gp-edit-input" data-field="' + esc(r.k) + '" value="' + esc(r.v == null ? '' : r.v) + '"' + ro + '></td>';
+      if (hasDom) {
+        var opts = DM.options(r.k, r.v).map(function (o) {
+          return '<option value="' + esc(o.code) + '"' + (String(r.v) === String(o.code) ? ' selected' : '') + '>' + esc(o.label) + '</option>';
+        }).join('');
+        html += '<td class="v"><select class="gp-edit-input" data-field="' + esc(r.k) + '">' + opts + '</select></td>';
+      } else {
+        html += '<td class="v"><input class="gp-edit-input" data-field="' + esc(r.k) + '" value="' + esc(r.v == null ? '' : r.v) + '"></td>';
+      }
     } else {
-      html += '<td class="v">' + esc(r.v == null ? '—' : r.v) + '</td>';
+      // display: domain label (raw code shown in title for reference)
+      var disp = hasDom ? DM.label(r.k, r.v) : r.v;
+      html += '<td class="v"' + (hasDom && disp !== r.v ? ' title="קוד ' + esc(r.v) + '"' : '') + '>' + esc(disp == null ? '—' : disp) + '</td>';
     }
     html += '</tr>';
   });
@@ -284,12 +294,14 @@ async function save() {
   var props = {};
   // התחל מהמאפיינים הקיימים (ללא שדות פנימיים) ודרוס בערוכים
   Object.keys(state.feature.properties || {}).forEach(function (k) { if (!INTERNAL[k]) props[k] = state.feature.properties[k]; });
+  var DM = window.GISDomains;
   Array.prototype.forEach.call(inputs, function (inp) {
     var k = inp.getAttribute('data-field');
     var def = fieldDefs[k];
     var val = inp.value;
     if (def && (def.type === 'int' || def.type === 'float')) val = val === '' ? null : Number(val);
     else if (def && def.type === 'bool') val = /^(true|1|כן|yes)$/i.test(val);
+    else if (DM && DM.has(k) && DM.numeric(k)) val = val === '' ? null : Number(val); // domain code → number
     props[k] = val;
   });
 
