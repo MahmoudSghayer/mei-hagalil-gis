@@ -61,6 +61,7 @@ var openVillages = {};  // villageName → bool (expanded)
 var metersFC = null;        // cached meters FeatureCollection (loaded once)
 var metersByVillage = null; // village → [meter features]
 var meterLayers = {};       // village → L.layer on the map
+var metersCount = null;     // { total, located } from countMeters()
 var metersOpen = false;
 var moveendWired = false;
 var _mt;
@@ -299,6 +300,10 @@ function meterPopup(f) {
 
 async function loadMetersOnce() {
   if (metersByVillage) return;
+  // Count first (cheap, head:true) so we can distinguish "no meters at all" from
+  // "meters imported but with NO location" (meters_geojson only returns rows
+  // whose geometry IS NOT NULL — i.e. lat/lng columns weren't recognised).
+  try { metersCount = await GIS.meters.countMeters(); } catch (e) { metersCount = null; }
   metersFC = await GIS.meters.getMeters();
   metersByVillage = {};
   (metersFC.features || []).forEach(function (f) {
@@ -325,11 +330,33 @@ function metersBlock() {
 
   function renderMeterRows() {
     var villages = Object.keys(metersByVillage).sort(function (a, b) { return a.localeCompare(b, 'he'); });
-    var total = (metersFC.features || []).length;
+    var located = (metersFC.features || []).length;
+    var totalInDb = metersCount ? metersCount.total : located;
     var cntEl = document.getElementById('ge-meters-count');
-    if (cntEl) cntEl.textContent = total.toLocaleString('he-IL') + ' מדים';
-    if (!villages.length) { bodyEl.innerHTML = '<div class="ge-empty">אין מדי מים. ייבא דרך "🔢 ייבוא מדים".</div>'; return; }
+    if (cntEl) cntEl.textContent = located.toLocaleString('he-IL') + ' מדים';
+
+    // Imported but none have a location → the file's lat/lng columns weren't
+    // recognised, so they can't be placed on the map. Tell the admin exactly that.
+    if (!villages.length) {
+      if (totalInDb > 0) {
+        bodyEl.innerHTML = '<div class="ge-empty" style="color:#b45309;line-height:1.6">' +
+          '⚠️ ' + totalInDb.toLocaleString('he-IL') + ' מדים קיימים במערכת אך <b>ללא מיקום</b> ' +
+          '(0 עם קואורדינטות), ולכן לא ניתן להציגם במפה.<br>' +
+          'סביר שעמודות <b>קו אורך</b> / <b>קו רוחב</b> לא זוהו בקובץ הייבוא. ' +
+          'בדוק את כותרות הקובץ וייבא מחדש דרך "🔢 ייבוא מדים".</div>';
+      } else {
+        bodyEl.innerHTML = '<div class="ge-empty">אין מדי מים. ייבא דרך "🔢 ייבוא מדים".</div>';
+      }
+      return;
+    }
     bodyEl.innerHTML = '';
+    if (totalInDb > located) {
+      var miss = document.createElement('div');
+      miss.className = 'ge-empty';
+      miss.style.cssText = 'color:#b45309;line-height:1.5';
+      miss.innerHTML = '⚠️ ' + (totalInDb - located).toLocaleString('he-IL') + ' מדים נוספים ללא מיקום (לא יוצגו).';
+      bodyEl.appendChild(miss);
+    }
     villages.forEach(function (v) { bodyEl.appendChild(meterRow(v)); });
   }
 

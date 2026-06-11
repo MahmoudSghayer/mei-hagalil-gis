@@ -115,10 +115,25 @@
   GIS.meters = {
 
     // All meters as a GeoJSON FeatureCollection (RPC). Read = any authed user.
-    getMeters: async function () {
+    // p_limit must be passed explicitly — the RPC defaults to 20000, which
+    // silently truncates large fleets (e.g. 32k meters over 7 villages).
+    // NOTE: meters_geojson only returns rows WHERE geometry IS NOT NULL, so a
+    // meter imported without recognised lat/lng columns will never appear here.
+    getMeters: async function (limit) {
       var sb = GIS.sb();
-      var fc = GIS._unwrap(await sb.rpc('meters_geojson', {}), 'load meters');
+      var fc = GIS._unwrap(await sb.rpc('meters_geojson', { p_limit: limit || 200000 }), 'load meters');
       return fc || GIS.emptyFC();
+    },
+
+    // Diagnostic: how many meters exist vs how many carry a location. Lets the
+    // UI explain "imported but not on the map" (no geometry) vs an empty table.
+    countMeters: async function () {
+      var sb = GIS.sb();
+      var total = await sb.from('meters').select('id', { count: 'exact', head: true });
+      if (total.error) throw new Error('[GIS] count meters: ' + total.error.message);
+      var withGeom = await sb.from('meters').select('id', { count: 'exact', head: true }).not('geometry', 'is', null);
+      if (withGeom.error) throw new Error('[GIS] count located meters: ' + withGeom.error.message);
+      return { total: total.count || 0, located: withGeom.count || 0 };
     },
 
     // Meters linked to a given asset_code (plain rows).

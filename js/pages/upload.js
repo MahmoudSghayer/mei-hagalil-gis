@@ -493,9 +493,11 @@ function renderDetection(result) {
     } else if (result.reason === 'outside_area') {
       body.innerHTML = 'מתוך ' + result.totalWithGeom + ' אובייקטים, ' +
         '<strong>' + result.outsideCount + '</strong> נמצאו מחוץ לאזור 7 הכפרים.<br>' +
-        'בדוק את הקואורדינטות בקובץ — ייתכן שמערכת הקואורדינטות שגויה (לדוגמה: ITM במקום WGS 84).';
+        'בדוק את הקואורדינטות בקובץ — ייתכן שמערכת הקואורדינטות שגויה (לדוגמה: ITM במקום WGS 84).' +
+        coordDiagnosticHtml();
     } else if (result.reason === 'no_match') {
-      body.textContent = 'אף אובייקט בקובץ לא נופל באזור 7 הכפרים. בדוק את הקואורדינטות.';
+      body.innerHTML = 'אף אובייקט בקובץ לא נופל באזור 7 הכפרים. בדוק את הקואורדינטות.' +
+        coordDiagnosticHtml();
     }
     return;
   }
@@ -536,6 +538,35 @@ function renderDetection(result) {
 
   overrideEl.style.display = 'block';
   document.getElementById('village-select-override').value = '';
+}
+
+// Diagnostic shown on a rejection: the actual coordinate range of the data we
+// received. For a DWG this is whatever the conversion service returned, so it
+// reveals the real CRS problem at a glance — valid WGS84 over the Galilee is
+// roughly lng 35.2–35.4, lat 32.8–33.0. Anything wildly different (negatives,
+// huge magnitudes) means the source coordinate system wasn't handled.
+function coordDiagnosticHtml() {
+  var feats = (gFileData && gFileData.features) || [];
+  var minLng = Infinity, minLat = Infinity, maxLng = -Infinity, maxLat = -Infinity, sample = null, n = 0;
+  for (var i = 0; i < feats.length; i++) {
+    var pt = featureCenter(feats[i].geometry);
+    if (!pt) continue;
+    n++;
+    if (!sample) sample = pt;
+    if (pt.lng < minLng) minLng = pt.lng;
+    if (pt.lat < minLat) minLat = pt.lat;
+    if (pt.lng > maxLng) maxLng = pt.lng;
+    if (pt.lat > maxLat) maxLat = pt.lat;
+  }
+  if (!n) return '';
+  var f = function (x) { return (Math.round(x * 1e4) / 1e4); };
+  return '<div style="margin-top:10px;padding:8px 10px;background:#fff7ed;border:1px solid #fed7aa;' +
+    'border-radius:8px;font-size:11.5px;color:#7c2d12;direction:ltr;text-align:left">' +
+    '<b>🔎 טווח קואורדינטות שהתקבל / received coordinate range:</b><br>' +
+    'lng: ' + f(minLng) + ' … ' + f(maxLng) + '<br>' +
+    'lat: ' + f(minLat) + ' … ' + f(maxLat) + '<br>' +
+    'sample: [' + f(sample.lng) + ', ' + f(sample.lat) + ']<br>' +
+    '<span style="color:#9a3412">תקין לגליל ≈ lng 35.2…35.4 · lat 32.8…33.0</span></div>';
 }
 
 function toggleOverride() {
