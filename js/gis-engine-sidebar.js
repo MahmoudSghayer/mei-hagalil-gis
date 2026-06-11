@@ -45,8 +45,9 @@ css.textContent = `
 #gis-eng-panel .ge-color{width:16px;height:16px;flex-shrink:0;padding:0;border:1px solid #cbd5e1;border-radius:4px;cursor:pointer;background:none;}
 #gis-eng-panel .ge-color::-webkit-color-swatch{border:none;border-radius:3px;}
 #gis-eng-panel .ge-color::-webkit-color-swatch-wrapper{padding:0;}
-#gis-eng-panel .ge-fly{background:none;border:none;cursor:pointer;font-size:12px;padding:0 2px;opacity:.75;}
+#gis-eng-panel .ge-fly,#gis-eng-panel .ge-del{background:none;border:none;cursor:pointer;font-size:12px;padding:0 2px;opacity:.7;}
 #gis-eng-panel .ge-fly:hover{opacity:1;}
+#gis-eng-panel .ge-del:hover{opacity:1;filter:saturate(1.5);}
 #gis-eng-panel .ge-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 #gis-eng-panel .ge-count{font-size:10px;color:#94a3b8;}
 #gis-eng-panel .ge-empty{font-size:11px;color:#94a3b8;padding:8px 2px;line-height:1.5;}
@@ -54,8 +55,32 @@ css.textContent = `
 #gis-eng-panel.collapsed .ge-body{display:none;}`;
 document.head.appendChild(css);
 
-var loaded = {};        // layerId → L.layer
+var loaded = {};        // layerId → L.layer (currently on the map)
+var active = {};        // layerId → layer (toggled on → reload on pan/zoom)
 var openVillages = {};  // villageName → bool (expanded)
+var moveendWired = false;
+var _mt;
+
+function currentBounds() {
+  var b = window.gMap.getBounds();
+  return { minLng: b.getWest(), minLat: b.getSouth(), maxLng: b.getEast(), maxLat: b.getNorth() };
+}
+// Load only the features in the current viewport (capped) — no timeouts.
+async function renderLayer(layer) {
+  var fc = await GIS.features.getInBBox(layer.id, currentBounds(), 4000);
+  if (loaded[layer.id]) window.gMap.removeLayer(loaded[layer.id]);
+  var lyr = buildLayer(fc, layer, colorFor(layer)).addTo(window.gMap);
+  lyr._gisFC = fc; loaded[layer.id] = lyr;
+  var n = (fc.features || []).length;
+  if (layer._cntEl) layer._cntEl.textContent = (n >= 4000 ? '4000+' : n);
+  return n;
+}
+function wireMoveend() {
+  if (moveendWired || !window.gMap) return;
+  moveendWired = true;
+  window.gMap.on('moveend', function () { clearTimeout(_mt); _mt = setTimeout(reloadActive, 350); });
+}
+function reloadActive() { Object.keys(active).forEach(function (id) { renderLayer(active[id]).catch(function () {}); }); }
 
 var tries = 0;
 var t = setInterval(function () {
@@ -165,6 +190,7 @@ function villageBlock(village, layers) {
     '<span class="ge-vchev">' + (openVillages[village] ? '▾' : '▸') + '</span>' +
     '<span class="ge-vname">📍 ' + esc(village) + '</span>' +
     '<button class="ge-fly" title="התמקד בכפר">🎯</button>' +
+    '<button class="ge-del" title="מחק כפר מהמנוע">🗑</button>' +
     '<span class="ge-vcount">' + layers.length + ' שכבות</span>';
   head.onclick = function () {
     openVillages[village] = !openVillages[village];
@@ -172,6 +198,7 @@ function villageBlock(village, layers) {
     head.querySelector('.ge-vchev').textContent = openVillages[village] ? '▾' : '▸';
   };
   head.querySelector('.ge-fly').onclick = function (e) { e.stopPropagation(); flyToVillage(layers); };
+  head.querySelector('.ge-del').onclick = function (e) { e.stopPropagation(); deleteVillage(village, layers); };
   wrap.appendChild(head);
 
   var bodyEl = document.createElement('div');
@@ -189,6 +216,19 @@ function flyToVillage(layers) {
   }).catch(function (e) { console.warn('[GISEngineSidebar] flyTo', e); });
 }
 
+// Delete an entire village (all its engine layers + their features). Admin only.
+async function deleteVillage(village, layers) {
+  if (!window.confirm('למחוק את כל שכבות "' + village + '" מהמנוע? כולל כל הפיצ\'רים. פעולה בלתי הפיכה.')) return;
+  for (var i = 0; i < layers.length; i++) {
+    var id = layers[i].id;
+    if (loaded[id]) { window.gMap.removeLayer(loaded[id]); delete loaded[id]; }
+    delete active[id];
+    try { await GIS.layers.deleteLayer(id); }
+    catch (e) { alert('שגיאה במחיקה: ' + e.message); break; }
+  }
+  render();
+}
+
 function row(layer) {
   var color = colorFor(layer);
   var el = document.createElement('div');
@@ -201,6 +241,7 @@ function row(layer) {
   var cb = el.querySelector('input[type=checkbox]');
   var picker = el.querySelector('.ge-color');
   var cnt = el.querySelector('.ge-count');
+  layer._cntEl = cnt;
 
   // clicking the name toggles the layer (the row is a div, not a label)
   el.querySelector('.ge-name').onclick = function () { cb.checked = !cb.checked; cb.onchange(); };
@@ -223,14 +264,11 @@ function row(layer) {
   cb.onchange = async function () {
     if (cb.checked) {
       cb.disabled = true; cnt.textContent = '…';
-      try {
-        var fc = await GIS.features.getFeatures(layer.id, 100000);
-        var lyr = buildLayer(fc, layer, colorFor(layer)).addTo(window.gMap);
-        lyr._gisFC = fc;
-        loaded[layer.id] = lyr; cnt.textContent = (fc.features || []).length;
-      } catch (e) { cb.checked = false; cnt.textContent = '✕'; alert('שגיאה: ' + e.message); }
+      try { active[layer.id] = layer; wireMoveend(); await renderLayer(layer); }
+      catch (e) { cb.checked = false; delete active[layer.id]; cnt.textContent = '✕'; alert('שגיאה: ' + e.message); }
       finally { cb.disabled = false; }
     } else {
+      delete active[layer.id];
       if (loaded[layer.id]) { window.gMap.removeLayer(loaded[layer.id]); delete loaded[layer.id]; }
       cnt.textContent = '';
     }

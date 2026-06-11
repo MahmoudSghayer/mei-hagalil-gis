@@ -31,6 +31,15 @@
       return layer;
     },
 
+    // Delete a layer and all its features (FK cascade). Admin only.
+    deleteLayer: async function (id) {
+      GIS._assert(id, 'deleteLayer requires an id');
+      await GIS._requireRole(['admin'], 'delete layers');
+      var sb = GIS.sb();
+      GIS._unwrap(await sb.from('layers').delete().eq('id', id), 'delete layer');
+      return { id: id, deleted: true };
+    },
+
     // Persist a layer's display colour (hex). Admin only (RLS on layers).
     setColor: async function (layerId, color) {
       GIS._assert(layerId && color, 'setColor requires (layerId, color)');

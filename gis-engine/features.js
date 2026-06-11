@@ -26,6 +26,21 @@
       return fc || GIS.emptyFC();
     },
 
+    // Viewport loading — only features intersecting the given bounds
+    // { minLng, minLat, maxLng, maxLat }. Capped by limit. Avoids timeouts
+    // on huge layers by relying on the spatial index.
+    getInBBox: async function (layerId, bounds, limit) {
+      GIS._assert(layerId && bounds, 'getInBBox requires (layerId, bounds)');
+      var sb = GIS.sb();
+      var fc = GIS._unwrap(await sb.rpc('features_in_bbox', {
+        p_layer_id: layerId,
+        p_minlng: bounds.minLng, p_minlat: bounds.minLat,
+        p_maxlng: bounds.maxLng, p_maxlat: bounds.maxLat,
+        p_limit: limit || 4000
+      }), 'load features');
+      return fc || GIS.emptyFC();
+    },
+
     // Single feature as a GeoJSON Feature, plus its meters (linked).
     getFeatureById: async function (id) {
       GIS._assert(id, 'getFeatureById requires an id');
