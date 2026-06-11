@@ -23,7 +23,8 @@
     aradSyncUrl: null,        // optional Arad REST endpoint for syncMeters()
     aradSyncToken: null,      // optional bearer token for that endpoint
     linkRadiusMeters: 25,     // proximity fallback when linking a meter
-    defaultFeatureLimit: 5000 // safety cap on feature reads
+    defaultFeatureLimit: 5000, // safety cap on feature reads
+    importChunkSize: 300      // meters per import_meters RPC call (avoids DB statement_timeout)
   };
 
   // ── Supabase client resolver ───────────────────────────────────────────

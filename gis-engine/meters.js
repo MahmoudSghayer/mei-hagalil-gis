@@ -134,6 +134,8 @@
     // Rows with no מספר מונה (arad_meter_id) are skipped rather than failing the
     // whole batch — Arad/Excel exports often carry a totals/footer row or stray
     // blank line that has no meter id.
+    // Sent to the RPC in chunks so a large file never exceeds the DB
+    // statement_timeout (the import_meters RPC upserts row-by-row).
     importMeters: async function (data, source) {
       GIS._assert(Array.isArray(data), 'importMeters expects an array of records');
       await GIS._requireRole(['admin'], 'import meters');
@@ -147,11 +149,19 @@
           + Object.keys(data[0] || {}).join(' | '));
       }
       var sb = GIS.sb();
-      var res = GIS._unwrap(await sb.rpc('import_meters', {
-        p_meters: rows, p_source: source || 'import'
-      }), 'import meters') || {};
-      res.skipped = skipped;
-      return res;
+      var CHUNK = GIS.config.importChunkSize || 300;
+      var agg = { inserted: 0, updated: 0, total: 0 };
+      for (var j = 0; j < rows.length; j += CHUNK) {
+        var batch = rows.slice(j, j + CHUNK);
+        var r = GIS._unwrap(await sb.rpc('import_meters', {
+          p_meters: batch, p_source: source || 'import'
+        }), 'import meters') || {};
+        agg.inserted += (r.inserted || 0);
+        agg.updated += (r.updated || 0);
+        agg.total += (r.total || 0);
+      }
+      agg.skipped = skipped;
+      return agg;
     },
 
     // Future-ready sync. If GIS.config.aradSyncUrl is set, pulls the latest
