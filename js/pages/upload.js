@@ -286,7 +286,11 @@ function handleFile(file) {
     }
     showToast('⏳ ממיר DWG בשרת (עשוי להימשך עד דקה)...', 'info');
     var dwgStatusEl = document.getElementById('fp-size');
-    window.dwgToGeoJSON(file, {}, function(stage, pct, msg) {
+    // Ask the converter to KEEP the drawing's native ITM coordinates (no
+    // server-side reprojection). finishFileLoad → autoReprojectIfITM then does
+    // ITM→WGS84 here, where the transform (incl. mirrored-X) is under our control
+    // and matches the village-shapefile pipeline.
+    window.dwgToGeoJSON(file, { sourceCrs: 'EPSG:2039', targetCrs: 'EPSG:2039' }, function(stage, pct, msg) {
       if (dwgStatusEl && msg) dwgStatusEl.textContent = msg;
     }).then(function(data) {
       if (!data || !Array.isArray(data.features) || !data.features.length) {
