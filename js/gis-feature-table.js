@@ -14,6 +14,8 @@
 'use strict';
 
 var CAP = 1500, HIDE = /^_|^__/;
+// Auto-derived fields recomputed by the DB on every save → never editable by hand.
+var READONLY = { length_m: 1, age: 1 };
 var CAT_HE = {
   water_pipes:'קווי מים', sewage_pipes:'קווי ביוב', main_sewer:'ביב ראשי', supply_pipe:'קו הספקה',
   valves:'מגופים', control_valves:'מגופים שולטים', hydrants:'הידרנטים', water_meters:'מדי מים',
@@ -55,7 +57,11 @@ css.textContent = `
 .gt-table td.idx .gt-rowx{cursor:pointer;margin-left:5px;opacity:.4;}
 .gt-table td.idx .gt-rowx:hover{opacity:1;}
 .gt-table th.gt-aud,.gt-table td.gt-aud{background:#f8fafc;color:#94a3b8;font-style:italic;font-size:11.5px;cursor:default;}
-.gt-table th.gt-pending{background:#eef6ff;}`;
+.gt-table th.gt-pending{background:#eef6ff;}
+.gt-calcbar{display:flex;align-items:center;gap:8px;background:#eef6ff;border-bottom:1px solid #cbd5e1;padding:7px 12px;flex-wrap:wrap;font-size:12.5px;color:#0d3b5e;}
+.gt-calcbar select,.gt-calcbar input{border:1px solid #93c5fd;border-radius:6px;padding:5px 8px;font-size:12.5px;direction:rtl;}
+.gt-calcbar #gt-calc-expr{flex:1;min-width:220px;direction:ltr;text-align:left;}
+.gt-calc-help{color:#64748b;font-size:11px;}`;
 document.head.appendChild(css);
 
 var el = document.createElement('div');
@@ -68,12 +74,21 @@ el.innerHTML =
     '<button class="gt-ico" id="gt-addrow" style="display:none">➕ שורה</button>' +
     '<button class="gt-ico" id="gt-delrow" style="display:none">🗑 שורה</button>' +
     '<button class="gt-ico" id="gt-add" style="display:none">➕ עמודה</button>' +
+    '<button class="gt-ico" id="gt-calc" style="display:none">🧮 חשב שדה</button>' +
     '<button class="gt-ico" id="gt-ren" style="display:none">✏️ עמודה</button>' +
     '<button class="gt-ico" id="gt-del" style="display:none">➖ עמודה</button>' +
     '<button class="gt-ico warn" id="gt-migrate" style="display:none">⬆️ ייבא לעריכה</button>' +
     '<input class="gt-search" id="gt-search" placeholder="סינון…">' +
     '<button class="gt-ico" id="gt-zoom" title="התמקד בנבחר">🎯</button>' +
     '<button class="gt-ico" id="gt-x" title="סגור">✕</button>' +
+  '</div>' +
+  '<div class="gt-calcbar" id="gt-calcbar" style="display:none">' +
+    '<span>🧮 חשב שדה:</span>' +
+    '<select id="gt-calc-field"></select><span>=</span>' +
+    '<input id="gt-calc-expr" placeholder="2026 - install_year   |   diameter * 1.2   |   length(geometry)">' +
+    '<button class="gt-ico act" id="gt-calc-run">החל על הכל</button>' +
+    '<button class="gt-ico" id="gt-calc-close">✕</button>' +
+    '<span class="gt-calc-help">פונקציות: length(geometry) · round · abs · sqrt · min · max · pow</span>' +
   '</div>' +
   '<div class="gt-wrap" id="gt-wrap"><div class="gt-empty">—</div></div>' +
   '<div class="gt-foot" id="gt-foot"></div>';
@@ -91,6 +106,9 @@ document.getElementById('gt-zoom').onclick = function () { if (state.selected) z
 document.getElementById('gt-search').oninput = debounce(function (e) { state.filter = e.target.value; renderBody(); }, 180);
 document.getElementById('gt-add').onclick = addColumn;       // ➕ עמודה (inline)
 document.getElementById('gt-addrow').onclick = addRow;        // ➕ שורה
+document.getElementById('gt-calc').onclick = openCalc;        // 🧮 חשב שדה
+document.getElementById('gt-calc-run').onclick = runCalc;
+document.getElementById('gt-calc-close').onclick = function () { document.getElementById('gt-calcbar').style.display = 'none'; };
 document.getElementById('gt-migrate').onclick = migrateThis;
 // rename/delete column → inline (header dblclick / ×); delete row → inline (🗑)
 document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && el.classList.contains('open') && !el.querySelector('.gt-cell-input')) close(); });
@@ -212,7 +230,7 @@ function renderBody(scrollToSel) {
       '<td class="idx">' + (state.editable ? '<span class="gt-rowx" title="מחק שורה">🗑</span>' : '') + (rows.indexOf(f) + 1) + '</td>';
     state.cols.forEach(function (c) {
       var calc = state.fieldDefs[c] && state.fieldDefs[c].is_calculated;
-      var editable = state.editable && !calc;
+      var editable = state.editable && !calc && !READONLY[c];
       html += '<td' + (editable ? ' class="editable" data-col="' + esc(c) + '"' : '') + '>' + esc(p[c] == null ? '' : p[c]) + '</td>';
     });
     if (state.pendingCol) html += '<td></td>';
@@ -294,6 +312,8 @@ function editCell(td, feature, col) {
       feature.properties = Object.assign({}, feature.properties, updated.properties);
       footer('<span class="ok">✓ נשמר</span>');
       renderBody();            // ירענן שדות מחושבים (length_m/age) אם השתנו
+      if (window.GISEngineSidebar) GISEngineSidebar.reload(state.layerId);  // עדכן את המפה
+
     } catch (e) {
       td.textContent = orig == null ? '' : orig;
       footer('<span class="er">✕ ' + esc(e.message) + '</span>');
@@ -304,11 +324,40 @@ function editCell(td, feature, col) {
 }
 
 // Reload the current engine layer in place, preserving header + selection.
+// Also refreshes the rendered layer on the map so edits show everywhere.
 async function reloadLayer(selCode) {
   await openLayer(state.layerId,
     selCode !== undefined ? selCode : (state.selected && state.selected.properties.asset_code),
     { title: document.getElementById('gt-title').textContent,
       sub: document.getElementById('gt-sub').textContent.split(' · ')[0], reset: false });
+  if (window.GISEngineSidebar) GISEngineSidebar.reload(state.layerId);
+}
+
+// ── מחשבון שדות (ArcGIS-style Field Calculator) ─────────────────────────────────
+// בוחרים שדה יעד (עמודה קיימת) + ביטוי בטוח ומחילים על כל הפיצ'רים.
+function openCalc() {
+  if (!state.layerId) return;
+  var bar = document.getElementById('gt-calcbar');
+  var sel = document.getElementById('gt-calc-field');
+  var targets = state.cols.filter(function (c) {
+    return !(state.fieldDefs[c] && state.fieldDefs[c].is_calculated) && !READONLY[c] && !HIDE.test(c);
+  });
+  sel.innerHTML = targets.map(function (c) { return '<option>' + esc(c) + '</option>'; }).join('');
+  bar.style.display = (bar.style.display === 'none' || !bar.style.display) ? 'flex' : 'none';
+  if (bar.style.display === 'flex') document.getElementById('gt-calc-expr').focus();
+}
+async function runCalc() {
+  var field = document.getElementById('gt-calc-field').value;
+  var expr = (document.getElementById('gt-calc-expr').value || '').trim();
+  if (!field) { footer('<span class="er">אין שדה יעד — הוסף עמודה תחילה (➕ עמודה)</span>'); return; }
+  if (!expr) { footer('<span class="er">הזן ביטוי</span>'); return; }
+  footer('מחשב…');
+  try {
+    var res = await GIS.fields.calculate(state.layerId, field, expr);
+    document.getElementById('gt-calcbar').style.display = 'none';
+    await reloadLayer();
+    footer('<span class="ok">✓ חושב "' + esc(field) + '" עבור ' + res.updated + ' שורות</span>');
+  } catch (e) { footer('<span class="er">✕ ' + esc(e.message) + '</span>'); }
 }
 
 // ── עמודות (אדמין) — הכל inline, ללא חלונות קופצים ──────────────────────────────
@@ -430,7 +479,9 @@ function footer(htmlStr) { document.getElementById('gt-foot').innerHTML = htmlSt
 function toolbar(o) {
   document.getElementById('gt-migrate').style.display = o.migrate ? '' : 'none';
   document.getElementById('gt-add').style.display = o.schema ? '' : 'none';   // ➕ עמודה
+  document.getElementById('gt-calc').style.display = o.rows ? '' : 'none';     // 🧮 חשב שדה
   document.getElementById('gt-addrow').style.display = o.rows ? '' : 'none';   // ➕ שורה
+  if (!o.rows) document.getElementById('gt-calcbar').style.display = 'none';
   // rename/delete column + delete row are inline now → keep their buttons hidden
   document.getElementById('gt-ren').style.display = 'none';
   document.getElementById('gt-del').style.display = 'none';

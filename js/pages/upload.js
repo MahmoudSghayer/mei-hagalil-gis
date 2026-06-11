@@ -312,7 +312,52 @@ function handleFile(file) {
   }
 }
 
+// First numeric [x,y] of any geometry.
+function firstCoord(g) {
+  if (!g || !g.coordinates) return null;
+  var c = g.coordinates;
+  while (Array.isArray(c) && Array.isArray(c[0])) c = c[0];
+  return (Array.isArray(c) && typeof c[0] === 'number') ? c : null;
+}
+// Heuristic: coords way outside lon/lat range → projected (ITM), not WGS84.
+function looksLikeITM(data) {
+  var n = 0, itm = 0;
+  for (var i = 0; i < data.features.length && n < 80; i++) {
+    var c = firstCoord(data.features[i].geometry); if (!c) continue;
+    n++;
+    if (Math.abs(c[0]) > 1000 || Math.abs(c[1]) > 1000) itm++;  // lon/lat are < 1000
+  }
+  return n > 0 && itm / n > 0.7;
+}
+function flipXCoords(coords) {
+  if (typeof coords[0] === 'number') return [-coords[0], coords[1]];
+  return coords.map(flipXCoords);
+}
+// If the file is in Israeli ITM (EPSG:2039), convert every geometry to WGS84
+// in place. Handles the mirrored-X variant some CAD exports use.
+function autoReprojectIfITM(data) {
+  if (!looksLikeITM(data)) return false;
+  ensureITM();
+  var neg = 0, pos = 0;
+  for (var i = 0; i < data.features.length && (neg + pos) < 80; i++) {
+    var c = firstCoord(data.features[i].geometry); if (!c) continue;
+    if (c[0] < 0) neg++; else pos++;
+  }
+  var flipX = neg > pos;
+  data.features.forEach(function (f) {
+    if (!f.geometry) return;
+    var g = flipX ? { type: f.geometry.type, coordinates: flipXCoords(f.geometry.coordinates) } : f.geometry;
+    f.geometry = convertGeometry(g, 'ITM');
+  });
+  return true;
+}
+
 function finishFileLoad(data) {
+  // Auto-detect ITM (EPSG:2039) coordinates and reproject to WGS84 so village
+  // detection works. GeoJSON/DWG that arrive already in lat/lng are untouched.
+  if (autoReprojectIfITM(data)) {
+    showToast('זוהו קואורדינטות ITM — הומרו אוטומטית ל-WGS84', 'info');
+  }
   gFileData = data;
   document.getElementById('fp-size').textContent = formatSize(gFile.size) + ' · ' + data.features.length + ' אובייקטים';
 

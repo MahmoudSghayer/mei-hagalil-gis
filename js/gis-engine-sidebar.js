@@ -105,28 +105,12 @@ function openPanelFor(f, layer) {
   else if (window.GISTable) GISTable.openLayer(layer.id, f.properties && f.properties.asset_code, { title: '📋 ' + catLabel(layer._cat), sub: layer.name.split(' · ')[0] });
 }
 
-// Build the Leaflet layer for an engine layer. Point layers are clustered
-// (markercluster) for performance on big datasets; lines/polygons use geoJSON.
+// Build the Leaflet layer for an engine layer. NO clustering — points render
+// as plain circle markers (no "bubbles"); viewport loading keeps it light.
 function buildLayer(fc, layer, color) {
-  var feats = fc.features || [];
-  if (layer.geometry_type === 'Point' && typeof L.markerClusterGroup === 'function') {
-    var cg = L.markerClusterGroup({ chunkedLoading: true, maxClusterRadius: 50, disableClusteringAtZoom: 19, removeOutsideVisibleBounds: true });
-    var markers = [];
-    feats.forEach(function (f) {
-      var g = f.geometry; if (!g || g.type !== 'Point') return;
-      var d = 12;
-      var m = L.marker([g.coordinates[1], g.coordinates[0]], { icon: L.divIcon({
-        className: '', iconSize: [d, d], iconAnchor: [d / 2, d / 2],
-        html: '<div style="width:' + d + 'px;height:' + d + 'px;background:' + color + ';border:1.5px solid #fff;border-radius:50%;box-sizing:border-box"></div>' }) });
-      m.on('click', function () { openPanelFor(f, layer); });
-      markers.push(m);
-    });
-    cg.addLayers(markers);
-    return cg;
-  }
   return L.geoJSON(fc, {
     style: function () { return { color: color, weight: 3, opacity: .9 }; },
-    pointToLayer: function (f, ll) { return L.circleMarker(ll, { radius: 6, color: '#fff', weight: 1.5, fillColor: color, fillOpacity: .9 }); },
+    pointToLayer: function (f, ll) { return L.circleMarker(ll, { radius: 5, color: '#fff', weight: 1.2, fillColor: color, fillOpacity: .9 }); },
     onEachFeature: function (f, lf) { lf.on('click', function () { openPanelFor(f, layer); }); }
   });
 }
@@ -195,7 +179,6 @@ function villageBlock(village, layers) {
     '<span class="ge-vchev">' + (openVillages[village] ? '▾' : '▸') + '</span>' +
     '<span class="ge-vname">📍 ' + esc(village) + '</span>' +
     '<button class="ge-fly" title="התמקד בכפר">🎯</button>' +
-    '<button class="ge-del" title="מחק כפר מהמנוע">🗑</button>' +
     '<span class="ge-vcount">' + layers.length + ' שכבות</span>';
   head.onclick = function () {
     openVillages[village] = !openVillages[village];
@@ -203,7 +186,6 @@ function villageBlock(village, layers) {
     head.querySelector('.ge-vchev').textContent = openVillages[village] ? '▾' : '▸';
   };
   head.querySelector('.ge-fly').onclick = function (e) { e.stopPropagation(); flyToVillage(layers); };
-  head.querySelector('.ge-del').onclick = function (e) { e.stopPropagation(); deleteVillage(village, layers); };
   wrap.appendChild(head);
 
   var bodyEl = document.createElement('div');
@@ -294,23 +276,9 @@ function meterVillageOf(f) {
 }
 
 function buildMeterLayer(feats) {
-  if (typeof L.markerClusterGroup === 'function') {
-    var cg = L.markerClusterGroup({ chunkedLoading: true, maxClusterRadius: 55, disableClusteringAtZoom: 19, removeOutsideVisibleBounds: true });
-    var markers = [];
-    feats.forEach(function (f) {
-      var g = f.geometry; if (!g || g.type !== 'Point') return;
-      var d = 11;
-      var m = L.marker([g.coordinates[1], g.coordinates[0]], { icon: L.divIcon({
-        className: '', iconSize: [d, d], iconAnchor: [d / 2, d / 2],
-        html: '<div style="width:' + d + 'px;height:' + d + 'px;background:' + METER_COLOR + ';border:1.5px solid #fff;border-radius:50%;box-sizing:border-box"></div>' }) });
-      m.bindPopup(meterPopup(f));
-      markers.push(m);
-    });
-    cg.addLayers(markers);
-    return cg;
-  }
+  // No clustering — plain circle markers.
   return L.geoJSON({ type: 'FeatureCollection', features: feats }, {
-    pointToLayer: function (f, ll) { return L.circleMarker(ll, { radius: 5, color: '#fff', weight: 1.5, fillColor: METER_COLOR, fillOpacity: .9 }); },
+    pointToLayer: function (f, ll) { return L.circleMarker(ll, { radius: 5, color: '#fff', weight: 1.2, fillColor: METER_COLOR, fillOpacity: .9 }); },
     onEachFeature: function (f, lf) { lf.bindPopup(meterPopup(f)); }
   });
 }
@@ -403,5 +371,11 @@ function meterRow(village) {
 }
 
 function esc(x) { return String(x == null ? '' : x).replace(/[&<>"]/g, function (c) { return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' })[c]; }); }
+
+// Allow the attribute table to refresh a rendered layer on the map after an edit.
+window.GISEngineSidebar = {
+  reload: function (layerId) { if (active[layerId]) renderLayer(active[layerId]).catch(function () {}); },
+  refresh: function () { try { render(); } catch (e) {} }
+};
 
 })();
