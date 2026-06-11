@@ -136,9 +136,12 @@
     // blank line that has no meter id.
     // Sent to the RPC in chunks so a large file never exceeds the DB
     // statement_timeout (the import_meters RPC upserts row-by-row).
-    importMeters: async function (data, source) {
+    // opts.onProgress(done, total) is called after each chunk so the import
+    // page can show a live progress bar (a 32k-meter file is ~100 RPC calls).
+    importMeters: async function (data, source, opts) {
       GIS._assert(Array.isArray(data), 'importMeters expects an array of records');
       await GIS._requireRole(['admin'], 'import meters');
+      opts = opts || {};
       var rows = [], skipped = 0;
       for (var i = 0; i < data.length; i++) {
         try { rows.push(normalize(data[i])); }
@@ -151,6 +154,7 @@
       var sb = GIS.sb();
       var CHUNK = GIS.config.importChunkSize || 300;
       var agg = { inserted: 0, updated: 0, total: 0 };
+      var done = 0;
       for (var j = 0; j < rows.length; j += CHUNK) {
         var batch = rows.slice(j, j + CHUNK);
         var r = GIS._unwrap(await sb.rpc('import_meters', {
@@ -159,6 +163,8 @@
         agg.inserted += (r.inserted || 0);
         agg.updated += (r.updated || 0);
         agg.total += (r.total || 0);
+        done += batch.length;
+        if (opts.onProgress) { try { opts.onProgress(done, rows.length); } catch (e) {} }
       }
       agg.skipped = skipped;
       return agg;

@@ -767,10 +767,23 @@ async function saveLearnedRules() {
   }
 }
 
+// Hebrew labels for the "<village> · <category>" engine layer names.
+var CAT_LABELS = {};
+CATEGORIES.forEach(function(c) { if (c.value !== 'IGNORE') CAT_LABELS[c.value] = c.label; });
+
+// "Existing layers" now reflects what's actually in the GIS engine (the
+// layers/features tables), grouped by village — uploads have imported there
+// since the engine became the whole app, NOT into the old village_layers table.
 async function loadLayers() {
-  var res = await gSb.from('village_layers').select('*').order('uploaded_at', {ascending:false});
-  if (res.error) return;
-  renderLayers(res.data || []);
+  var el = document.getElementById('layers-list');
+  el.innerHTML = '<div class="empty"><div class="empty-icon">⏳</div>טוען...</div>';
+  try {
+    var layers = await GIS.layers.getLayers();
+    renderLayers(layers || []);
+  } catch (e) {
+    el.innerHTML = '<div class="empty" style="color:#dc2626"><div class="empty-icon">⚠️</div>' +
+      escapeHtml(e.message || String(e)) + '</div>';
+  }
 }
 
 function renderLayers(layers) {
@@ -779,30 +792,58 @@ function renderLayers(layers) {
     el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div>אין שכבות עדיין</div>';
     return;
   }
-  el.innerHTML = '<table class="layers"><thead><tr>' +
-    '<th>שכבה</th><th>אובייקטים</th><th>הועלה</th><th>סטטוס</th><th>פעולות</th>' +
-    '</tr></thead><tbody>' +
-    layers.map(function(l) {
-      var date = new Date(l.uploaded_at).toLocaleString('he-IL', {day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-      return '<tr>' +
-        '<td><div class="layer-name"><span class="layer-icon">'+(l.icon||'🏘️')+'</span>' +
-          '<div><div style="font-weight:600">'+l.village_name+'</div>' +
-          '<div style="font-size:11px;color:var(--muted)">'+l.file_path+'</div></div></div></td>' +
-        '<td><span class="feature-count-pill">'+l.feature_count+'</span></td>' +
-        '<td><div style="font-size:12px">'+date+'</div></td>' +
-        '<td>' + (l.is_active ? '🟢 פעיל' : '⚪ מושהה') + '</td>' +
-        '<td><button class="btn btn-danger" style="padding:5px 12px;font-size:11px" onclick="deleteLayer(\''+l.village_id+'\',\''+l.file_path+'\')">🗑️ מחק</button></td>' +
-      '</tr>';
-    }).join('') +
-    '</tbody></table>';
-  MotionUtils.animateTableRows('#layers-list tbody');
+  // Group engine layers by village (layer name = "<village> · <category>").
+  var groups = {}, order = [];
+  layers.forEach(function(l) {
+    var idx = (l.name || '').indexOf(' · ');
+    var village = idx >= 0 ? l.name.slice(0, idx) : (l.name || 'שכבות כלליות');
+    var cat = idx >= 0 ? l.name.slice(idx + 3) : '';
+    if (!groups[village]) { groups[village] = []; order.push(village); }
+    groups[village].push({ id: l.id, cat: cat, label: CAT_LABELS[cat] || cat || l.name });
+  });
+
+  var html = '';
+  order.forEach(function(village) {
+    var rows = groups[village];
+    html += '<div class="layers-village" style="border:1px solid #eef2f6;border-radius:10px;margin-bottom:10px;overflow:hidden">' +
+      '<div style="display:flex;align-items:center;gap:8px;padding:10px 12px;background:#f8fafc;font-weight:700;color:#0d3b5e">' +
+        '<span style="flex:1">📍 ' + escapeHtml(village) + '</span>' +
+        '<span style="font-size:11px;color:#94a3b8">' + rows.length + ' שכבות</span>' +
+        '<button class="btn btn-danger" style="padding:4px 10px;font-size:11px" ' +
+          'onclick="deleteVillageLayers(\'' + escapeQuote(village) + '\')">🗑️ מחק כפר</button>' +
+      '</div><div style="padding:6px 12px">';
+    rows.forEach(function(r) {
+      html += '<div style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-top:1px solid #f1f5f9">' +
+        '<span style="flex:1;font-size:13px">' + escapeHtml(r.label) + '</span>' +
+        '<button class="btn btn-danger" style="padding:3px 9px;font-size:11px" ' +
+          'onclick="deleteEngineLayer(\'' + r.id + '\')">🗑️ מחק</button></div>';
+    });
+    html += '</div></div>';
+  });
+  el.innerHTML = html;
 }
 
-async function deleteLayer(villageId, filePath) {
-  if (!confirm('האם למחוק את השכבה?')) return;
-  await gSb.storage.from('village-layers').remove([filePath]);
-  await gSb.from('village_layers').delete().eq('village_id', villageId);
-  showToast('🗑️ נמחק');
+async function deleteEngineLayer(layerId) {
+  if (!confirm('למחוק את השכבה הזו מהמנוע? כולל כל הפיצ\'רים. פעולה בלתי הפיכה.')) return;
+  try {
+    await GIS.layers.deleteLayer(layerId);
+    showToast('🗑️ נמחק');
+  } catch (e) { showToast('שגיאה: ' + e.message, 'error'); }
+  loadLayers();
+}
+
+async function deleteVillageLayers(village) {
+  if (!confirm('למחוק את כל שכבות "' + village + '" מהמנוע? כולל כל הפיצ\'רים. פעולה בלתי הפיכה.')) return;
+  try {
+    var layers = await GIS.layers.getLayers();
+    var toDel = layers.filter(function(l) {
+      var idx = (l.name || '').indexOf(' · ');
+      var v = idx >= 0 ? l.name.slice(0, idx) : (l.name || '');
+      return v === village;
+    });
+    for (var i = 0; i < toDel.length; i++) await GIS.layers.deleteLayer(toDel[i].id);
+    showToast('🗑️ נמחקו ' + toDel.length + ' שכבות');
+  } catch (e) { showToast('שגיאה: ' + e.message, 'error'); }
   loadLayers();
 }
 
@@ -823,5 +864,6 @@ function showToast(msg, type) {
 }
 
 window.updateLayerMapping = updateLayerMapping;
-window.deleteLayer = deleteLayer;
+window.deleteEngineLayer = deleteEngineLayer;
+window.deleteVillageLayers = deleteVillageLayers;
 window.toggleOverride = toggleOverride;

@@ -58,6 +58,10 @@ document.head.appendChild(css);
 var loaded = {};        // layerId → L.layer (currently on the map)
 var active = {};        // layerId → layer (toggled on → reload on pan/zoom)
 var openVillages = {};  // villageName → bool (expanded)
+var metersFC = null;        // cached meters FeatureCollection (loaded once)
+var metersByVillage = null; // village → [meter features]
+var meterLayers = {};       // village → L.layer on the map
+var metersOpen = false;
 var moveendWired = false;
 var _mt;
 
@@ -176,6 +180,7 @@ async function render() {
 
     body.innerHTML = '';
     order.forEach(function (village) { body.appendChild(villageBlock(village, groups[village])); });
+    body.appendChild(metersBlock());
   } catch (e) {
     body.innerHTML = '<div class="ge-empty" style="color:#dc2626">' + esc(e.message) + '</div>';
   }
@@ -271,6 +276,127 @@ function row(layer) {
       delete active[layer.id];
       if (loaded[layer.id]) { window.gMap.removeLayer(loaded[layer.id]); delete loaded[layer.id]; }
       cnt.textContent = '';
+    }
+  };
+  return el;
+}
+
+// ── Water meters (Arad) ──────────────────────────────────────────────────
+// Meters live in their own table (GIS.meters), NOT in the engine layers, so
+// they never appeared in the layer list. This block surfaces them: load once
+// via meters_geojson, group by raw_data village, and cluster each village's
+// meters on the map with its own toggle.
+var METER_COLOR = '#0284c7';
+
+function meterVillageOf(f) {
+  var p = f.properties || {};
+  return p.village || (p.raw_data && p.raw_data.village) || 'ללא כפר';
+}
+
+function buildMeterLayer(feats) {
+  if (typeof L.markerClusterGroup === 'function') {
+    var cg = L.markerClusterGroup({ chunkedLoading: true, maxClusterRadius: 55, disableClusteringAtZoom: 19, removeOutsideVisibleBounds: true });
+    var markers = [];
+    feats.forEach(function (f) {
+      var g = f.geometry; if (!g || g.type !== 'Point') return;
+      var d = 11;
+      var m = L.marker([g.coordinates[1], g.coordinates[0]], { icon: L.divIcon({
+        className: '', iconSize: [d, d], iconAnchor: [d / 2, d / 2],
+        html: '<div style="width:' + d + 'px;height:' + d + 'px;background:' + METER_COLOR + ';border:1.5px solid #fff;border-radius:50%;box-sizing:border-box"></div>' }) });
+      m.bindPopup(meterPopup(f));
+      markers.push(m);
+    });
+    cg.addLayers(markers);
+    return cg;
+  }
+  return L.geoJSON({ type: 'FeatureCollection', features: feats }, {
+    pointToLayer: function (f, ll) { return L.circleMarker(ll, { radius: 5, color: '#fff', weight: 1.5, fillColor: METER_COLOR, fillOpacity: .9 }); },
+    onEachFeature: function (f, lf) { lf.bindPopup(meterPopup(f)); }
+  });
+}
+
+function meterPopup(f) {
+  var p = f.properties || {};
+  var rows = [
+    ['מספר מונה', p.arad_meter_id],
+    ['מספר צרכן', p.customer_id],
+    ['שם צרכן', p.customer_name || (p.raw_data && p.raw_data.customer_name)],
+    ['קריאה אחרונה', p.last_reading],
+    ['כתובת', p.address || (p.raw_data && p.raw_data.address)]
+  ];
+  var html = '<div style="font-size:12.5px;line-height:1.6;min-width:170px"><b>🔢 מד מים</b>';
+  rows.forEach(function (r) { if (r[1] != null && r[1] !== '') html += '<br>' + esc(r[0]) + ': ' + esc(r[1]); });
+  return html + '</div>';
+}
+
+async function loadMetersOnce() {
+  if (metersByVillage) return;
+  metersFC = await GIS.meters.getMeters();
+  metersByVillage = {};
+  (metersFC.features || []).forEach(function (f) {
+    if (!f.geometry || !f.geometry.coordinates) return;
+    var v = meterVillageOf(f);
+    (metersByVillage[v] = metersByVillage[v] || []).push(f);
+  });
+}
+
+function metersBlock() {
+  var wrap = document.createElement('div');
+  wrap.className = 'ge-village' + (metersOpen ? '' : ' collapsed');
+  var head = document.createElement('div');
+  head.className = 'ge-vhead';
+  head.innerHTML =
+    '<span class="ge-vchev">' + (metersOpen ? '▾' : '▸') + '</span>' +
+    '<span class="ge-vname">🔢 מדי מים (Arad)</span>' +
+    '<span class="ge-vcount" id="ge-meters-count"></span>';
+  var bodyEl = document.createElement('div');
+  bodyEl.className = 'ge-vbody';
+  bodyEl.innerHTML = '<div class="ge-empty">טוען…</div>';
+  wrap.appendChild(head);
+  wrap.appendChild(bodyEl);
+
+  function renderMeterRows() {
+    var villages = Object.keys(metersByVillage).sort(function (a, b) { return a.localeCompare(b, 'he'); });
+    var total = (metersFC.features || []).length;
+    var cntEl = document.getElementById('ge-meters-count');
+    if (cntEl) cntEl.textContent = total.toLocaleString('he-IL') + ' מדים';
+    if (!villages.length) { bodyEl.innerHTML = '<div class="ge-empty">אין מדי מים. ייבא דרך "🔢 ייבוא מדים".</div>'; return; }
+    bodyEl.innerHTML = '';
+    villages.forEach(function (v) { bodyEl.appendChild(meterRow(v)); });
+  }
+
+  head.onclick = function () {
+    metersOpen = !metersOpen;
+    wrap.classList.toggle('collapsed');
+    head.querySelector('.ge-vchev').textContent = metersOpen ? '▾' : '▸';
+    if (metersOpen && !metersByVillage) {
+      loadMetersOnce().then(renderMeterRows).catch(function (e) {
+        bodyEl.innerHTML = '<div class="ge-empty" style="color:#dc2626">' + esc(e.message) + '</div>';
+      });
+    }
+  };
+  if (metersOpen && metersByVillage) renderMeterRows();
+  else if (!metersOpen) bodyEl.innerHTML = '<div class="ge-empty">לחץ להצגת מדי המים</div>';
+  return wrap;
+}
+
+function meterRow(village) {
+  var feats = metersByVillage[village] || [];
+  var el = document.createElement('div');
+  el.className = 'ge-row';
+  el.innerHTML =
+    '<input type="checkbox">' +
+    '<span class="ge-dot" style="background:' + METER_COLOR + '"></span>' +
+    '<span class="ge-name" title="' + esc(village) + '">' + esc(village) + '</span>' +
+    '<span class="ge-count">' + feats.length + '</span>';
+  var cb = el.querySelector('input[type=checkbox]');
+  el.querySelector('.ge-name').onclick = function () { cb.checked = !cb.checked; cb.onchange(); };
+  cb.onchange = function () {
+    if (cb.checked) {
+      if (!meterLayers[village]) meterLayers[village] = buildMeterLayer(feats);
+      meterLayers[village].addTo(window.gMap);
+    } else if (meterLayers[village]) {
+      window.gMap.removeLayer(meterLayers[village]);
     }
   };
   return el;

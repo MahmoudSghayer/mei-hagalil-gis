@@ -130,13 +130,61 @@ function renderPreview(rows) {
 }
 
 // ── ייבוא דרך המנוע ───────────────────────────────────────────────────────────
+// Lazily-created progress panel (a 32k-meter import is ~100 chunked RPC calls,
+// so the user needs to see how far along it is and roughly how long is left).
+function ensureProgress() {
+  var p = document.getElementById('mi-progress');
+  if (p) return p;
+  p = document.createElement('div');
+  p.id = 'mi-progress';
+  p.style.cssText = 'display:none;margin-top:14px;padding:14px;border:1px solid #e2e8f0;border-radius:10px;background:#f8fafc';
+  p.innerHTML =
+    '<div id="mip-stage" style="font-size:13px;font-weight:700;color:#0d3b5e;margin-bottom:8px">מייבא מדי מים…</div>' +
+    '<div style="height:10px;background:#e2e8f0;border-radius:6px;overflow:hidden">' +
+      '<div id="mip-fill" style="height:100%;width:0%;background:#1a7fc1;transition:width .25s"></div></div>' +
+    '<div id="mip-text" style="font-size:12px;color:#64748b;margin-top:6px">—</div>';
+  var btn = document.getElementById('mi-import-btn');
+  var host = (btn && btn.closest('.card')) || document.getElementById('mi-preview-wrap') || document.body;
+  host.appendChild(p);
+  return p;
+}
+
+function fmtETA(sec) {
+  if (!isFinite(sec) || sec < 0) return '';
+  if (sec < 60) return Math.round(sec) + ' שׄ';
+  return Math.floor(sec / 60) + ':' + ('0' + Math.round(sec % 60)).slice(-2) + ' דק';
+}
+
 async function doImport() {
   if (!gRows) return;
   var btn = document.getElementById('mi-import-btn');
   btn.disabled = true; btn.textContent = 'מייבא…';
   document.getElementById('mi-err').textContent = '';
+
+  var p = ensureProgress();
+  var fill = document.getElementById('mip-fill');
+  var text = document.getElementById('mip-text');
+  var stage = document.getElementById('mip-stage');
+  p.style.display = 'block';
+  stage.textContent = 'מייבא מדי מים…';
+  fill.style.width = '0%';
+  text.textContent = 'מתכונן… (' + gRows.length + ' רשומות)';
+  var startedAt = Date.now();
+
   try {
-    var result = await GIS.meters.importMeters(gRows, 'csv-json-upload');
+    var result = await GIS.meters.importMeters(gRows, 'csv-json-upload', {
+      onProgress: function (done, total) {
+        var pct = total ? Math.round(done / total * 100) : 0;
+        fill.style.width = pct + '%';
+        var elapsed = (Date.now() - startedAt) / 1000;
+        var eta = done ? elapsed / done * (total - done) : 0;
+        text.textContent = done + ' / ' + total + ' (' + pct + '%)' +
+          (eta && pct < 100 ? ' · נותרו כ-' + fmtETA(eta) : '');
+      }
+    });
+    fill.style.width = '100%';
+    stage.textContent = '✅ הייבוא הושלם';
+    text.textContent = 'יובאו ' + result.total + ' מדים (' + result.inserted + ' חדשים, ' + result.updated + ' עודכנו)';
     document.getElementById('r-ins').textContent = result.inserted;
     document.getElementById('r-upd').textContent = result.updated;
     document.getElementById('r-tot').textContent = result.total;
@@ -145,6 +193,7 @@ async function doImport() {
       ? 'הערה: ' + result.skipped + ' שורות דולגו (חסר מספר מונה — למשל שורת סיכום).'
       : '';
   } catch (e) {
+    stage.textContent = '⚠️ הייבוא נכשל';
     document.getElementById('mi-err').textContent = 'שגיאת ייבוא: ' + e.message;
   } finally {
     btn.disabled = false; btn.textContent = '⬆️ ייבא מדים';
