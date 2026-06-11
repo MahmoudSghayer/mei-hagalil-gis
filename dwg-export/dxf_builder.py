@@ -205,6 +205,13 @@ def _ensure_manhole_block(doc: Drawing) -> None:
         )
 
 
+def _as_float(v: Any) -> float | None:
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
 def _manhole_attrib_values(props: dict) -> dict[str, str]:
     """Map GIS manhole fields → the visible TL / IL1 / IL2 / H / DIA rows.
 
@@ -214,15 +221,30 @@ def _manhole_attrib_values(props: dict) -> dict[str, str]:
       IL2 = Invert Level 2   ← props["LowIL"]   (outlet)
       H   = Height (depth)   ← props["Depth"]
       DIA = manhole diameter ← props["ManholeDia"]   (shown bare, e.g. "100")
+
+    IL2 fix (CEO, June 2026): the source data stores LowIL as 0.00 for every
+    manhole (placeholder, never properly entered). So when the stored IL2 is
+    missing or zero, derive it from TL − Depth (TL = cover level, Depth = how
+    deep the invert sits below it). A genuinely-entered non-zero IL2 is kept.
     """
     def num(key: str, decimals: int | None = 2) -> str:
         v = props.get(key)
         return _fmt_num(v, decimals) if v not in (None, "") else ""
 
+    il2 = _as_float(props.get("LowIL"))
+    tl = _as_float(props.get("TL"))
+    depth = _as_float(props.get("Depth"))
+    if (il2 is None or il2 == 0.0) and tl is not None and depth is not None:
+        il2_str = _fmt_num(tl - depth, 2)        # derived: TL − Depth
+    elif il2 not in (None, 0.0):
+        il2_str = _fmt_num(il2, 2)               # genuine stored value
+    else:
+        il2_str = ""                              # placeholder 0 & can't derive → blank
+
     return {
         "TL":  f"TL={num('TL')}",
         "IL1": f"IL1={num('HighIL')}",
-        "IL2": f"IL2={num('LowIL')}",
+        "IL2": f"IL2={il2_str}",
         "H":   f"H={num('Depth')}",
         "DIA": num("ManholeDia", None),
     }
