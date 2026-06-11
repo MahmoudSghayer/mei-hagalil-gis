@@ -235,9 +235,17 @@
     // insert directly under the title bar
     topbar.parentNode.insertBefore(ribbon, topbar.nextSibling);
 
-    // mark the sidebar as an ArcGIS Contents pane
+    // mark the sidebar as an ArcGIS Contents pane + add its header
     var sb = $('sidebar');
-    if (sb) { sb.classList.add('ags-contents'); }
+    if (sb) {
+      sb.classList.add('ags-contents');
+      if (!$('ags-contents-head')) {
+        var h = document.createElement('div');
+        h.id = 'ags-contents-head';
+        h.innerHTML = '<span class="ico">📑</span><span>תוכן · Contents</span>';
+        sb.insertBefore(h, sb.firstChild);
+      }
+    }
 
     initStatusScale();
   }

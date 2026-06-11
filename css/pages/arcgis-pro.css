@@ -161,9 +161,45 @@
 /* ArcGIS Contents pane has a thin title strip at the very top of the pane */
 #sidebar.ags-contents { box-shadow: -2px 0 8px rgba(13,59,94,0.06); }
 
-/* ── Original floating controls are KEPT VISIBLE (measure toolbar, export &
-   stats FABs). The ribbon ADDS access to the same actions — it does not
-   replace them. Nothing is removed. ──────────────────────────────────────── */
+/* ══════════════════════════════════════════════════════════════════════════
+   FULL ArcGIS Pro reskin — replaces the old UI/UX (per user request).
+   Functions are preserved (all live in the ribbon); only the redundant old
+   floating chrome + panel styling are removed/restyled. No DOM is deleted —
+   every wired element keeps its id, so behaviour is unchanged.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Old floating controls — actions now live in the ribbon → hide the duplicates */
+#basemap-switcher, #layer-toggles, #exp-fab, #stats-fab, #measure-toolbar { display: none !important; }
+
+/* ── Title bar → slim, flat ArcGIS quick-access strip ─────────────────────── */
+#topbar { height: 44px; background: linear-gradient(180deg, #0d3b5e 0%, #0a2f4d 100%); box-shadow: inset 0 -1px 0 rgba(0,0,0,0.35); }
+#topbar::before, #topbar::after { display: none !important; }    /* drop dotted texture + accent line — flatter pro look */
+#topbar .logo { font-size: 14px; }
+#topbar .stat { padding: 2px 10px; background: rgba(255,255,255,0.06); }
+#topbar .stat .n { font-size: 13px; } #topbar .stat .l { font-size: 9px; }
+#topbar .admin-link { padding: 4px 10px; font-size: 11.5px; }
+
+/* ── Sidebar → ArcGIS "Contents" pane ─────────────────────────────────────── */
+#sidebar.ags-contents { width: 296px; background: #eef1f4; border-right: 1px solid var(--ags-ribbon-border); box-shadow: -1px 0 0 var(--ags-ribbon-border); }
+#sidebar.ags-contents.collapsed { width: 0; }
+/* the pane header injected by the ribbon module */
+#ags-contents-head {
+  display: flex; align-items: center; gap: 8px; padding: 8px 14px; flex-shrink: 0;
+  background: linear-gradient(180deg, var(--ags-ribbon-bg-2), var(--ags-ribbon-bg));
+  border-bottom: 1px solid var(--ags-ribbon-border);
+  font-size: 12.5px; font-weight: 700; color: var(--ags-accent-dark);
+}
+#ags-contents-head .ico { font-size: 14px; }
+/* panels become flat sections inside the pane */
+#sidebar.ags-contents .panel { background: transparent; padding: 10px 12px; }
+#sidebar.ags-contents .panel-title { text-transform: none; font-size: 11.5px; letter-spacing: 0; color: var(--ags-cmd-muted); }
+#sidebar.ags-contents #gis-eng-panel { background: #fff; border: 1px solid var(--ags-ribbon-border); border-radius: 9px; margin: 8px; padding: 8px 10px; }
+#sidebar.ags-contents .my-incidents-panel { border-radius: 9px; margin: 8px; }
+#sidebar.ags-contents #add-btn { border-radius: 8px; }
+
+/* ── Status bar → ArcGIS footer ───────────────────────────────────────────── */
+#statusbar { height: 24px; background: #0a2f4d; gap: 10px; }
+#statusbar > span:not(#coords):not(#ags-scale):not(#ags-proj) { opacity: 0.4; }
 
 /* ══════════════════════════════════════════════════════════════════════════
    Network trace (Phase 2): arm banner, valve markers, results card
