@@ -92,7 +92,10 @@ document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && el
 
 function close() { el.classList.remove('open'); clearHl(); }
 
-var GISTable = { autoOpen: true, open: open, openLayer: openLayer, close: close };
+// autoOpen=false → clicking a feature keeps the NATIVE behaviour (line
+// highlights/selects + popup shows start↔end). The meters panel / editable
+// table open on demand from the popup's "📋 מאפיינים ומדים" button.
+var GISTable = { autoOpen: false, open: open, openLayer: openLayer, close: close };
 window.GISTable = GISTable;
 
 // ── פתיחה מנתוני כפר (זיכרון). אם הקטגוריה עברה מיגרציה → מעבר אוטומטי למצב מנוע נערך ──
