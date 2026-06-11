@@ -62,10 +62,20 @@
 
       if (!fc) {
         var slug = String(villageId).split('_')[0];
-        // 1. reuse already-loaded features from index.js if present
+        // 1. reuse already-loaded features from index.js if present.
+        //    index.js stores gVillageFeatures[vid] = { catId: [features] }
+        //    (an object keyed by category), but tolerate a flat array too.
         var loaded = window.gVillageFeatures && window.gVillageFeatures[villageId];
-        if (loaded && loaded.length) {
-          fc = { type: 'FeatureCollection', features: loaded.slice() };
+        var loadedArr = null;
+        if (loaded) {
+          if (Array.isArray(loaded)) loadedArr = loaded;
+          else {
+            loadedArr = [];
+            Object.keys(loaded).forEach(function (k) { loadedArr = loadedArr.concat(loaded[k]); });
+          }
+        }
+        if (loadedArr && loadedArr.length) {
+          fc = { type: 'FeatureCollection', features: loadedArr.slice() };
         } else {
           // 2. fetch the flat GeoJSON from Storage (same path index.js uses)
           var row = GIS._unwrap(
