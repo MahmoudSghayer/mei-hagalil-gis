@@ -86,6 +86,30 @@
       return { valid: errors.length === 0, errors: errors, coerced: coerced };
     },
 
+    // Add a column to a layer and backfill it on every feature. Admin only.
+    // def = { name, type, default? }
+    addColumn: async function (layerId, def) {
+      GIS._assert(layerId && def && def.name, 'addColumn requires (layerId, { name, type })');
+      await GIS._requireRole(['admin'], 'add columns');
+      var sb = GIS.sb();
+      GIS._unwrap(await sb.rpc('add_layer_field', {
+        p_layer_id: layerId,
+        p_name: def.name,
+        p_type: normalizeType(def.type),
+        p_default: def.default === undefined ? null : def.default
+      }), 'add column');
+      return { layer_id: layerId, name: def.name };
+    },
+
+    // Delete a column from a layer and strip it from every feature. Admin only.
+    deleteColumn: async function (layerId, name) {
+      GIS._assert(layerId && name, 'deleteColumn requires (layerId, name)');
+      await GIS._requireRole(['admin'], 'delete columns');
+      var sb = GIS.sb();
+      GIS._unwrap(await sb.rpc('delete_layer_field', { p_layer_id: layerId, p_name: name }), 'delete column');
+      return { layer_id: layerId, name: name, deleted: true };
+    },
+
     // Convenience: compute a calculated field over a whole layer and persist it.
     // Loads features → evaluates the expression → writes each value into
     // properties[fieldName]. Respects RLS (admin|engineer to write features).
