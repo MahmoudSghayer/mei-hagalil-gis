@@ -31,6 +31,23 @@
       return layer;
     },
 
+    // Persist a layer's display colour (hex). Admin only (RLS on layers).
+    setColor: async function (layerId, color) {
+      GIS._assert(layerId && color, 'setColor requires (layerId, color)');
+      await GIS._requireRole(['admin'], 'recolor layers');
+      var sb = GIS.sb();
+      return GIS._unwrap(
+        await sb.from('layers').update({ color: color }).eq('id', layerId).select().single(), 'set color');
+    },
+
+    // Bounding box [minLng, minLat, maxLng, maxLat] over the given layers,
+    // or null if empty. Used to fly the map to a village.
+    extent: async function (layerIds) {
+      GIS._assert(layerIds && layerIds.length, 'extent requires layerIds');
+      var sb = GIS.sb();
+      return GIS._unwrap(await sb.rpc('layers_extent', { p_layer_ids: layerIds }), 'layer extent');
+    },
+
     // Find a layer by exact name (used to map a migrated village+category to
     // its engine layer). Returns the layer row or null.
     findByName: async function (name) {

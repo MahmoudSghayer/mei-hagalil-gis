@@ -24,7 +24,9 @@ var CAT_ICON = {
   hydrants:'🚒', water_meters:'🔢', sewage_manholes:'⭕', reservoirs:'🏗️', pump_stations:'⛽'
 };
 function catLabel(cat) { return (CAT_ICON[cat] ? CAT_ICON[cat] + ' ' : '') + (CAT_HE[cat] || cat); }
-function colorFor(t) { return t === 'Point' ? '#0d3b5e' : t === 'Polygon' ? '#0e7490' : '#1a7fc1'; }
+function defaultColor(t) { return t === 'Point' ? '#0d3b5e' : t === 'Polygon' ? '#0e7490' : '#1a7fc1'; }
+function colorFor(layer) { return (layer && layer.color) || defaultColor(layer && layer.geometry_type); }
+function toHex(c) { return /^#[0-9a-fA-F]{6}$/.test(c || '') ? c : defaultColor(); }
 
 var css = document.createElement('style');
 css.textContent = `
@@ -40,6 +42,11 @@ css.textContent = `
 #gis-eng-panel .ge-row:hover{background:#f1f5f9;}
 #gis-eng-panel .ge-row input{accent-color:#0d3b5e;width:14px;height:14px;cursor:pointer;flex-shrink:0;}
 #gis-eng-panel .ge-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+#gis-eng-panel .ge-color{width:16px;height:16px;flex-shrink:0;padding:0;border:1px solid #cbd5e1;border-radius:4px;cursor:pointer;background:none;}
+#gis-eng-panel .ge-color::-webkit-color-swatch{border:none;border-radius:3px;}
+#gis-eng-panel .ge-color::-webkit-color-swatch-wrapper{padding:0;}
+#gis-eng-panel .ge-fly{background:none;border:none;cursor:pointer;font-size:12px;padding:0 2px;opacity:.75;}
+#gis-eng-panel .ge-fly:hover{opacity:1;}
 #gis-eng-panel .ge-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 #gis-eng-panel .ge-count{font-size:10px;color:#94a3b8;}
 #gis-eng-panel .ge-empty{font-size:11px;color:#94a3b8;padding:8px 2px;line-height:1.5;}
@@ -157,12 +164,14 @@ function villageBlock(village, layers) {
   head.innerHTML =
     '<span class="ge-vchev">' + (openVillages[village] ? '▾' : '▸') + '</span>' +
     '<span class="ge-vname">📍 ' + esc(village) + '</span>' +
+    '<button class="ge-fly" title="התמקד בכפר">🎯</button>' +
     '<span class="ge-vcount">' + layers.length + ' שכבות</span>';
   head.onclick = function () {
     openVillages[village] = !openVillages[village];
     wrap.classList.toggle('collapsed');
     head.querySelector('.ge-vchev').textContent = openVillages[village] ? '▾' : '▸';
   };
+  head.querySelector('.ge-fly').onclick = function (e) { e.stopPropagation(); flyToVillage(layers); };
   wrap.appendChild(head);
 
   var bodyEl = document.createElement('div');
@@ -173,23 +182,51 @@ function villageBlock(village, layers) {
   return wrap;
 }
 
+function flyToVillage(layers) {
+  if (!window.gMap) return;
+  GIS.layers.extent(layers.map(function (l) { return l.id; })).then(function (bb) {
+    if (bb) gMap.flyToBounds([[bb[1], bb[0]], [bb[3], bb[2]]], { padding: [40, 40], duration: .8, maxZoom: 17 });
+  }).catch(function (e) { console.warn('[GISEngineSidebar] flyTo', e); });
+}
+
 function row(layer) {
-  var color = colorFor(layer.geometry_type);
-  var el = document.createElement('label');
+  var color = colorFor(layer);
+  var el = document.createElement('div');
   el.className = 'ge-row';
   el.innerHTML =
     '<input type="checkbox">' +
-    '<span class="ge-dot" style="background:' + color + '"></span>' +
+    '<input type="color" class="ge-color" value="' + toHex(color) + '" title="שנה צבע שכבה">' +
     '<span class="ge-name" title="' + esc(layer.name) + '">' + esc(catLabel(layer._cat)) + '</span>' +
     '<span class="ge-count"></span>';
-  var cb = el.querySelector('input');
+  var cb = el.querySelector('input[type=checkbox]');
+  var picker = el.querySelector('.ge-color');
   var cnt = el.querySelector('.ge-count');
+
+  // clicking the name toggles the layer (the row is a div, not a label)
+  el.querySelector('.ge-name').onclick = function () { cb.checked = !cb.checked; cb.onchange(); };
+
+  // recolour: persist + restyle live if the layer is rendered
+  picker.onclick = function (e) { e.stopPropagation(); };
+  picker.onchange = async function () {
+    var newColor = picker.value;
+    layer.color = newColor;
+    try { await GIS.layers.setColor(layer.id, newColor); }
+    catch (e) { alert('שגיאה בשמירת צבע: ' + e.message); return; }
+    if (loaded[layer.id]) {
+      window.gMap.removeLayer(loaded[layer.id]);
+      var fc = loaded[layer.id]._gisFC;
+      loaded[layer.id] = buildLayer(fc, layer, newColor).addTo(window.gMap);
+      loaded[layer.id]._gisFC = fc;
+    }
+  };
+
   cb.onchange = async function () {
     if (cb.checked) {
       cb.disabled = true; cnt.textContent = '…';
       try {
         var fc = await GIS.features.getFeatures(layer.id, 100000);
-        var lyr = buildLayer(fc, layer, color).addTo(window.gMap);
+        var lyr = buildLayer(fc, layer, colorFor(layer)).addTo(window.gMap);
+        lyr._gisFC = fc;
         loaded[layer.id] = lyr; cnt.textContent = (fc.features || []).length;
       } catch (e) { cb.checked = false; cnt.textContent = '✕'; alert('שגיאה: ' + e.message); }
       finally { cb.disabled = false; }
