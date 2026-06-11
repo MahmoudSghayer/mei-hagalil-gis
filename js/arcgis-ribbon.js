@@ -56,6 +56,10 @@
       ] },
       { label: 'איתור', cmds: [
         { ic: '🔍', lb: 'חיפוש', size: 'lg', act: focusSearch }
+      ] },
+      { label: 'מראה', cmds: [
+        { ic: '📖', lb: 'מקרא', size: 'lg', act: toggleLegend },
+        { ic: '🏷️', lb: 'תוויות קוטר', size: 'lg', act: toggleLabels }
       ] }
     ],
 
@@ -134,6 +138,8 @@
   function traceIsolation() { if (window.GISTrace) { window.GISTrace.startIsolation(); } else { toast('מנוע הרשת עדיין נטען…'); } }
   function traceConnected() { if (window.GISTrace) { window.GISTrace.startConnected(); } else { toast('מנוע הרשת עדיין נטען…'); } }
   function traceClear() { if (window.GISTrace) { window.GISTrace.clear(); } }
+  function toggleLegend() { if (window.GISSymbology) { window.GISSymbology.toggleLegend(); } else { toast('מנוע הסימבולוגיה עדיין נטען…'); } }
+  function toggleLabels() { if (window.GISSymbology) { window.GISSymbology.toggleLabels(); } else { toast('מנוע הסימבולוגיה עדיין נטען…'); } }
   function focusSearch() {
     var inp = document.querySelector('#search-bar input');
     if (inp) { inp.focus(); inp.select && inp.select(); }

@@ -223,3 +223,35 @@
 #gis-trace-card .gtc-actions { padding: 8px 14px 14px; }
 #gis-trace-card .gtc-clear { width: 100%; padding: 9px; border: none; border-radius: 9px; background: #0d3b5e; color: #fff; font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
 #gis-trace-card .gtc-clear:hover { background: #1a7fc1; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Symbology (Phase 3): diameter labels + legend card
+   ══════════════════════════════════════════════════════════════════════════ */
+.gis-sym-label {
+  background: transparent; border: none; box-shadow: none;
+  color: #0d3b5e; font-family: Arial, sans-serif; font-size: 9px; font-weight: 700;
+  text-shadow: 1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff;
+  white-space: nowrap; pointer-events: none; padding: 0;
+}
+.gis-sym-label::before { display: none; }            /* kill Leaflet tooltip arrow */
+body.dark-basemap .gis-sym-label { color: #fff; text-shadow: 1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000; }
+
+#gis-legend {
+  position: absolute; bottom: 80px; left: 14px; z-index: 410; width: 192px;
+  background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 12px;
+  box-shadow: 0 8px 28px rgba(13,59,94,0.16); direction: rtl;
+  font-family: 'Rubik', sans-serif; overflow: hidden;
+}
+#gis-legend .gsl-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 12px; font-size: 12px; font-weight: 700; color: var(--ags-accent-dark, #0d3b5e);
+  background: var(--ags-ribbon-bg, #f3f4f6); border-bottom: 1px solid var(--ags-ribbon-border, #cdd2d9);
+}
+#gis-legend .gsl-x { background: none; border: none; cursor: pointer; color: #94a3b8; font-size: 12px; }
+#gis-legend .gsl-x:hover { color: #dc2626; }
+#gis-legend .gsl-body { padding: 6px 12px 10px; max-height: 320px; overflow-y: auto; }
+#gis-legend .gsl-h { font-size: 10px; font-weight: 700; color: #64748b; margin: 8px 0 3px; }
+#gis-legend .gsl-row { display: flex; align-items: center; gap: 8px; padding: 2px 0; font-size: 11.5px; color: #1e293b; }
+#gis-legend .gsl-sw { width: 28px; display: inline-flex; justify-content: center; flex-shrink: 0; }
+#gis-legend .gsl-t { flex: 1; }
+#gis-legend .gsl-empty { font-size: 11.5px; color: #94a3b8; padding: 6px 0; }

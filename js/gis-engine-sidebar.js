@@ -78,6 +78,7 @@ async function renderLayer(layer) {
   lyr._gisFC = fc; loaded[layer.id] = lyr;
   var n = (fc.features || []).length;
   if (layer._cntEl) layer._cntEl.textContent = (n >= 4000 ? '4000+' : n);
+  if (window.GISSymbology && window.GISSymbology.refreshLegend) window.GISSymbology.refreshLegend();
   return n;
 }
 function wireMoveend() {
@@ -109,10 +110,14 @@ function openPanelFor(f, layer) {
 // Build the Leaflet layer for an engine layer. NO clustering — points render
 // as plain circle markers (no "bubbles"); viewport loading keeps it light.
 function buildLayer(fc, layer, color) {
+  var sym = window.GISSymbology;   // Phase 3: attribute-driven symbology (optional)
   return L.geoJSON(fc, {
-    style: function () { return { color: color, weight: 3, opacity: .9 }; },
-    pointToLayer: function (f, ll) { return L.circleMarker(ll, { radius: 5, color: '#fff', weight: 1.2, fillColor: color, fillOpacity: .9 }); },
-    onEachFeature: function (f, lf) { lf.on('click', function () { openPanelFor(f, layer); }); }
+    style: function (f) { return sym ? sym.lineStyle(layer, f, color) : { color: color, weight: 3, opacity: .9 }; },
+    pointToLayer: function (f, ll) { return sym ? sym.pointToLayer(layer, f, ll, color) : L.circleMarker(ll, { radius: 5, color: '#fff', weight: 1.2, fillColor: color, fillOpacity: .9 }); },
+    onEachFeature: function (f, lf) {
+      lf.on('click', function () { openPanelFor(f, layer); });
+      if (sym && sym.wantLabel(layer)) { var txt = sym.labelText(layer, f); if (txt) lf.bindTooltip(txt, { permanent: true, direction: 'center', className: 'gis-sym-label', opacity: 1 }); }
+    }
   });
 }
 
@@ -399,9 +404,14 @@ function meterRow(village) {
 
 function esc(x) { return String(x == null ? '' : x).replace(/[&<>"]/g, function (c) { return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' })[c]; }); }
 
+// Expose the Hebrew category label so the legend (GISSymbology) can name layers.
+window.GISLayerLabel = catLabel;
+
 // Allow the attribute table to refresh a rendered layer on the map after an edit.
 window.GISEngineSidebar = {
   reload: function (layerId) { if (active[layerId]) renderLayer(active[layerId]).catch(function () {}); },
+  reloadAll: function () { reloadActive(); },                       // Phase 3: re-style all active layers (labels toggle)
+  activeLayers: function () { return Object.keys(active).map(function (id) { return active[id]; }); },
   refresh: function () { try { render(); } catch (e) {} }
 };
 
