@@ -130,6 +130,9 @@ async function doImport() {
     document.getElementById('r-upd').textContent = result.updated;
     document.getElementById('r-tot').textContent = result.total;
     document.getElementById('mi-result').style.display = 'block';
+    document.getElementById('mi-err').textContent = result.skipped
+      ? 'הערה: ' + result.skipped + ' שורות דולגו (חסר מספר מונה — למשל שורת סיכום).'
+      : '';
   } catch (e) {
     document.getElementById('mi-err').textContent = 'שגיאת ייבוא: ' + e.message;
   } finally {

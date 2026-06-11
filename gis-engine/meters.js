@@ -130,15 +130,28 @@
     },
 
     // Import / upsert meters. `data` = array of raw records (CSV/JSON parsed).
-    // Admin only (RLS). Returns { inserted, updated, total }.
+    // Admin only (RLS). Returns { inserted, updated, total, skipped }.
+    // Rows with no מספר מונה (arad_meter_id) are skipped rather than failing the
+    // whole batch — ARad/Excel exports often carry a totals/footer row or stray
+    // blank line that has no meter id.
     importMeters: async function (data, source) {
       GIS._assert(Array.isArray(data), 'importMeters expects an array of records');
       await GIS._requireRole(['admin'], 'import meters');
-      var rows = data.map(normalize);
+      var rows = [], skipped = 0;
+      for (var i = 0; i < data.length; i++) {
+        try { rows.push(normalize(data[i])); }
+        catch (e) { skipped++; }
+      }
+      if (!rows.length) {
+        throw new Error('[GIS.meters] לא נמצאו רשומות תקינות — כל השורות חסרות מספר מונה. עמודות שזוהו: '
+          + Object.keys(data[0] || {}).join(' | '));
+      }
       var sb = GIS.sb();
-      return GIS._unwrap(await sb.rpc('import_meters', {
+      var res = GIS._unwrap(await sb.rpc('import_meters', {
         p_meters: rows, p_source: source || 'import'
-      }), 'import meters');
+      }), 'import meters') || {};
+      res.skipped = skipped;
+      return res;
     },
 
     // Future-ready sync. If GIS.config.aradSyncUrl is set, pulls the latest
