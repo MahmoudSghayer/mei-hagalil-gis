@@ -68,6 +68,43 @@ def _detect_sign(t: Transformer, sample: list[tuple[float, float]]) -> tuple[int
     return best_sign
 
 
+# Candidate source coordinate systems for Israeli CAD data, tried in order.
+# Many older drawings are in the Cassini "old Israeli grid", NOT the new ITM —
+# converting those as ITM lands them ~500 km away (Sinai). We auto-pick.
+_SRC_CANDIDATES = [
+    "EPSG:2039",   # Israel 1993 / Israeli TM Grid (ITM, the new grid)
+    "EPSG:28193",  # Palestine 1923 / Israeli CS Grid (old Cassini)
+    "EPSG:28191",  # Palestine 1923 / Palestine Grid (old Cassini)
+    "EPSG:6991",   # Israeli Grid 05/12
+]
+
+
+def _detect_crs_and_sign(sample: list[tuple[float, float]]):
+    """Try every candidate source CRS × sign convention and pick the combo that
+    lands the most sample points inside Israel. Returns (Transformer, sx, sy).
+    Falls back to ITM (1, 1) when nothing matches."""
+    best = None  # (hits, transformer, sx, sy, crs)
+    for crs in _SRC_CANDIDATES:
+        try:
+            tr = Transformer.from_crs(crs, "EPSG:4326", always_xy=True)
+        except Exception:
+            continue
+        for sx, sy in _SIGN_VARIANTS:
+            hits = 0
+            for x, y in sample:
+                try:
+                    lon, lat = tr.transform(sx * x, sy * y)
+                except Exception:
+                    continue
+                if _in_israel(lon, lat):
+                    hits += 1
+            if best is None or hits > best[0]:
+                best = (hits, tr, sx, sy, crs)
+    if best is None or best[0] < max(1, int(0.3 * len(sample))):
+        return Transformer.from_crs("EPSG:2039", "EPSG:4326", always_xy=True), 1, 1, "EPSG:2039?"
+    return best[1], best[2], best[3], best[4]
+
+
 def dxf_to_geojson(dxf_bytes: bytes, source_crs: str = "EPSG:2039") -> dict:
     # ezdxf wants a file path so it can sniff the DXF encoding itself.
     with tempfile.NamedTemporaryFile(suffix=".dxf", delete=False) as tf:
@@ -158,7 +195,8 @@ def dxf_to_geojson(dxf_bytes: bytes, source_crs: str = "EPSG:2039") -> dict:
             sample.append((c[0], c[1]))
         if len(sample) >= 800:
             break
-    sx, sy = _detect_sign(t, sample)
+    # Auto-detect the real source CRS (ITM vs old Cassini grid) AND sign.
+    t, sx, sy, src_crs = _detect_crs_and_sign(sample)
 
     # ── Pass 2: transform every coordinate with the chosen sign ────────────
     def conv(c):
@@ -179,4 +217,5 @@ def dxf_to_geojson(dxf_bytes: bytes, source_crs: str = "EPSG:2039") -> dict:
         except Exception:
             continue
 
-    return {"type": "FeatureCollection", "features": features}
+    return {"type": "FeatureCollection", "features": features,
+            "_meta": {"source_crs_detected": src_crs, "sign": [sx, sy]}}
