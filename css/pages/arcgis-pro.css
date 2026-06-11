@@ -1,0 +1,225 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   ArcGIS Pro skin — Phase 1 UI shell (ribbon + Contents pane + status scale)
+   Additive: layers an ArcGIS-Pro look over the existing app. RTL/Hebrew kept.
+   The recognizable ArcGIS signature is the RIBBON; theme stays light.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --ags-ribbon-bg:    #f3f4f6;
+  --ags-ribbon-bg-2:  #e9ebee;
+  --ags-ribbon-border:#cdd2d9;
+  --ags-tab-active:   #ffffff;
+  --ags-accent:       #1a7fc1;     /* matches app --blue-mid */
+  --ags-accent-dark:  #0d3b5e;
+  --ags-cmd-text:     #2b3138;
+  --ags-cmd-muted:    #6b7480;
+  --ags-group-label:  #7a828c;
+  --ags-ribbon-h:     94px;        /* tabs (26) + body (68) */
+}
+
+/* ── Ribbon shell ─────────────────────────────────────────────────────────── */
+#ags-ribbon {
+  flex-shrink: 0;
+  background: var(--ags-ribbon-bg);
+  border-bottom: 1px solid var(--ags-ribbon-border);
+  font-family: 'Rubik', 'Segoe UI', Tahoma, Arial, sans-serif;
+  user-select: none;
+  position: relative;
+  z-index: 600;
+  box-shadow: 0 1px 4px rgba(13,59,94,0.06);
+}
+
+/* Tab strip */
+#ags-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 28px;
+  padding: 0 8px;
+  background: linear-gradient(180deg, var(--ags-ribbon-bg-2) 0%, var(--ags-ribbon-bg) 100%);
+  border-bottom: 1px solid var(--ags-ribbon-border);
+}
+.ags-tab {
+  appearance: none;
+  border: 1px solid transparent;
+  border-bottom: none;
+  background: transparent;
+  color: var(--ags-cmd-muted);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 5px 16px 6px;
+  cursor: pointer;
+  border-radius: 5px 5px 0 0;
+  line-height: 1;
+  transition: background 0.12s, color 0.12s;
+}
+.ags-tab:hover { background: rgba(26,127,193,0.10); color: var(--ags-cmd-text); }
+.ags-tab.active {
+  background: var(--ags-tab-active);
+  color: var(--ags-accent-dark);
+  border-color: var(--ags-ribbon-border);
+  position: relative;
+  z-index: 1;
+  margin-bottom: -1px;        /* fuse with body */
+}
+.ags-tab.active::before {     /* ArcGIS accent line on active tab */
+  content: '';
+  position: absolute;
+  top: 0; left: 6px; right: 6px;
+  height: 2.5px;
+  background: var(--ags-accent);
+  border-radius: 2px;
+}
+
+/* Ribbon body — horizontal groups */
+#ags-panels { background: var(--ags-tab-active); height: 66px; }
+.ags-panel { display: none; height: 100%; align-items: stretch; padding: 0 4px; overflow-x: auto; }
+.ags-panel.active { display: flex; }
+
+.ags-group {
+  display: flex;
+  flex-direction: column;
+  padding: 3px 4px 0;
+  border-left: 1px solid var(--ags-ribbon-border);  /* RTL: divider on the left edge */
+  min-width: max-content;
+}
+.ags-group:last-child { border-left: none; }
+.ags-group-body { display: flex; align-items: flex-start; gap: 1px; flex: 1; }
+.ags-group-label {
+  text-align: center;
+  font-size: 9.5px;
+  color: var(--ags-group-label);
+  padding: 1px 4px 3px;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+}
+
+/* Command buttons */
+.ags-cmd {
+  appearance: none;
+  border: 1px solid transparent;
+  background: transparent;
+  font-family: inherit;
+  color: var(--ags-cmd-text);
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: background 0.12s, border-color 0.12s;
+  white-space: nowrap;
+}
+.ags-cmd:hover { background: rgba(26,127,193,0.12); border-color: rgba(26,127,193,0.30); }
+.ags-cmd:active { background: rgba(26,127,193,0.20); }
+.ags-cmd.active { background: rgba(26,127,193,0.18); border-color: var(--ags-accent); }
+.ags-cmd:disabled { opacity: 0.4; cursor: not-allowed; }
+.ags-cmd:disabled:hover { background: transparent; border-color: transparent; }
+
+/* Large command: icon over label */
+.ags-cmd-lg {
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  width: 54px;
+  height: 56px;
+  padding: 4px 2px;
+}
+.ags-cmd-lg .ags-ic { font-size: 21px; line-height: 1; }
+.ags-cmd-lg .ags-lb { font-size: 9.5px; font-weight: 500; line-height: 1.1; text-align: center; max-width: 50px; }
+
+/* Small command: icon + label inline, stacked 3-per-column */
+.ags-cmd-sm {
+  gap: 6px;
+  height: 18px;
+  padding: 1px 6px 1px 5px;
+  width: 100%;
+  justify-content: flex-start;
+}
+.ags-cmd-sm .ags-ic { font-size: 13px; width: 16px; text-align: center; }
+.ags-cmd-sm .ags-lb { font-size: 11px; font-weight: 500; }
+.ags-col { display: flex; flex-direction: column; gap: 1px; justify-content: center; padding: 2px 0; }
+
+/* ── Status bar: scale + projection ───────────────────────────────────────── */
+#ags-scale-wrap { display: flex; align-items: center; gap: 6px; }
+#ags-scale { color: var(--blue-light); font-family: monospace; font-size: 11px; }
+#ags-scalebar {
+  width: 70px; height: 7px;
+  border: 1px solid rgba(255,255,255,0.5);
+  border-top: none;
+  position: relative;
+}
+#ags-proj { color: rgba(255,255,255,0.5); font-size: 11px; }
+
+/* ── Contents pane (restyle existing #sidebar header to ArcGIS TOC) ────────── */
+#sidebar #layers-scroll-area .panel-title {
+  text-transform: none;
+  font-size: 12px;
+  letter-spacing: 0;
+  color: var(--ags-accent-dark);
+  border-bottom: 1px solid var(--ags-ribbon-border);
+}
+/* ArcGIS Contents pane has a thin title strip at the very top of the pane */
+#sidebar.ags-contents { box-shadow: -2px 0 8px rgba(13,59,94,0.06); }
+
+/* ── Hide the floating FABs the ribbon now replaces ───────────────────────── */
+#exp-fab, #stats-fab, #measure-toolbar { display: none !important; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Network trace (Phase 2): arm banner, valve markers, results card
+   ══════════════════════════════════════════════════════════════════════════ */
+#gis-trace-banner {
+  position: absolute; top: 112px; left: 50%; transform: translateX(-50%);
+  z-index: 820; background: rgba(13,27,46,0.93); color: #fff;
+  border: 1px solid rgba(220,38,38,0.45); border-radius: 9999px;
+  padding: 8px 22px; font-size: 12.5px; font-family: 'Rubik', sans-serif;
+  direction: rtl; white-space: nowrap; box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+  pointer-events: none; backdrop-filter: blur(8px);
+}
+#gis-trace-banner b { color: #fca5a5; }
+
+.gis-valve-mk {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: #dc2626; color: #fff; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  border: 2.5px solid #fff; box-shadow: 0 0 0 2px #dc2626, 0 2px 8px rgba(0,0,0,0.5);
+  animation: gisValvePulse 1.6s infinite;
+}
+.gis-valve-mk.inop { background: #b45309; box-shadow: 0 0 0 2px #b45309, 0 2px 8px rgba(0,0,0,0.5); }
+@keyframes gisValvePulse {
+  0%   { box-shadow: 0 0 0 2px #dc2626, 0 0 0 0 rgba(220,38,38,0.55); }
+  70%  { box-shadow: 0 0 0 2px #dc2626, 0 0 0 12px rgba(220,38,38,0); }
+  100% { box-shadow: 0 0 0 2px #dc2626, 0 0 0 0 rgba(220,38,38,0); }
+}
+
+#gis-trace-card {
+  position: absolute; top: 112px; left: 14px; z-index: 815; width: 290px;
+  background: #fff; border: 1px solid var(--border, #e2e8f0); border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(13,59,94,0.22); direction: rtl;
+  font-family: 'Rubik', 'Segoe UI', sans-serif; overflow: hidden;
+  animation: fadeUp .22s ease both;
+}
+#gis-trace-card .gtc-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 14px; font-size: 14px; font-weight: 700; color: #fff;
+  background: linear-gradient(135deg, #b91c1c 0%, #dc2626 100%);
+}
+#gis-trace-card .gtc-x { background: rgba(255,255,255,0.18); border: none; color: #fff; width: 24px; height: 24px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+#gis-trace-card .gtc-x:hover { background: rgba(255,255,255,0.32); }
+#gis-trace-card .gtc-sub { padding: 8px 14px 4px; font-size: 11.5px; color: #64748b; font-weight: 600; }
+#gis-trace-card .gtc-stats { display: flex; gap: 8px; padding: 6px 14px; }
+#gis-trace-card .gtc-stat { flex: 1; background: #f8fafc; border: 1px solid #eef2f6; border-radius: 9px; padding: 8px 4px; text-align: center; }
+#gis-trace-card .gtc-n { font-size: 18px; font-weight: 800; color: #0d3b5e; line-height: 1.1; }
+#gis-trace-card .gtc-l { font-size: 9.5px; color: #94a3b8; margin-top: 2px; }
+#gis-trace-card .gtc-vlist-h { padding: 8px 14px 2px; font-size: 10px; font-weight: 700; color: #7a828c; text-transform: none; }
+#gis-trace-card .gtc-vlist { max-height: 168px; overflow-y: auto; padding: 0 10px 4px; }
+#gis-trace-card .gtc-valve { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 7px; cursor: pointer; font-size: 12.5px; }
+#gis-trace-card .gtc-valve:hover { background: #fef2f2; }
+#gis-trace-card .gtc-valve.inop { opacity: 0.85; }
+#gis-trace-card .gtc-vk { font-size: 13px; }
+#gis-trace-card .gtc-vn { flex: 1; font-weight: 600; color: #1e293b; }
+#gis-trace-card .gtc-vt { font-size: 10.5px; color: #94a3b8; }
+#gis-trace-card .gtc-empty { padding: 10px 14px; font-size: 12px; color: #94a3b8; line-height: 1.5; }
+#gis-trace-card .gtc-warn { margin: 6px 12px; padding: 7px 10px; background: #fffbeb; border: 1px solid #fde68a; color: #92400e; font-size: 11px; border-radius: 8px; line-height: 1.45; }
+#gis-trace-card .gtc-actions { padding: 8px 14px 14px; }
+#gis-trace-card .gtc-clear { width: 100%; padding: 9px; border: none; border-radius: 9px; background: #0d3b5e; color: #fff; font-family: inherit; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+#gis-trace-card .gtc-clear:hover { background: #1a7fc1; }
