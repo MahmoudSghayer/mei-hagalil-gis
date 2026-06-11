@@ -58,7 +58,45 @@ var t = setInterval(function () {
   } else if (tries > 80) { clearInterval(t); }
 }, 200);
 
+// Hide the old flat-file infrastructure panel — the engine is the layer system now.
+function hideOldPanel() {
+  var oldList = document.getElementById('dwg-layers-list');
+  if (oldList) { var p = oldList.closest('.panel'); if (p) p.style.display = 'none'; }
+}
+
+function openPanelFor(f, layer) {
+  if (window.GISPanel) window.GISPanel.open(f, { layerId: layer.id, sub: layer.name.split(' · ')[0] });
+  else if (window.GISTable) GISTable.openLayer(layer.id, f.properties && f.properties.asset_code, { title: '📋 ' + catLabel(layer._cat), sub: layer.name.split(' · ')[0] });
+}
+
+// Build the Leaflet layer for an engine layer. Point layers are clustered
+// (markercluster) for performance on big datasets; lines/polygons use geoJSON.
+function buildLayer(fc, layer, color) {
+  var feats = fc.features || [];
+  if (layer.geometry_type === 'Point' && typeof L.markerClusterGroup === 'function') {
+    var cg = L.markerClusterGroup({ chunkedLoading: true, maxClusterRadius: 50, disableClusteringAtZoom: 19, removeOutsideVisibleBounds: true });
+    var markers = [];
+    feats.forEach(function (f) {
+      var g = f.geometry; if (!g || g.type !== 'Point') return;
+      var d = 12;
+      var m = L.marker([g.coordinates[1], g.coordinates[0]], { icon: L.divIcon({
+        className: '', iconSize: [d, d], iconAnchor: [d / 2, d / 2],
+        html: '<div style="width:' + d + 'px;height:' + d + 'px;background:' + color + ';border:1.5px solid #fff;border-radius:50%;box-sizing:border-box"></div>' }) });
+      m.on('click', function () { openPanelFor(f, layer); });
+      markers.push(m);
+    });
+    cg.addLayers(markers);
+    return cg;
+  }
+  return L.geoJSON(fc, {
+    style: function () { return { color: color, weight: 3, opacity: .9 }; },
+    pointToLayer: function (f, ll) { return L.circleMarker(ll, { radius: 6, color: '#fff', weight: 1.5, fillColor: color, fillOpacity: .9 }); },
+    onEachFeature: function (f, lf) { lf.on('click', function () { openPanelFor(f, layer); }); }
+  });
+}
+
 async function build() {
+  hideOldPanel();
   var host = document.getElementById('layers-scroll-area');
   var panel = document.createElement('div');
   panel.className = 'panel'; panel.id = 'gis-eng-panel';
@@ -150,17 +188,8 @@ function row(layer) {
     if (cb.checked) {
       cb.disabled = true; cnt.textContent = '…';
       try {
-        var fc = await GIS.features.getFeatures(layer.id);
-        var lyr = L.geoJSON(fc, {
-          style: function () { return { color: color, weight: 3, opacity: .9 }; },
-          pointToLayer: function (f, ll) { return L.circleMarker(ll, { radius: 6, color: '#fff', weight: 1.5, fillColor: color, fillOpacity: .9 }); },
-          onEachFeature: function (f, lf) {
-            lf.on('click', function () {
-              if (window.GISPanel) window.GISPanel.open(f, { layerId: layer.id, sub: layer.name.split(' · ')[0] });
-              else if (window.GISTable) GISTable.openLayer(layer.id, f.properties && f.properties.asset_code, { title: '📋 ' + catLabel(layer._cat), sub: layer.name.split(' · ')[0] });
-            });
-          }
-        }).addTo(window.gMap);
+        var fc = await GIS.features.getFeatures(layer.id, 100000);
+        var lyr = buildLayer(fc, layer, color).addTo(window.gMap);
         loaded[layer.id] = lyr; cnt.textContent = (fc.features || []).length;
       } catch (e) { cb.checked = false; cnt.textContent = '✕'; alert('שגיאה: ' + e.message); }
       finally { cb.disabled = false; }

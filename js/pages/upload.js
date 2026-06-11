@@ -703,82 +703,31 @@ async function doUpload() {
       await saveLearnedRules();
     }
 
-    var ts = Date.now();
-    var totalAdded = 0, totalSkipped = 0;
+    // ── Import straight into the GIS engine (features/layers/fields) ──────
+    // Grouped by _category → one engine layer per "<village> · <category>".
+    // Re-upload is safe: import_features upserts by synthesised asset_code.
+    var totalAdded = 0;
 
     for (var vi = 0; vi < slugs.length; vi++) {
       var slug = slugs[vi];
       var vData = taggedByVillage[slug];
       var village = vData.village;
       var vFeatures = vData.features;
-      var catCounts = vData.categoryCounts;
 
-      ps.textContent = 'מעלה ' + village.name + ' (' + (vi + 1) + '/' + slugs.length + ')';
-      pf.style.width = (55 + Math.round(40 * (vi + 1) / slugs.length)) + '%';
+      ps.textContent = 'מייבא ' + village.name + ' למנוע (' + (vi + 1) + '/' + slugs.length + ')';
+      pf.style.width = (55 + Math.round(40 * vi / slugs.length)) + '%';
       pt.textContent = vFeatures.length + ' אובייקטים...';
 
-      // MERGE with existing data — keep both. Skip new features that already exist
-      // (same geometry + same real attributes), so re-uploading the same data is safe.
-      pt.textContent = 'בודק כפילויות מול הנתונים הקיימים...';
-      var existing = await fetchActiveVillageFeatures(village.slug);
-      var seen = {};
-      for (var ei = 0; ei < existing.length; ei++) seen[featureSignature(existing[ei])] = true;
-      var merged = existing.slice();
-      var addedCount = 0, skippedCount = 0;
-      for (var ni = 0; ni < vFeatures.length; ni++) {
-        var sig = featureSignature(vFeatures[ni]);
-        if (seen[sig]) { skippedCount++; continue; }
-        seen[sig] = true;
-        merged.push(vFeatures[ni]);
-        addedCount++;
-      }
-      totalAdded += addedCount;
-      totalSkipped += skippedCount;
-      pt.textContent = 'נוספו ' + addedCount + ' · דולגו ' + skippedCount + ' כפולים · סה"כ ' + merged.length;
-
-      // Deactivate previous uploads for this village; the new file holds the merged set.
-      await gSb.from('village_layers')
-        .update({ is_active: false })
-        .eq('is_active', true)
-        .like('village_id', village.slug + '_%');
-
-      var fileName = village.slug + '_' + ts + (slugs.length > 1 ? '_' + vi : '') + '.geojson';
-      var dataToUpload = {
-        type: 'FeatureCollection',
-        features: merged,
-        _meta: {
-          uploaded_at: new Date().toISOString(),
-          original_filename: gFile.name,
-          detected_village: village.name,
-          layer_count: Object.keys(catCounts).length,
-          kept_features: merged.length,
-          added: addedCount,
-          skipped_duplicates: skippedCount
-        }
-      };
-      var fileBlob = new Blob([JSON.stringify(dataToUpload)], { type: 'application/json' });
-      // filenames are unique per upload (slug_timestamp), so cache immutably for a year
-      var uploadRes = await gSb.storage.from('village-layers').upload(fileName, fileBlob, { upsert: true, contentType: 'application/json', cacheControl: '31536000' });
-      if (uploadRes.error) throw uploadRes.error;
-
-      var metaId = village.slug + '_' + ts + (slugs.length > 1 ? '_' + vi : '');
-      var displayName = village.name + ' — ' + Object.keys(catCounts).length + ' קטגוריות';
-      var metaRes = await gSb.from('village_layers').upsert({
-        village_id: metaId,
-        village_name: displayName,
-        icon: icon,
-        file_path: fileName,
-        feature_count: merged.length,
-        uploaded_by: gAdminId,
-        uploaded_at: new Date().toISOString(),
-        is_active: true
-      }, { onConflict: 'village_id' });
-      if (metaRes.error) throw metaRes.error;
-
+      var summary = await GIS.migrate.importFeatures(village.name, village.slug, vFeatures, {
+        onProgress: function (vname) {
+          return function (done, total) { pt.textContent = vname + ': ' + done + ' / ' + total; };
+        }(village.name)
+      });
+      totalAdded += summary.total;
     }
 
     pf.style.width = '100%';
-    pt.textContent = '✅ נוספו ' + totalAdded + ' · דולגו ' + totalSkipped + ' כפולים · ' + slugs.length + ' כפרים';
+    pt.textContent = '✅ יובאו ' + totalAdded + ' אובייקטים למנוע · ' + slugs.length + ' כפרים';
     var villageNames = slugs.map(function(s) { return taggedByVillage[s].village.name; }).join(', ');
     showToast('✅ הועלה ל: ' + villageNames, 'success');
 

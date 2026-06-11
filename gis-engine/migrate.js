@@ -98,6 +98,39 @@
       return { village_id: villageId, layers: layersOut, total: done };
     },
 
+    // Import an arbitrary parsed FeatureCollection/array straight into the
+    // engine, grouped by properties._category. Used by the upload page so a
+    // DWG/Shapefile/GeoJSON upload lands directly in features/layers/fields.
+    // villageName → engine layer prefix; slug → asset_code prefix. Admin only.
+    importFeatures: async function (villageName, slug, features, opts) {
+      opts = opts || {};
+      await GIS._requireRole(['admin'], 'import features');
+      features = (features && features.features) ? features.features : (features || []);
+      GIS._assert(features.length, 'no features to import');
+
+      var byCat = {};
+      features.forEach(function (f) {
+        var c = (f.properties && f.properties._category) || 'other';
+        (byCat[c] = byCat[c] || []).push(f);
+      });
+      var cats = Object.keys(byCat);
+      var grandTotal = features.length, done = 0, layersOut = [];
+      var sb = GIS.sb();
+
+      for (var ci = 0; ci < cats.length; ci++) {
+        var cat = cats[ci];
+        var raw = byCat[cat];
+        var layerName = villageName + ' · ' + cat;
+        var layerId = GIS._unwrap(await sb.rpc('ensure_layer', {
+          p_name: layerName, p_geometry_type: geomTypeOf(raw)
+        }), 'ensure layer');
+        var payload = buildPayload(raw, slug, slug, cat);
+        done = await importChunks(layerId, payload, opts.onProgress, done, grandTotal);
+        layersOut.push({ category: cat, layer_id: layerId, count: raw.length });
+      }
+      return { village: villageName, layers: layersOut, total: done };
+    },
+
     // Migrate every village currently loaded into memory.
     all: async function (opts) {
       var ids = Object.keys(window.gVillageFeatures || {});

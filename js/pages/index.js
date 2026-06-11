@@ -79,7 +79,9 @@ window.addEventListener('load', async function() {
   initMap();
   document.getElementById('app').classList.add('ready');  // reveal shell + map immediately
   initSB();
-  loadAllVillages();                                       // non-blocking: villages stream in afterward
+  // OLD flat-file village system disabled — the GIS engine is the layer system now.
+  // Layers come from the engine (js/gis-engine-sidebar.js); uploads import into it.
+  // loadAllVillages();
 });
 
 function setUserUI(p) {
