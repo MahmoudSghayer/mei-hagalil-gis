@@ -61,6 +61,18 @@ BEGIN
    WHERE layer_id = p_layer_id AND NOT (properties ? p_name);
 END; $$;
 
+-- Rename a field (column) and move the value on every feature.
+CREATE OR REPLACE FUNCTION public.rename_layer_field(p_layer_id UUID, p_old TEXT, p_new TEXT)
+RETURNS VOID LANGUAGE plpgsql AS $$
+BEGIN
+  IF p_new !~ '^[A-Za-z_][A-Za-z0-9_]*$' THEN RAISE EXCEPTION 'Invalid field name: %', p_new; END IF;
+  UPDATE public.fields SET name = p_new WHERE layer_id = p_layer_id AND name = p_old;
+  UPDATE public.features
+     SET properties = (properties - p_old) || jsonb_build_object(p_new, properties->p_old),
+         updated_at = NOW()
+   WHERE layer_id = p_layer_id AND (properties ? p_old);
+END; $$;
+
 -- Delete a field (column) from a layer and strip it from every feature.
 CREATE OR REPLACE FUNCTION public.delete_layer_field(p_layer_id UUID, p_name TEXT)
 RETURNS VOID LANGUAGE plpgsql AS $$

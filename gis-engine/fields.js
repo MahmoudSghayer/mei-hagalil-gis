@@ -101,6 +101,17 @@
       return { layer_id: layerId, name: def.name };
     },
 
+    // Rename a column and move its value on every feature. Admin only.
+    renameColumn: async function (layerId, oldName, newName) {
+      GIS._assert(layerId && oldName && newName, 'renameColumn requires (layerId, oldName, newName)');
+      await GIS._requireRole(['admin'], 'rename columns');
+      var sb = GIS.sb();
+      GIS._unwrap(await sb.rpc('rename_layer_field', {
+        p_layer_id: layerId, p_old: oldName, p_new: newName
+      }), 'rename column');
+      return { layer_id: layerId, from: oldName, to: newName };
+    },
+
     // Delete a column from a layer and strip it from every feature. Admin only.
     deleteColumn: async function (layerId, name) {
       GIS._assert(layerId && name, 'deleteColumn requires (layerId, name)');

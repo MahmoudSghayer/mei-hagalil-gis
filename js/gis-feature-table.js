@@ -58,7 +58,10 @@ el.innerHTML =
     '<span class="gt-title" id="gt-title">טבלת מאפיינים</span>' +
     '<span class="gt-sub" id="gt-sub"></span>' +
     '<span class="gt-spacer"></span>' +
+    '<button class="gt-ico" id="gt-addrow" style="display:none">➕ שורה</button>' +
+    '<button class="gt-ico" id="gt-delrow" style="display:none">🗑 שורה</button>' +
     '<button class="gt-ico" id="gt-add" style="display:none">➕ עמודה</button>' +
+    '<button class="gt-ico" id="gt-ren" style="display:none">✏️ עמודה</button>' +
     '<button class="gt-ico" id="gt-del" style="display:none">➖ עמודה</button>' +
     '<button class="gt-ico warn" id="gt-migrate" style="display:none">⬆️ ייבא לעריכה</button>' +
     '<input class="gt-search" id="gt-search" placeholder="סינון…">' +
@@ -80,7 +83,10 @@ document.getElementById('gt-x').onclick = close;
 document.getElementById('gt-zoom').onclick = function () { if (state.selected) zoomTo(state.selected); };
 document.getElementById('gt-search').oninput = debounce(function (e) { state.filter = e.target.value; renderBody(); }, 180);
 document.getElementById('gt-add').onclick = addColumn;
+document.getElementById('gt-ren').onclick = renameColumnUI;
 document.getElementById('gt-del').onclick = deleteColumn;
+document.getElementById('gt-addrow').onclick = addRow;
+document.getElementById('gt-delrow').onclick = deleteRow;
 document.getElementById('gt-migrate').onclick = migrateThis;
 document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && el.classList.contains('open') && !el.querySelector('.gt-cell-input')) close(); });
 
@@ -103,7 +109,7 @@ async function open(vid, catId, selProps) {
                                feats.find(function (f) { return shallowMatch(f.properties, selProps); }) || null) : null;
 
   setHeader('📋 ' + (CAT_HE[catId] || catId), (village.village_name || '') + ' · ' + feats.length + ' פריטים');
-  toolbar({ migrate: false, schema: false });
+  toolbar({ migrate: false, schema: false, rows: false });
   el.classList.add('open'); invalidateMap();
   renderBody(true);
   if (state.selected) zoomTo(state.selected, true);
@@ -116,7 +122,7 @@ async function open(vid, catId, selProps) {
       var selCode = state.selected && state.selected.properties && state.selected.properties.asset_code;
       await openLayer(layer.id, selCode, { title: '📋 ' + (CAT_HE[catId] || catId), sub: village.village_name });
     } else {
-      toolbar({ migrate: true, schema: false });   // אפשר ייבוא
+      toolbar({ migrate: true, schema: false, rows: false });   // אפשר ייבוא
       footer('תצוגה בלבד — ייבא לעריכה');
     }
   } catch (e) { /* נשאר בתצוגת כפר */ }
@@ -141,7 +147,7 @@ async function openLayer(layerId, selectAssetCode, meta) {
     : state.selected;
 
   setHeader(meta.title || '📋 שכבת מנוע', (meta.sub ? meta.sub + ' · ' : '') + state.all.length + ' פריטים' + (state.editable ? ' · נערך' : ' · תצוגה'));
-  toolbar({ migrate: false, schema: state.editable && state.role === 'admin' });
+  toolbar({ migrate: false, schema: state.editable && state.role === 'admin', rows: state.editable });
   renderBody(true);
   if (state.selected) zoomTo(state.selected, true);
   footer(state.editable ? 'דאבל-קליק על תא לעריכה' : ('תצוגה בלבד (' + (state.role || 'אורח') + ')'));
@@ -259,7 +265,15 @@ function editCell(td, feature, col) {
   input.onblur = function () { commit(true); };
 }
 
-// ── הוספת / מחיקת עמודה (אדמין) ─────────────────────────────────────────────────
+// Reload the current engine layer in place, preserving header + selection.
+async function reloadLayer(selCode) {
+  await openLayer(state.layerId,
+    selCode !== undefined ? selCode : (state.selected && state.selected.properties.asset_code),
+    { title: document.getElementById('gt-title').textContent,
+      sub: document.getElementById('gt-sub').textContent.split(' · ')[0], reset: false });
+}
+
+// ── עמודות (אדמין): הוספה / שינוי שם / מחיקה ────────────────────────────────────
 async function addColumn() {
   if (!state.layerId) return;
   var name = window.prompt('שם העמודה החדשה (אנגלית, ללא רווחים):');
@@ -268,8 +282,21 @@ async function addColumn() {
   footer('מוסיף עמודה…');
   try {
     await GIS.fields.addColumn(state.layerId, { name: name.trim(), type: type });
-    await openLayer(state.layerId, state.selected && state.selected.properties.asset_code, { title: document.getElementById('gt-title').textContent, sub: document.getElementById('gt-sub').textContent.split(' · ')[0], reset: false });
+    await reloadLayer();
     footer('<span class="ok">✓ נוספה עמודה ' + esc(name) + '</span>');
+  } catch (e) { footer('<span class="er">✕ ' + esc(e.message) + '</span>'); }
+}
+async function renameColumnUI() {
+  if (!state.layerId) return;
+  var oldName = window.prompt('עמודה לשינוי שם:\n' + state.cols.join(', '));
+  if (!oldName) return;
+  var newName = window.prompt('שם חדש ל-"' + oldName.trim() + '" (אנגלית, ללא רווחים):');
+  if (!newName) return;
+  footer('משנה שם…');
+  try {
+    await GIS.fields.renameColumn(state.layerId, oldName.trim(), newName.trim());
+    await reloadLayer();
+    footer('<span class="ok">✓ שונה שם → ' + esc(newName) + '</span>');
   } catch (e) { footer('<span class="er">✕ ' + esc(e.message) + '</span>'); }
 }
 async function deleteColumn() {
@@ -280,8 +307,39 @@ async function deleteColumn() {
   footer('מוחק עמודה…');
   try {
     await GIS.fields.deleteColumn(state.layerId, name.trim());
-    await openLayer(state.layerId, state.selected && state.selected.properties.asset_code, { title: document.getElementById('gt-title').textContent, sub: document.getElementById('gt-sub').textContent.split(' · ')[0], reset: false });
+    await reloadLayer();
     footer('<span class="ok">✓ נמחקה עמודה ' + esc(name) + '</span>');
+  } catch (e) { footer('<span class="er">✕ ' + esc(e.message) + '</span>'); }
+}
+
+// ── שורות (פיצ'רים): הוספה / מחיקה ──────────────────────────────────────────────
+async function addRow() {
+  if (!state.layerId) return;
+  // גאומטריה: שכפול מהנבחר (או מהראשון) — ניתן לכוונן בהמשך
+  var src = state.selected || state.all[0];
+  if (!src || !src.geometry) { alert('אין גאומטריה לשכפול — בחר פיצ\'ר קיים תחילה'); return; }
+  var geom = JSON.parse(JSON.stringify(src.geometry));
+  var code = 'NEW-' + Date.now().toString(36) + '-' + Math.floor(Math.random() * 1000);
+  var props = {};
+  state.cols.forEach(function (c) { var d = state.fieldDefs[c]; if (!(d && d.is_calculated)) props[c] = null; });
+  footer('מוסיף שורה…');
+  try {
+    await GIS.features.createFeature(state.layerId, geom, props, code);
+    await reloadLayer(code);   // טען מחדש ובחר את החדש
+    footer('<span class="ok">✓ נוספה שורה — ערוך את הערכים (דאבל-קליק)</span>');
+  } catch (e) { footer('<span class="er">✕ ' + esc(e.message) + '</span>'); }
+}
+async function deleteRow() {
+  if (!state.layerId || !state.selected) { alert('בחר שורה למחיקה (לחיצה על שורה)'); return; }
+  var id = state.selected.properties.__id || state.selected.id;
+  var code = state.selected.properties.asset_code || '';
+  if (!window.confirm('למחוק את הפיצ\'ר ' + code + '? פעולה בלתי הפיכה.')) return;
+  footer('מוחק שורה…');
+  try {
+    await GIS.features.deleteFeature(id);
+    clearHl(); state.selected = null;
+    await reloadLayer(null);
+    footer('<span class="ok">✓ השורה נמחקה</span>');
   } catch (e) { footer('<span class="er">✕ ' + esc(e.message) + '</span>'); }
 }
 
@@ -330,7 +388,10 @@ function footer(htmlStr) { document.getElementById('gt-foot').innerHTML = htmlSt
 function toolbar(o) {
   document.getElementById('gt-migrate').style.display = o.migrate ? '' : 'none';
   document.getElementById('gt-add').style.display = o.schema ? '' : 'none';
+  document.getElementById('gt-ren').style.display = o.schema ? '' : 'none';
   document.getElementById('gt-del').style.display = o.schema ? '' : 'none';
+  document.getElementById('gt-addrow').style.display = o.rows ? '' : 'none';
+  document.getElementById('gt-delrow').style.display = o.rows ? '' : 'none';
 }
 function invalidateMap() { if (window.gMap) setTimeout(function () { gMap.invalidateSize(); }, 260); }
 

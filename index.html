@@ -69,11 +69,11 @@
         </button>
       </div>
       <div id="basemap-switcher">
-        <button class="basemap-btn active" data-basemap="satellite" onclick="switchBasemap('satellite')">
+        <button class="basemap-btn" data-basemap="satellite" onclick="switchBasemap('satellite')">
           <div class="basemap-icon">🛰️</div><div class="basemap-label">Esri HD</div>
         </button>
-        <button class="basemap-btn" data-basemap="hybrid" onclick="switchBasemap('hybrid')">
-          <div class="basemap-icon">🌍</div><div class="basemap-label">היברידי</div>
+        <button class="basemap-btn active" data-basemap="hybrid" onclick="switchBasemap('hybrid')">
+          <div class="basemap-icon">🌍</div><div class="basemap-label">היברידי HD</div>
         </button>
         <button class="basemap-btn" data-basemap="streets" onclick="switchBasemap('streets')">
           <div class="basemap-icon">🛣️</div><div class="basemap-label">רחובות</div>
@@ -132,7 +132,7 @@
   <div id="statusbar">
     <span id="coords">לחץ על המפה</span><span>|</span>
     <span>זום: <span id="zoom-level">11</span></span><span>|</span>
-    <span id="basemap-name">Google לוויין HD</span><span>|</span><span>מי הגליל © 2025</span>
+    <span id="basemap-name">Google היברידי HD</span><span>|</span><span>מי הגליל © 2025</span>
   </div>
 </div>
 
@@ -195,7 +195,7 @@
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
 <script defer src="js/motion-utils.js"></script>
 <script defer src="js/measure-tools.js"></script>
-<script defer src="js/pages/index.js?v=8"></script>
+<script defer src="js/pages/index.js?v=9"></script>
 <script defer src="js/export-feature.js?v=10"></script>
 <script defer src="js/search-feature.js"></script>
 <script defer src="js/backend-client.js?v=6"></script>

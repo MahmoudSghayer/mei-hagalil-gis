@@ -50,7 +50,7 @@ var SUB_LAYERS = {
 };
 
 var gMap, gIncidentsLayer, gIncidents=[], gMarkers={};
-var gCurrentBasemap = 'satellite';
+var gCurrentBasemap = 'hybrid';
 var gActiveBasemapLayers = [];
 var gCadastralLayer = null, gCadastralVisible = false;
 var gVillages = [], gVillageLayers = {}, gVillageState = {}, gVillageBounds = {}, gVillageFeatures = {}, gVillageById = {};
@@ -267,10 +267,9 @@ function applyBasemap(key) {
       L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom:20, maxNativeZoom:19, attribution:'Esri, Maxar, Earthstar Geographics' })
     ];
   } else if (key === 'hybrid') {
-    name = 'Esri היברידי'; isDark = true;
+    name = 'Google היברידי HD'; isDark = true;
     gActiveBasemapLayers = [
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom:20, maxNativeZoom:19, attribution:'Esri' }),
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom:20, maxNativeZoom:19, opacity:0.85 })
+      L.tileLayer('https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom:21, maxNativeZoom:21, subdomains:['0','1','2','3'], attribution:'Google' })
     ];
   } else if (key === 'streets') {
     name = 'Google רחובות'; isDark = false;

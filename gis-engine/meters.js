@@ -13,8 +13,41 @@
   var GIS = window.GIS;
   GIS._assert(GIS, 'core.js must load before meters.js');
 
+  // Whitelist of villages we report for a meter. The customer file's כתובת
+  // column is free text (e.g. "שכונת אלעין דייר חנא", "מד מס' 1 דייר חנא"); we
+  // reduce it to one of these canonical names. Matching is spelling-tolerant
+  // (see normHe — collapses doubled yod/vav, strips gershayim), so address
+  // spellings like "דייר חנא" still resolve to "דיר חנא".
+  var VILLAGES = [
+    'סחנין', 'עראבה', 'דיר חנא', 'נחף', 'דיר אלאסד', 'בענה', 'מגד אלכרום'
+  ];
+
+  function normHe(s) {
+    return String(s == null ? '' : s)
+      .replace(/['"׳״’`]/g, '')   // strip geresh / gershayim / quotes
+      .replace(/יי/g, 'י')         // collapse doubled yod  (דייר → דיר)
+      .replace(/וו/g, 'ו')         // collapse doubled vav
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  // Extract the canonical village name from a free-text address, or null.
+  function extractVillage(address) {
+    var hay = normHe(address);
+    if (!hay) return null;
+    for (var i = 0; i < VILLAGES.length; i++) {
+      if (hay.indexOf(normHe(VILLAGES[i])) !== -1) return VILLAGES[i];
+    }
+    return null;
+  }
+
   // Normalise one raw meter record (CSV row / JSON object / ARad payload)
   // into the engine's canonical shape consumed by the import_meters RPC.
+  // Accepts both English keys and the Hebrew column headers exported by the
+  // ARad customer file. Columns with no first-class DB column (consumer name,
+  // phone, zone, transmitter id, reading time, village…) ride along in
+  // raw_data, which import_meters merges and meters_geojson spreads back into
+  // the map properties — so no schema change is needed to surface them.
   function normalize(raw) {
     var pick = function () {
       for (var i = 0; i < arguments.length; i++) {
@@ -23,20 +56,40 @@
       }
       return null;
     };
-    var lng = pick('lng', 'lon', 'longitude', 'x', 'X');
-    var lat = pick('lat', 'latitude', 'y', 'Y');
+    var lng = pick('lng', 'lon', 'longitude', 'x', 'X', 'קו אורך');
+    var lat = pick('lat', 'latitude', 'y', 'Y', 'קו רוחב');
     var out = {
-      arad_meter_id: pick('arad_meter_id', 'meter_id', 'meterId', 'id', 'serial'),
-      customer_id: pick('customer_id', 'customerId', 'customer'),
+      // מספר מונה = the unique ARad meter id (per product decision).
+      arad_meter_id: pick('arad_meter_id', 'meter_id', 'meterId', 'id', 'serial', 'מספר מונה'),
+      customer_id: pick('customer_id', 'customerId', 'customer', 'מספר צרכן'),
       asset_code: pick('asset_code', 'assetCode', 'asset'),
-      last_reading: pick('last_reading', 'reading', 'lastReading'),
+      last_reading: pick('last_reading', 'reading', 'lastReading', 'קריאה אחרונה(קוב)', 'קריאה אחרונה (קוב)', 'קריאה אחרונה'),
       consumption: pick('consumption', 'usage'),
       status: pick('status') || 'active',
       install_date: pick('install_date', 'installDate'),
       raw_data: raw.raw_data || {}
     };
     if (lng !== null && lat !== null) { out.lng = Number(lng); out.lat = Number(lat); }
-    if (!out.arad_meter_id) throw new Error('[GIS.meters] record is missing arad_meter_id');
+    if (!out.arad_meter_id) throw new Error('[GIS.meters] record is missing arad_meter_id (מספר מונה)');
+
+    // Hebrew-file extras → raw_data (only when present, never clobber existing).
+    var extra = {};
+    var addRaw = function (key, val) {
+      if (val !== null && val !== undefined && val !== '' && extra[key] === undefined) extra[key] = val;
+    };
+    addRaw('record_id', pick('record_id', 'מס זיהוי', 'מספר זיהוי'));
+    addRaw('transmitter_id', pick('transmitter_id', 'מספר משדר'));
+    addRaw('customer_name', pick('customer_name', 'שם צרכן'));
+    addRaw('phone', pick('phone', 'טלפון'));
+    addRaw('zone', pick('zone', 'אזור'));
+    addRaw('last_reading_time', pick('last_reading_time', 'זמן קריאה אחרונה'));
+    var address = pick('address', 'כתובת');
+    if (address) {
+      addRaw('address', address);
+      var village = extractVillage(address);
+      if (village) addRaw('village', village);
+    }
+    out.raw_data = Object.assign({}, raw.raw_data || {}, extra);
     return out;
   }
 

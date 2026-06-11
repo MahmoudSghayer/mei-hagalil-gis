@@ -139,12 +139,14 @@ async function doImport() {
 
 // ── CSV לדוגמה ────────────────────────────────────────────────────────────────
 function downloadSample() {
+  // תבנית בפורמט קובץ ARad (כותרות בעברית). מספר מונה = מזהה ייחודי.
   var csv = [
-    'arad_meter_id,customer_id,asset_code,lng,lat,last_reading,consumption,status,install_date',
-    'ARAD-900100,CUST-777,PIPE-1001,35.2970,32.8655,1200,14.2,active,2021-05-01',
-    'ARAD-900101,CUST-778,,35.2995,32.8656,4300,22.7,active,2019-11-20'
+    'מס זיהוי,מספר משדר,מספר צרכן,מספר מונה,שם צרכן,כתובת,זמן קריאה אחרונה,קריאה אחרונה(קוב),אזור,טלפון,קו אורך,קו רוחב',
+    '26020049,70B3D5A9F00A9C87,26254417,70B3D5A9F00A9C87,גריר קאסם ועולא חלאילה,שכונת אלעין דייר חנא,09/06/2026 11:38,1038.744,23,503328774,35.3739283,32.8583',
+    '26020050,70B3D5A9F00A81E7,27571421,70B3D5A9F00A81E7,סלאמה קאסם וזוהיר חלאילה,שכונת אלעין דייר חנא,09/06/2026 11:52,441.257,24,506475505,35.3740333,32.8582367'
   ].join('\n');
-  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  // BOM כדי ש-Excel יזהה UTF-8 ויציג עברית נכון.
+  var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'meters-sample.csv';
