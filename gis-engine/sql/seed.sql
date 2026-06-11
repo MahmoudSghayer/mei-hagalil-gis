@@ -40,7 +40,7 @@ INSERT INTO public.features (layer_id, asset_code, geometry, properties) VALUES
     ST_SetSRID(ST_MakePoint(35.3010,32.8650),4326), '{"type":"pillar","install_year":2015}')
 ON CONFLICT (asset_code) DO NOTHING;
 
--- Meters (ARad) — linked to pipes via asset_code. ARAD-900002 is an anomaly.
+-- Meters (Arad) — linked to pipes via asset_code. ARAD-900002 is an anomaly.
 INSERT INTO public.meters
   (arad_meter_id, customer_id, asset_code, geometry, last_reading, consumption, status, install_date, raw_data) VALUES
   ('ARAD-900001','CUST-501','PIPE-1001', ST_SetSRID(ST_MakePoint(35.2970,32.8655),4326), 1543.2, 12.4, 'active','2018-03-01','{"model":"Sonata"}'),

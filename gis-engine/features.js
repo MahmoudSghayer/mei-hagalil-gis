@@ -6,7 +6,7 @@
 //  Writes go through RLS: only admin|engineer may mutate features.
 //
 //  DATA RULE: every feature carries an `asset_code` — the primary link key
-//  to ARad meters and external systems.
+//  to Arad meters and external systems.
 // ════════════════════════════════════════════════════════════════════════
 (function () {
   'use strict';

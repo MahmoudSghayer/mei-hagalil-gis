@@ -1,6 +1,6 @@
 // ════════════════════════════════════════════════════════════════════════
 //  GIS ENGINE — meters.js   →   GIS.meters
-//  ARad water-meter integration. Meters live in their own table, separate
+//  Arad water-meter integration. Meters live in their own table, separate
 //  from GIS features, and are EDITABLE ONLY BY ADMIN (enforced by RLS).
 //
 //  Linking a meter to a GIS feature, in priority order:
@@ -41,15 +41,15 @@
     return null;
   }
 
-  // Normalise one raw meter record (CSV row / JSON object / ARad payload)
+  // Normalise one raw meter record (CSV row / JSON object / Arad payload)
   // into the engine's canonical shape consumed by the import_meters RPC.
   // Accepts both English keys and the Hebrew column headers exported by the
-  // ARad customer file. Columns with no first-class DB column (consumer name,
+  // Arad customer file. Columns with no first-class DB column (consumer name,
   // phone, zone, transmitter id, reading time, village…) ride along in
   // raw_data, which import_meters merges and meters_geojson spreads back into
   // the map properties — so no schema change is needed to surface them.
   function normalize(raw) {
-    // Header keys in ARad/Excel exports often carry invisible bidi marks
+    // Header keys in Arad/Excel exports often carry invisible bidi marks
     // (RLM/LRM), zero-width chars, NBSP or gershayim, so a literal lookup of a
     // Hebrew column name can miss. Build a cleaned-key index and fall back to
     // it, so "מספר מונה" matches regardless of such noise.
@@ -78,7 +78,7 @@
     var lng = pick('lng', 'lon', 'longitude', 'x', 'X', 'קו אורך');
     var lat = pick('lat', 'latitude', 'y', 'Y', 'קו רוחב');
     var out = {
-      // מספר מונה = the unique ARad meter id (per product decision).
+      // מספר מונה = the unique Arad meter id (per product decision).
       arad_meter_id: pick('arad_meter_id', 'meter_id', 'meterId', 'id', 'serial', 'מספר מונה'),
       customer_id: pick('customer_id', 'customerId', 'customer', 'מספר צרכן'),
       asset_code: pick('asset_code', 'assetCode', 'asset'),
@@ -132,7 +132,7 @@
     // Import / upsert meters. `data` = array of raw records (CSV/JSON parsed).
     // Admin only (RLS). Returns { inserted, updated, total, skipped }.
     // Rows with no מספר מונה (arad_meter_id) are skipped rather than failing the
-    // whole batch — ARad/Excel exports often carry a totals/footer row or stray
+    // whole batch — Arad/Excel exports often carry a totals/footer row or stray
     // blank line that has no meter id.
     importMeters: async function (data, source) {
       GIS._assert(Array.isArray(data), 'importMeters expects an array of records');
@@ -155,7 +155,7 @@
     },
 
     // Future-ready sync. If GIS.config.aradSyncUrl is set, pulls the latest
-    // readings from the ARad endpoint and upserts them; otherwise re-links any
+    // readings from the Arad endpoint and upserts them; otherwise re-links any
     // meters that are missing an asset_code by spatial proximity. Logs to
     // sync_logs (via importMeters / a sync_logs row). Admin only.
     syncMeters: async function () {
@@ -164,7 +164,7 @@
         var headers = { 'Accept': 'application/json' };
         if (GIS.config.aradSyncToken) headers.Authorization = 'Bearer ' + GIS.config.aradSyncToken;
         var resp = await fetch(GIS.config.aradSyncUrl, { headers: headers });
-        if (!resp.ok) throw new Error('[GIS.meters] ARad sync failed: HTTP ' + resp.status);
+        if (!resp.ok) throw new Error('[GIS.meters] Arad sync failed: HTTP ' + resp.status);
         var payload = await resp.json();
         var records = Array.isArray(payload) ? payload : (payload.meters || payload.data || []);
         return GIS.meters.importMeters(records, 'arad-api');

@@ -25,7 +25,7 @@ No build step, no framework. Plain `<script>` files attaching to a global
   calculator.js   GIS.calculator— SAFE expression evaluator (no eval)
   queries.js      GIS.queries   — SQL-like attribute filtering
   spatial.js      GIS.spatial   — distance / buffer / intersects / withinRadius
-  meters.js       GIS.meters    — ARad meter integration (admin only)
+  meters.js       GIS.meters    — Arad meter integration (admin only)
   villages.js     GIS.villages  — adapter for ALREADY-UPLOADED village GeoJSON
   /sql
     schema.sql    tables, RPCs, triggers, RLS   (run once in Supabase)
@@ -128,7 +128,7 @@ GIS.queries.parseFilterToSQL("diameter > 100 AND status = 'active'");
 L.geoJSON(fc).addTo(map);   // render the filtered result
 ```
 
-## Example — import ARad meters (admin only)
+## Example — import Arad meters (admin only)
 
 ```js
 // data parsed from CSV/JSON upload; field aliases are auto-normalised
@@ -146,7 +146,7 @@ const meters = await GIS.meters.getMeters();
 L.geoJSON(meters).addTo(map);
 const anomalies = await GIS.meters.getAnomalies();   // consumption > 1.5× avg
 
-// future-ready: pull from ARad API (set GIS.config.aradSyncUrl first)
+// future-ready: pull from Arad API (set GIS.config.aradSyncUrl first)
 await GIS.meters.syncMeters();
 ```
 
@@ -202,7 +202,7 @@ The engine uses these — the UI should not.
   against a field/function whitelist → interpreted. Filters are sent to the DB
   as a structured array; the RPC whitelists operators, regex-checks field
   names, and quotes values.
-- **`asset_code`** is the primary link key across GIS features, ARad meters,
+- **`asset_code`** is the primary link key across GIS features, Arad meters,
   and external data. Every feature must have one.
 - **Reads return GeoJSON** so results drop straight into `L.geoJSON(...)`.
 - **Auto-calc:** a DB trigger fills `length_m` (lines), `age` (from
