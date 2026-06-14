@@ -636,6 +636,13 @@ tbody tr:last-child td { border-bottom: none; }
 .empty { text-align: center; padding: var(--sp-12) var(--sp-5); color: var(--muted); font-size: 13px; }
 .empty-icon { font-size: 38px; margin-bottom: var(--sp-3); display: block; opacity: 0.7; }
 
+/* Inline SVG icons inherit their container's font-size + color (one icon language). */
+.upload-icon svg, .file-icon svg, .empty-icon svg,
+.role-card .icon svg, .eye-btn svg {
+  width: 1em; height: 1em; display: inline-block; vertical-align: middle;
+  stroke-width: 1.6; fill: none; stroke: currentColor;
+}
+
 /* ─────────────────────────────────────────────────────────
    KEYFRAMES
 ───────────────────────────────────────────────────────── */
