@@ -55,8 +55,11 @@
         ] }
       ] },
       { label: 'איתור', cmds: [
-        { ic: '🔍', lb: 'חיפוש', size: 'lg', act: focusSearch },
-        { ic: '🔖', lb: 'סימניות', size: 'lg', act: toggleBookmarks }
+        { ic: '🧭', lb: 'אתר נכס', size: 'lg', act: toggleFind },
+        { col: [
+          { ic: '🔍', lb: 'חיפוש כתובת', act: focusSearch },
+          { ic: '🔖', lb: 'סימניות',     act: toggleBookmarks }
+        ] }
       ] },
       { label: 'מראה', cmds: [
         { ic: '📖', lb: 'מקרא', size: 'lg', act: toggleLegend },
@@ -150,6 +153,7 @@
   function anlyBuffer() { if (window.GISAnalysis) { window.GISAnalysis.buffer(); } else { toast('מנוע הניתוח עדיין נטען…'); } }
   function anlyClear() { if (window.GISAnalysis) { window.GISAnalysis.clear(); } }
   function toggleBookmarks() { if (window.GISBookmarks) { window.GISBookmarks.toggle(); } else { toast('הסימניות עדיין נטענות…'); } }
+  function toggleFind() { if (window.GISFind) { window.GISFind.toggle(); } else { toast('כלי האיתור עדיין נטען…'); } }
   function focusSearch() {
     var inp = document.querySelector('#search-bar input');
     if (inp) { inp.focus(); inp.select && inp.select(); }

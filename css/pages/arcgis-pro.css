@@ -381,3 +381,17 @@ body.dark-basemap .gis-sym-label { color: #fff; text-shadow: 1px 1px 0 #000, -1p
 #gis-bm-card .gbm-empty { font-size: 11.5px; color: #94a3b8; padding: 8px 6px; line-height: 1.5; }
 #gis-bm-card .gbm-add { width: calc(100% - 8px); margin: 4px; padding: 8px; border: none; border-radius: 8px; background: var(--ags-accent-dark, #0d3b5e); color: #fff; font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
 #gis-bm-card .gbm-add:hover { background: var(--ags-accent, #1a7fc1); }
+
+/* ── Find / Locate asset ──────────────────────────────────────────────────── */
+#gis-find-card { position: absolute; top: 140px; left: 50%; transform: translateX(-50%); z-index: 816; width: 340px; max-width: 92vw; background: #fff; border: 1px solid var(--ags-ribbon-border, #e2e8f0); border-radius: 12px; box-shadow: 0 12px 36px rgba(13,59,94,0.22); direction: rtl; overflow: hidden; font-family: 'Rubik', sans-serif; }
+#gis-find-card .gf-head { display: flex; align-items: center; gap: 6px; padding: 8px 10px; background: var(--ags-ribbon-bg, #f3f4f6); border-bottom: 1px solid var(--ags-ribbon-border, #cdd2d9); }
+#gis-find-card .gf-input { flex: 1; border: 1px solid var(--ags-ribbon-border, #cdd2d9); border-radius: 7px; padding: 7px 10px; font-size: 13px; direction: rtl; font-family: inherit; }
+#gis-find-card .gf-input:focus { outline: none; border-color: var(--ags-accent, #1a7fc1); }
+#gis-find-card .gf-x { background: none; border: none; cursor: pointer; color: #94a3b8; font-size: 13px; }
+#gis-find-card .gf-x:hover { color: #dc2626; }
+#gis-find-card .gf-results { max-height: 300px; overflow-y: auto; }
+#gis-find-card .gf-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; border-bottom: 1px solid #f1f5f9; cursor: pointer; }
+#gis-find-card .gf-item:hover { background: #eff6ff; }
+#gis-find-card .gf-code { font-size: 13px; font-weight: 600; color: #0d3b5e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#gis-find-card .gf-layer { font-size: 10.5px; color: #94a3b8; white-space: nowrap; flex-shrink: 0; }
+#gis-find-card .gf-hint { padding: 12px; font-size: 12px; color: #94a3b8; text-align: center; }
