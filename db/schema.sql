@@ -76,7 +76,11 @@ BEGIN
     NEW.id,
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'full_name',   ''),
-    COALESCE(NEW.raw_user_meta_data->>'role',        'user'),
+    -- SECURITY: never trust a client-supplied role. New users are always 'user';
+    -- admins are promoted afterwards via an authenticated UPDATE (see admin.js +
+    -- the "profiles: admin can update any" policy). Reading role from
+    -- raw_user_meta_data here would let anyone self-signup as admin.
+    'user',
     COALESCE(NEW.raw_user_meta_data->>'phone',       ''),
     COALESCE(NEW.raw_user_meta_data->>'department',  '')
   )
@@ -134,6 +138,31 @@ CREATE POLICY "profiles: admin can update any"
 CREATE POLICY "profiles: admin can delete"
   ON profiles FOR DELETE
   USING (is_admin());
+
+-- SECURITY: the "user can update own" policy lets a user edit their own profile,
+-- but its WITH CHECK only verifies id = auth.uid() — it does NOT stop them from
+-- setting role='admin' or re-activating a suspended account. This trigger pins the
+-- privileged columns for non-admins, so self-promotion is impossible while admins
+-- (is_admin()) retain full control via "profiles: admin can update any".
+CREATE OR REPLACE FUNCTION public.prevent_privileged_self_update()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NOT is_admin() THEN
+    NEW.role      := OLD.role;
+    NEW.is_active := OLD.is_active;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_prevent_priv_self_update ON public.profiles;
+CREATE TRIGGER trg_prevent_priv_self_update
+  BEFORE UPDATE ON public.profiles
+  FOR EACH ROW EXECUTE FUNCTION public.prevent_privileged_self_update();
 
 
 -- ════════════════════════════════════════════════════════════════════════

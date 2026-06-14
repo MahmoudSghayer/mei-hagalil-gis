@@ -71,8 +71,12 @@ module.exports = async function handler(req, res) {
 
   // ── 2. Fallback: try data.gov.il SQL search with wider filter ────────────
   // Try the SQL endpoint which allows LIKE-style matching
-  const sqlResources = resources.slice(0, 3).map(r => r.id);
+  // Resource ids from data.gov.il are UUIDs. Whitelist the shape before
+  // interpolating `rid` into SQL so a malformed/hostile id can't inject.
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const sqlResources = resources.slice(0, 3).map(r => r.id).filter(id => UUID_RE.test(id));
   for (const rid of sqlResources) {
+    // `g` is parseInt'd above (numeric), `rid` is UUID-validated → no injection vector.
     const sql = `SELECT * FROM "${rid}" WHERE "GUSH_NUM"=${g} OR "GUSH"=${g} OR "gush_num"=${g} LIMIT 1`;
     const r = await get(
       `https://data.gov.il/api/3/action/datastore_search_sql?sql=${encodeURIComponent(sql)}`,

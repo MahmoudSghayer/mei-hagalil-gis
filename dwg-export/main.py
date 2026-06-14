@@ -56,7 +56,9 @@ MAX_DWG_FEATURES: int = int(os.getenv("MAX_DWG_FEATURES", "8000"))
 
 # Legacy auth token the frontend sends in X-Api-Token. Kept only as a transitional
 # fallback — the preferred auth is a Supabase session JWT (see SUPABASE_JWT_SECRET).
-API_TOKEN: str = os.getenv("API_TOKEN", "7bnNTN5T70qMRGp75AnrWe5NwaQFawG6tUmi35mz")
+# No hardcoded default: if API_TOKEN is unset the static-token path is disabled
+# (an empty token can never match an incoming header) and only JWT auth is accepted.
+API_TOKEN: str = os.getenv("API_TOKEN", "")
 
 # Supabase project JWT secret (Dashboard → Settings → API → JWT Secret).
 # When set, the service accepts a logged-in user's "Authorization: Bearer <access_token>"

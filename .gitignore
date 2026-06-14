@@ -1,6 +1,9 @@
 node_modules/
 .env
 .env.local
+.env.*
+**/.env
+**/.env.local
 .DS_Store
 .vscode/
 .claude/
