@@ -69,7 +69,7 @@
 
     edit: [
       { label: 'תקלות', cmds: [
-        { ic: 'alert', lb: 'תקלה חדשה', size: 'lg', act: function () { call('openIncModal'); } }
+        { ic: 'alert', lb: 'תקלה חדשה', size: 'lg', act: function () { call('startIncPick'); } }
       ] },
       { label: 'עריכת ישויות', cmds: [
         { ic: 'edit', lb: 'עריכה', size: 'lg', act: soon, disabled: true },

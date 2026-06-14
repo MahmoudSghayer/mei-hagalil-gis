@@ -61,6 +61,7 @@ var VILLAGE_CENTERS = {
   nahf:[32.9344,35.3025], sakhnin:[32.8650,35.2978], deir_hanna:[32.8631,35.3589], arrabeh:[32.8514,35.3339]
 };
 var gLastLat=null, gLastLng=null, gFilter='';
+var gIncPicking=false;
 var gUser=null, gProfile=null, gClosingId=null;
 var gSelectedLayer = null;
 
@@ -137,7 +138,10 @@ function initMap() {
     document.getElementById('tc-coords').textContent = '— הזז עכבר על המפה —';
   });
   gMap.on('zoomend',function(){document.getElementById('zoom-level').textContent=gMap.getZoom();});
-  gMap.on('click',function(e){gLastLat=e.latlng.lat;gLastLng=e.latlng.lng;});
+  gMap.on('click',function(e){
+    gLastLat=e.latlng.lat;gLastLng=e.latlng.lng;
+    if(gIncPicking){ finishIncPick(e.latlng.lat,e.latlng.lng); }
+  });
   gIncidentsLayer = L.layerGroup().addTo(gMap);
   MeasureTools.init(gMap);
   initCadastralLayer();
@@ -845,7 +849,44 @@ async function confirmClose(){var notes=document.getElementById('close-notes').v
 
 async function logAction(incidentId,action,notes,inc,durationSec){await gSb.from('incident_logs').insert([{incident_id:incidentId,user_id:gUser.id,user_name:gProfile.full_name||gUser.email,action:action,incident_title:inc?inc.title:null,incident_village:inc?inc.village:null,incident_priority:inc?inc.priority:null,notes:notes,duration_seconds:durationSec||null}]);}
 
-function openIncModal(){if(gLastLat){document.getElementById('f-lat').value=gLastLat.toFixed(5);document.getElementById('f-lng').value=gLastLng.toFixed(5);}document.getElementById('inc-modal-bg').classList.add('open');}
+// Entry point from the "תקלה חדשה" buttons: enter map-pick mode so the user
+// clicks the exact spot of the fault instead of reusing the last mouse XY.
+function startIncPick(){
+  if(gIncPicking)return;
+  gIncPicking=true;
+  if(gMap){gMap.getContainer().style.cursor='crosshair';}
+  showIncPickHint();
+  document.addEventListener('keydown',_incPickEsc);
+}
+function _incPickEsc(e){ if(e.key==='Escape')cancelIncPick(); }
+function finishIncPick(lat,lng){
+  if(!gIncPicking)return;
+  _exitIncPick();
+  document.getElementById('f-lat').value=lat.toFixed(5);
+  document.getElementById('f-lng').value=lng.toFixed(5);
+  document.getElementById('inc-modal-bg').classList.add('open');
+}
+function cancelIncPick(){ if(!gIncPicking)return; _exitIncPick(); }
+function _exitIncPick(){
+  gIncPicking=false;
+  if(gMap){gMap.getContainer().style.cursor='';}
+  hideIncPickHint();
+  document.removeEventListener('keydown',_incPickEsc);
+}
+function showIncPickHint(){
+  var h=document.getElementById('inc-pick-hint');
+  if(!h){
+    h=document.createElement('div');
+    h.id='inc-pick-hint';
+    h.style.cssText='position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:9999;background:#1e293b;color:#fff;padding:10px 18px;border-radius:8px;font-size:14px;box-shadow:0 4px 16px rgba(0,0,0,.35);direction:rtl;display:flex;align-items:center;gap:14px';
+    h.innerHTML='<span>📍 לחץ על המפה במיקום המדויק של התקלה</span><button style="background:#475569;color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:13px" onclick="cancelIncPick()">ביטול (Esc)</button>';
+    document.body.appendChild(h);
+  }
+  h.style.display='flex';
+}
+function hideIncPickHint(){ var h=document.getElementById('inc-pick-hint'); if(h)h.style.display='none'; }
+// Kept for compatibility / programmatic opening with the last clicked point.
+function openIncModal(){ startIncPick(); }
 function closeIncModal(){document.getElementById('inc-modal-bg').classList.remove('open');}
 
 async function submitIncident(){var title=document.getElementById('f-title').value.trim(),village=document.getElementById('f-village').value,priority=document.getElementById('f-priority').value,desc=document.getElementById('f-desc').value.trim(),lat=parseFloat(document.getElementById('f-lat').value),lng=parseFloat(document.getElementById('f-lng').value);if(!title||!village||isNaN(lat)||isNaN(lng)){showToast('אנא מלא את כל השדות');return;}var rec={title:title,village:village,priority:priority,description:desc,lat:lat,lng:lng,status:'open',created_by:gUser.id};var res=await gSb.from('incidents').insert([rec]).select().single();if(res.error){showToast('שגיאה: '+res.error.message);return;}await logAction(res.data.id,'created',null,res.data);closeIncModal();['f-title','f-village','f-desc','f-lat','f-lng'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('f-priority').value='medium';showToast('✅ נפתחה');}
@@ -854,6 +895,9 @@ function timeAgo(iso){if(!iso)return'';var d=Math.floor((Date.now()-new Date(iso
 function timeSince(iso){if(!iso)return'';var d=Math.floor((Date.now()-new Date(iso))/60000);if(d<1)return'בטיפול: זה עתה';if(d<60)return'בטיפול: '+d+' דק׳';var h=Math.floor(d/60);if(h<24)return'בטיפול: '+h+' שעות';return'בטיפול: '+Math.floor(h/24)+' ימים';}
 function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},3000);}
 
+window.startIncPick=startIncPick;
+window.cancelIncPick=cancelIncPick;
+window.openIncModal=openIncModal;
 window.takeIncident=takeIncident;
 window.openCloseModal=openCloseModal;
 window.zoomTo=zoomTo;
