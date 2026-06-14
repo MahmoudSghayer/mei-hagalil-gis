@@ -40,9 +40,6 @@ css.textContent = `
 #gis-eng-panel .ge-vcount{font-size:10.5px;color:#94a3b8;font-weight:600;}
 #gis-eng-panel .ge-vbody{padding:4px 8px 6px;}
 #gis-eng-panel .ge-village.collapsed .ge-vbody{display:none;}
-#gis-eng-panel .ge-chead{background:#eaf2fb;}
-#gis-eng-panel .ge-chead:hover{background:#e0ecfa;}
-#gis-eng-panel .ge-catall{accent-color:#0d3b5e;width:14px;height:14px;cursor:pointer;flex-shrink:0;}
 #gis-eng-panel .ge-row{display:flex;align-items:center;gap:8px;padding:5px 4px;border-radius:6px;cursor:pointer;font-size:12.5px;color:#1e293b;}
 #gis-eng-panel .ge-row:hover{background:#f1f5f9;}
 #gis-eng-panel .ge-row input{accent-color:#0d3b5e;width:14px;height:14px;cursor:pointer;flex-shrink:0;}
@@ -67,7 +64,7 @@ document.head.appendChild(css);
 
 var loaded = {};        // layerId → GISTileLoader controller (on the map)
 var active = {};        // layerId → layer (toggled on → reload on pan/zoom)
-var openCats = {};      // category (or '__meters__') → bool (expanded)
+var openVillages = {};  // villageName → bool (expanded)
 var meterLayers = {};       // village name → meters L.layer on the map
 var moveendWired = false;
 var _mt;
@@ -251,103 +248,60 @@ async function render() {
   try {
     var layers = await GIS.layers.getLayers();
     document.getElementById('ge-count').textContent = layers.length;
-    // קבץ לפי קטגוריה (שם השכבה: "<כפר> · <category>") — הכפרים מקוננים בתוכה
-    var cats = {}, order = [];
+    // קבץ לפי כפר (שם השכבה: "<כפר> · <category>")
+    var groups = {}, order = [];
     layers.forEach(function (l) {
       var idx = l.name.indexOf(' · ');
-      l._village = idx >= 0 ? l.name.slice(0, idx) : 'כללי';
+      var village = idx >= 0 ? l.name.slice(0, idx) : 'שכבות כלליות';
       var cat = idx >= 0 ? l.name.slice(idx + 3) : l.name;
       l._cat = cat;
-      if (!cats[cat]) { cats[cat] = []; order.push(cat); }
-      cats[cat].push(l);
+      if (!groups[village]) { groups[village] = []; order.push(village); }
+      groups[village].push(l);
     });
 
     body.innerHTML = '';
     if (!layers.length) {
       var note = document.createElement('div');
       note.className = 'ge-empty';
-      note.innerHTML = 'אין שכבות תשתית עדיין — מדי מים זמינים למטה.';
+      note.innerHTML = 'אין שכבות תשתית עדיין — הכפרים מוצגים עבור מדי מים.';
       body.appendChild(note);
     }
-    order.sort(function (a, b) { return catLabel(a).localeCompare(catLabel(b), 'he'); });
-    order.forEach(function (cat) { body.appendChild(categoryBlock(cat, cats[cat])); });
-    // Arad water-meters: kept PER VILLAGE (bbox-loaded), under their own group.
-    body.appendChild(meterGroupBlock());
+    order.forEach(function (village) { body.appendChild(villageBlock(village, groups[village])); });
+    // Every known village is shown so its water meters are reachable even with no
+    // uploaded infrastructure layers. Meters attach to a village by coordinates
+    // (nearest centre) and load per-village via a bbox query (no fleet-wide load).
+    Object.keys(VILLAGE_CENTERS).forEach(function (v) {
+      if (order.indexOf(v) === -1) body.appendChild(villageBlock(v, []));
+    });
   } catch (e) {
     body.innerHTML = '<div class="ge-empty" style="color:#dc2626">' + esc(e.message) + '</div>';
   }
 }
 
-function categoryBlock(cat, layers) {
+function villageBlock(village, layers) {
   var wrap = document.createElement('div');
-  wrap.className = 'ge-village ge-cat' + (openCats[cat] ? '' : ' collapsed');
+  wrap.className = 'ge-village' + (openVillages[village] ? '' : ' collapsed');
   var head = document.createElement('div');
-  head.className = 'ge-vhead ge-chead';
+  head.className = 'ge-vhead';
   head.innerHTML =
-    '<span class="ge-vchev">' + (openCats[cat] ? '▾' : '▸') + '</span>' +
-    '<input type="checkbox" class="ge-catall" title="הצג/הסתר את כל הכפרים">' +
-    '<span class="ge-vname">' + esc(catLabel(cat)) + '</span>' +
-    '<button class="ge-fly" title="התמקד בקטגוריה"><svg class="ge-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.6"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/></svg></button>' +
-    '<span class="ge-vcount">' + layers.length + ' כפרים</span>';
-  head.onclick = function (e) {
-    if (e.target.closest('.ge-catall') || e.target.closest('.ge-fly')) return;
-    openCats[cat] = !openCats[cat];
-    wrap.classList.toggle('collapsed');
-    head.querySelector('.ge-vchev').textContent = openCats[cat] ? '▾' : '▸';
-  };
-  head.querySelector('.ge-fly').onclick = function (e) { e.stopPropagation(); flyToVillage(layers, cat); };
-  wrap.appendChild(head);
-
-  var bodyEl = document.createElement('div');
-  bodyEl.className = 'ge-vbody ge-cbody';
-  layers.sort(function (a, b) { return String(a._village).localeCompare(String(b._village), 'he'); });
-  var childCbs = [];
-  layers.forEach(function (l) {
-    var r = row(l, true);                 // village-named row under the category header
-    bodyEl.appendChild(r);
-    childCbs.push(r.querySelector('input[type=checkbox]'));
-  });
-  wrap.appendChild(bodyEl);
-
-  // Parent checkbox toggles every village layer of this category at once.
-  var all = head.querySelector('.ge-catall');
-  all.onclick = function (e) { e.stopPropagation(); };
-  all.onchange = function () {
-    childCbs.forEach(function (cb) { if (cb.checked !== all.checked) { cb.checked = all.checked; cb.onchange(); } });
-  };
-  function syncParent() {
-    var on = 0; childCbs.forEach(function (cb) { if (cb.checked) on++; });
-    all.checked = on > 0 && on === childCbs.length;
-    all.indeterminate = on > 0 && on < childCbs.length;
-  }
-  childCbs.forEach(function (cb) { cb.addEventListener('change', syncParent); });
-  syncParent();
-  return wrap;
-}
-
-// Meters group: Arad water-meters kept PER VILLAGE (each loads its own bbox),
-// gathered under one "מדי מים (Arad)" header so they have a home in the
-// category-first list. No toggle-all (avoids loading all 7 fleets at once).
-function meterGroupBlock() {
-  var cat = '__meters__';
-  var wrap = document.createElement('div');
-  wrap.className = 'ge-village ge-cat ge-meters' + (openCats[cat] ? '' : ' collapsed');
-  var head = document.createElement('div');
-  head.className = 'ge-vhead ge-chead';
-  head.innerHTML =
-    '<span class="ge-vchev">' + (openCats[cat] ? '▾' : '▸') + '</span>' +
-    '<span class="ge-dot" style="background:' + METER_COLOR + ';margin:0 3px"></span>' +
-    '<span class="ge-vname">🔢 מדי מים (Arad)</span>' +
-    '<span class="ge-vcount">' + Object.keys(VILLAGE_CENTERS).length + ' כפרים</span>';
+    '<span class="ge-vchev">' + (openVillages[village] ? '▾' : '▸') + '</span>' +
+    '<span class="ge-vname"><svg class="ge-ic ge-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.7-6-10a6 6 0 0 1 12 0c0 4.3-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/></svg>' + esc(village) + '</span>' +
+    '<button class="ge-fly" title="התמקד בכפר"><svg class="ge-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.6"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/></svg></button>' +
+    '<span class="ge-vcount">' + layers.length + ' שכבות</span>';
   head.onclick = function () {
-    openCats[cat] = !openCats[cat];
+    openVillages[village] = !openVillages[village];
     wrap.classList.toggle('collapsed');
-    head.querySelector('.ge-vchev').textContent = openCats[cat] ? '▾' : '▸';
+    head.querySelector('.ge-vchev').textContent = openVillages[village] ? '▾' : '▸';
   };
+  head.querySelector('.ge-fly').onclick = function (e) { e.stopPropagation(); flyToVillage(layers, village); };
   wrap.appendChild(head);
+
   var bodyEl = document.createElement('div');
-  bodyEl.className = 'ge-vbody ge-cbody';
-  Object.keys(VILLAGE_CENTERS).forEach(function (v) { bodyEl.appendChild(meterVillageRow(v)); });
+  bodyEl.className = 'ge-vbody';
+  layers.sort(function (a, b) { return catLabel(a._cat).localeCompare(catLabel(b._cat), 'he'); });
+  layers.forEach(function (l) { bodyEl.appendChild(row(l)); });
+  // Water meters for this village (own table, placed by coordinates).
+  if (VILLAGE_CENTERS[village]) bodyEl.appendChild(meterVillageRow(village));
   wrap.appendChild(bodyEl);
   return wrap;
 }
@@ -377,14 +331,14 @@ async function deleteVillage(village, layers) {
   render();
 }
 
-function row(layer, showVillage) {
+function row(layer) {
   var color = colorFor(layer);
   var el = document.createElement('div');
   el.className = 'ge-row';
   el.innerHTML =
     '<input type="checkbox">' +
     '<input type="color" class="ge-color" value="' + toHex(color) + '" title="שנה צבע שכבה">' +
-    '<span class="ge-name" title="' + esc(layer.name) + '">' + esc(showVillage ? layer._village : catLabel(layer._cat)) + '</span>' +
+    '<span class="ge-name" title="' + esc(layer.name) + '">' + esc(catLabel(layer._cat)) + '</span>' +
     '<span class="ge-count"></span>' +
     '<span class="ge-stat"></span>';
   var cb = el.querySelector('input[type=checkbox]');
@@ -522,7 +476,7 @@ function meterVillageRow(village) {
   el.innerHTML =
     '<input type="checkbox">' +
     '<span class="ge-dot" style="background:' + METER_COLOR + '"></span>' +
-    '<span class="ge-name" title="מדי מים מתוך מערכת Arad (עם קריאות), ממוקמים לפי קואורדינטות"><svg class="ge-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></svg> ' + esc(village) + '</span>' +
+    '<span class="ge-name" title="מדי מים מתוך מערכת Arad (עם קריאות), ממוקמים לפי קואורדינטות"><svg class="ge-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></svg> מדי מים (Arad)</span>' +
     '<span class="ge-count"></span>';
   var cb = el.querySelector('input[type=checkbox]');
   var cnt = el.querySelector('.ge-count');
