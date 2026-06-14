@@ -89,6 +89,19 @@
         'update feature');
     },
 
+    // Update a feature's GEOMETRY (attributes unchanged). geometry = GeoJSON
+    // geometry object. Goes through the update_feature_geometry RPC (PostGIS
+    // ST_GeomFromGeoJSON); the DB trigger then recomputes length_m. The
+    // features RLS enforces admin|engineer. Used by the on-map Edit tool.
+    updateGeometry: async function (id, geometry) {
+      GIS._assert(id && geometry, 'updateGeometry requires (id, geometry)');
+      await GIS._requireRole(['admin', 'engineer'], 'edit geometry');
+      var sb = GIS.sb();
+      return GIS._unwrap(await sb.rpc('update_feature_geometry', {
+        p_id: id, p_geometry: geometry
+      }), 'update geometry');
+    },
+
     deleteFeature: async function (id) {
       GIS._assert(id, 'deleteFeature requires an id');
       await GIS._requireRole(['admin', 'engineer'], 'delete features');

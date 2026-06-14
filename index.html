@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css"/>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.3/dist/leaflet-geoman.css"/>
   <link rel="stylesheet" href="css/shared.css"/>
   <link rel="stylesheet" href="css/pages/index.css"/>
   <link rel="stylesheet" href="css/pages/arcgis-pro.css?v=14"/>
@@ -207,6 +208,8 @@
 
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
+<!-- Leaflet-Geoman (free): on-map editing — must load before index.js so map.pm auto-attaches -->
+<script defer src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.3/dist/leaflet-geoman.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
 <script defer src="js/motion-utils.js"></script>
@@ -252,7 +255,9 @@
 <script defer src="js/gis-print.js?v=9"></script>
 <!-- Meter→pipeline connection: KNN auto-connect + show/edit connections -->
 <script defer src="js/gis-meter-connect.js?v=4"></script>
+<!-- On-map editing (Edit tab): Geoman-driven add / move-geometry / delete / snap -->
+<script defer src="js/gis-edit.js?v=1"></script>
 <!-- ArcGIS Pro UI shell (Phase 1): ribbon + Contents pane + scale status bar -->
-<script defer src="js/arcgis-ribbon.js?v=11"></script>
+<script defer src="js/arcgis-ribbon.js?v=12"></script>
 </body>
 </html>

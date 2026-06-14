@@ -72,11 +72,11 @@
         { ic: 'alert', lb: 'תקלה חדשה', size: 'lg', act: function () { call('startIncPick'); } }
       ] },
       { label: 'עריכת ישויות', cmds: [
-        { ic: 'edit', lb: 'עריכה', size: 'lg', act: soon, disabled: true },
+        { ic: 'edit', lb: 'עריכה', size: 'lg', act: editGeom },
         { col: [
-          { ic: 'plus',  lb: 'הוסף ישות', act: soon, disabled: true },
-          { ic: 'snap',  lb: 'הצמדה',     act: soon, disabled: true },
-          { ic: 'trash', lb: 'מחק',       act: soon, disabled: true }
+          { ic: 'plus',  lb: 'הוסף ישות', act: editAdd },
+          { ic: 'snap',  lb: 'הצמדה',     act: editSnap },
+          { ic: 'trash', lb: 'מחק',       act: editDelete }
         ] }
       ] }
     ],
@@ -153,10 +153,14 @@
   function traceIsolation() { if (window.GISTrace) { window.GISTrace.startIsolation(); } else { toast('מנוע הרשת עדיין נטען…'); } }
   function traceConnected() { if (window.GISTrace) { window.GISTrace.startConnected(); } else { toast('מנוע הרשת עדיין נטען…'); } }
   function traceClear() { if (window.GISTrace) { window.GISTrace.clear(); } }
-  function traceClearAll() { if (window.GISTrace) { window.GISTrace.clear(); } if (window.GISMeterConnect) { window.GISMeterConnect.clear(); } }
+  function traceClearAll() { if (window.GISTrace) { window.GISTrace.clear(); } if (window.GISMeterConnect) { window.GISMeterConnect.clear(); } if (window.GISEdit) { window.GISEdit.disarm(); } }
   function meterAutoConnect() { if (window.GISMeterConnect) { window.GISMeterConnect.run(); } else { toast('מנוע חיבור המונים עדיין נטען…'); } }
   function meterEditConnect() { if (window.GISMeterConnect) { window.GISMeterConnect.editArm(); } else { toast('מנוע חיבור המונים עדיין נטען…'); } }
   function meterShowConnectors() { if (window.GISMeterConnect) { window.GISMeterConnect.toggleConnectors(); } else { toast('מנוע חיבור המונים עדיין נטען…'); } }
+  function editAdd()        { if (window.GISEdit) { window.GISEdit.startAdd(); }       else { toast('מנוע העריכה עדיין נטען…'); } }
+  function editGeom()       { if (window.GISEdit) { window.GISEdit.startEditGeom(); }  else { toast('מנוע העריכה עדיין נטען…'); } }
+  function editDelete()     { if (window.GISEdit) { window.GISEdit.startDelete(); }    else { toast('מנוע העריכה עדיין נטען…'); } }
+  function editSnap(_, b)   { if (window.GISEdit) { window.GISEdit.toggleSnap(b); }    else { toast('מנוע העריכה עדיין נטען…'); } }
   function toggleLegend() { if (window.GISSymbology) { window.GISSymbology.toggleLegend(); } else { toast('מנוע הסימבולוגיה עדיין נטען…'); } }
   function toggleLabels() { if (window.GISSymbology) { window.GISSymbology.toggleLabels(); } else { toast('מנוע הסימבולוגיה עדיין נטען…'); } }
   function anlyAttr() { if (window.GISAnalysis) { window.GISAnalysis.selectByAttribute(); } else { toast('מנוע הניתוח עדיין נטען…'); } }
@@ -168,6 +172,7 @@
     if (window.GISAnalysis) { window.GISAnalysis.clear(); }
     if (window.GISMeterConnect && window.GISMeterConnect.resetMouse) { window.GISMeterConnect.resetMouse(); }
     if (window.GISTrace && window.GISTrace.clear) { window.GISTrace.clear(); }
+    if (window.GISEdit && window.GISEdit.disarm) { window.GISEdit.disarm(); }
     if (window.gMap) { window.gMap.getContainer().style.cursor = ''; }
   }
   function toggleBookmarks() { if (window.GISBookmarks) { window.GISBookmarks.toggle(); } else { toast('הסימניות עדיין נטענות…'); } }

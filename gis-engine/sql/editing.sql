@@ -82,3 +82,24 @@ BEGIN
      SET properties = properties - p_name, updated_at = NOW()
    WHERE layer_id = p_layer_id AND (properties ? p_name);
 END; $$;
+
+-- ════════════════════════════════════════════════════════════════════════
+--  On-map editing — geometry write (ArcGIS "Edit" tab: move / reshape).
+--  Mirrors create_feature (schema.sql) but UPDATEs only the geometry of an
+--  existing feature from a GeoJSON geometry object. SECURITY INVOKER → the
+--  features RLS (can_edit_gis: admin|engineer) enforces who may move assets.
+--  The features_autocalc trigger then recomputes length_m + stamps
+--  edited_by/edited_at; the gis_audit trigger logs the change.
+-- ════════════════════════════════════════════════════════════════════════
+CREATE OR REPLACE FUNCTION public.update_feature_geometry(p_id UUID, p_geometry JSONB)
+RETURNS public.features LANGUAGE plpgsql AS $$
+DECLARE row public.features;
+BEGIN
+  UPDATE public.features
+     SET geometry   = ST_SetSRID(ST_GeomFromGeoJSON(p_geometry::text), 4326),
+         updated_at = NOW()
+   WHERE id = p_id
+  RETURNING * INTO row;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Feature % not found', p_id; END IF;
+  RETURN row;
+END; $$;
