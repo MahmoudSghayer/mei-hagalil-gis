@@ -35,7 +35,7 @@ function loadProj4(cb) {
 // ── INJECT STYLES ──
 var css = document.createElement('style');
 css.textContent = `
-#search-bar{position:absolute;top:14px;left:50%;transform:translateX(-50%);background:#fff;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,0.18);z-index:450;display:flex;align-items:center;width:440px;max-width:calc(100vw - 220px);overflow:hidden;border:1px solid rgba(0,0,0,0.08);font-family:'Segoe UI',Tahoma,Arial,sans-serif}
+#search-bar{position:absolute;top:14px;right:14px;background:#fff;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,0.18);z-index:450;display:flex;align-items:center;width:380px;max-width:calc(100vw - 360px);overflow:hidden;border:1px solid rgba(0,0,0,0.08);font-family:'Segoe UI',Tahoma,Arial,sans-serif}
 #search-input{flex:1;padding:11px 14px;border:none;outline:none;font-size:13px;direction:rtl;background:transparent;color:#1e293b;font-family:inherit}
 #search-input::placeholder{color:#94a3b8}
 #search-clear{padding:0 10px;background:none;border:none;cursor:pointer;color:#94a3b8;font-size:16px;display:none}
@@ -54,7 +54,7 @@ css.textContent = `
 .sr-loading{padding:14px;text-align:center;color:#64748b;font-size:12px}
 .sr-empty{padding:14px;text-align:center;color:#94a3b8;font-size:12px}
 .sr-section{padding:6px 14px;background:#f8fafc;font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid #e2e8f0}
-#search-help{position:absolute;top:64px;left:50%;transform:translateX(-50%);background:#fff;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,0.2);width:440px;max-width:calc(100vw - 220px);z-index:451;padding:18px;display:none;direction:rtl;font-family:'Segoe UI',Tahoma,Arial,sans-serif;border:1px solid #e2e8f0}
+#search-help{position:absolute;top:64px;right:14px;background:#fff;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,0.2);width:380px;max-width:calc(100vw - 360px);z-index:451;padding:18px;display:none;direction:rtl;font-family:'Segoe UI',Tahoma,Arial,sans-serif;border:1px solid #e2e8f0}
 #search-help.show{display:block}
 #search-help h4{font-size:13px;color:#0d3b5e;margin:0 0 10px;font-weight:700}
 .help-row{display:flex;gap:10px;margin-bottom:8px;font-size:12px;color:#1e293b;line-height:1.4}
@@ -444,7 +444,7 @@ function showPanel(title, content) {
   hidePanel();
   gPanel = document.createElement('div');
   gPanel.id = 'search-info-panel';
-  gPanel.style.cssText = 'position:absolute;top:14px;right:14px;background:#fff;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,0.18);width:280px;max-width:calc(100vw - 580px);z-index:445;padding:14px;direction:rtl;font-family:\'Segoe UI\',Tahoma,Arial,sans-serif;border:1px solid #e2e8f0';
+  gPanel.style.cssText = 'position:absolute;top:70px;right:14px;background:#fff;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,0.18);width:280px;max-width:calc(100vw - 580px);z-index:445;padding:14px;direction:rtl;font-family:\'Segoe UI\',Tahoma,Arial,sans-serif;border:1px solid #e2e8f0';
   gPanel.innerHTML =
     '<button onclick="window.searchClearMarker()" style="position:absolute;top:8px;left:10px;background:none;border:none;cursor:pointer;font-size:14px;color:#94a3b8;padding:0">✖</button>' +
     '<div style="font-weight:700;color:#0d3b5e;font-size:13px;margin-bottom:6px;padding-left:20px">' + title + '</div>' +
