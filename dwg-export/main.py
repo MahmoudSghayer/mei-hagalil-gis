@@ -15,6 +15,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import urllib.request
 from typing import Any
 
 import jwt
@@ -60,9 +61,17 @@ MAX_DWG_FEATURES: int = int(os.getenv("MAX_DWG_FEATURES", "8000"))
 # (an empty token can never match an incoming header) and only JWT auth is accepted.
 API_TOKEN: str = os.getenv("API_TOKEN", "")
 
-# Supabase project JWT secret (Dashboard → Settings → API → JWT Secret).
-# When set, the service accepts a logged-in user's "Authorization: Bearer <access_token>"
-# and no static token needs to live in the browser. Leave unset to keep token-only auth.
+# Preferred auth: validate the caller's Supabase access token REMOTELY by asking
+# Supabase (GET /auth/v1/user). This works no matter how the project signs its
+# JWTs (legacy HS256 *or* the newer asymmetric signing keys), so it is more robust
+# than a local secret decode. Set both on Render:
+#   SUPABASE_URL        e.g. https://xxxx.supabase.co
+#   SUPABASE_ANON_KEY   the project's public anon key (safe to expose)
+SUPABASE_URL: str = os.getenv("SUPABASE_URL", "").rstrip("/")
+SUPABASE_APIKEY: str = os.getenv("SUPABASE_ANON_KEY", "") or os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
+
+# Legacy fallback: local HS256 verification with the project JWT secret
+# (Dashboard → Settings → API → JWT Secret). Only used if SUPABASE_URL is unset.
 SUPABASE_JWT_SECRET: str = os.getenv("SUPABASE_JWT_SECRET", "")
 
 
@@ -77,21 +86,34 @@ class ExportRequest(BaseModel):
 
 def _valid_supabase_jwt(authorization: str | None) -> bool:
     """True if `authorization` is 'Bearer <token>' carrying a valid Supabase JWT."""
-    if not SUPABASE_JWT_SECRET or not authorization:
+    if not authorization:
         return False
     parts = authorization.split()
     if len(parts) != 2 or parts[0].lower() != "bearer":
         return False
-    try:
-        jwt.decode(
-            parts[1],
-            SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
-            audience="authenticated",
-        )
-        return True
-    except Exception:
-        return False
+    token = parts[1]
+
+    # Primary: ask Supabase to validate the token (signing-algorithm agnostic).
+    if SUPABASE_URL and SUPABASE_APIKEY:
+        try:
+            req = urllib.request.Request(
+                f"{SUPABASE_URL}/auth/v1/user",
+                headers={"Authorization": f"Bearer {token}", "apikey": SUPABASE_APIKEY},
+            )
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                return resp.status == 200
+        except Exception:
+            return False
+
+    # Fallback: local HS256 verification with the project JWT secret.
+    if SUPABASE_JWT_SECRET:
+        try:
+            jwt.decode(token, SUPABASE_JWT_SECRET, algorithms=["HS256"], audience="authenticated")
+            return True
+        except Exception:
+            return False
+
+    return False
 
 
 def _require_auth(x_api_token: str | None, authorization: str | None = None) -> None:
