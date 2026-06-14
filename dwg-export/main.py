@@ -11,6 +11,7 @@ GET  /health          — liveness check
 from __future__ import annotations
 
 import io
+import json
 import os
 import shutil
 import subprocess
@@ -83,16 +84,20 @@ class ExportRequest(BaseModel):
 
 # ── auth ──────────────────────────────────────────────────────────────────────
 
-def _valid_supabase_jwt(authorization: str | None) -> bool:
-    """True if `authorization` is 'Bearer <token>' carrying a valid Supabase JWT."""
+def _caller_identity(authorization: str | None) -> tuple[str | None, str | None]:
+    """Validate the bearer token and return (user_id, role).
+
+    (None, None) means the token is invalid. role may be None if it could not be
+    resolved (e.g. the HS256 fallback path, which carries no profile lookup)."""
     if not authorization:
-        return False
+        return (None, None)
     parts = authorization.split()
     if len(parts) != 2 or parts[0].lower() != "bearer":
-        return False
+        return (None, None)
     token = parts[1]
 
-    # Primary: ask Supabase to validate the token (signing-algorithm agnostic).
+    # Primary: validate the token remotely (works for any JWT signing algorithm)
+    # and read the caller's role from their profile.
     if SUPABASE_URL and SUPABASE_APIKEY:
         try:
             req = urllib.request.Request(
@@ -100,27 +105,48 @@ def _valid_supabase_jwt(authorization: str | None) -> bool:
                 headers={"Authorization": f"Bearer {token}", "apikey": SUPABASE_APIKEY},
             )
             with urllib.request.urlopen(req, timeout=8) as resp:
-                return resp.status == 200
+                if resp.status != 200:
+                    return (None, None)
+                user = json.loads(resp.read().decode())
         except Exception:
-            return False
+            return (None, None)
+        uid = user.get("id")
+        if not uid:
+            return (None, None)
+        try:
+            req2 = urllib.request.Request(
+                f"{SUPABASE_URL}/rest/v1/profiles?id=eq.{uid}&select=role,is_active",
+                headers={"Authorization": f"Bearer {token}", "apikey": SUPABASE_APIKEY},
+            )
+            with urllib.request.urlopen(req2, timeout=8) as resp:
+                rows = json.loads(resp.read().decode())
+            if rows and rows[0].get("is_active", True):
+                return (uid, rows[0].get("role"))
+        except Exception:
+            pass
+        return (uid, None)
 
-    # Fallback: local HS256 verification with the project JWT secret.
+    # Fallback: local HS256 verification (no role info available).
     if SUPABASE_JWT_SECRET:
         try:
             jwt.decode(token, SUPABASE_JWT_SECRET, algorithms=["HS256"], audience="authenticated")
-            return True
+            return ("jwt", None)
         except Exception:
-            return False
+            return (None, None)
 
-    return False
+    return (None, None)
 
 
 def _require_auth(x_api_token: str | None, authorization: str | None = None) -> None:
-    # Preferred: a valid Supabase session JWT — no shared secret lives in the client.
-    if _valid_supabase_jwt(authorization):
-        return
-    # Transitional fallback: the static token (drop once all clients send a JWT).
-    if x_api_token and x_api_token == API_TOKEN:
+    uid, role = _caller_identity(authorization)
+    if uid:
+        # Export is for editors/admins. If the role is known it must be one of
+        # those; if it couldn't be resolved (HS256 fallback), the valid token passes.
+        if role is None or role in ("admin", "editor"):
+            return
+        raise HTTPException(status_code=403, detail="Forbidden: export requires editor or admin role")
+    # Transitional static-token fallback (no role context); dead once API_TOKEN is unset.
+    if API_TOKEN and x_api_token and x_api_token == API_TOKEN:
         return
     raise HTTPException(status_code=401, detail="Unauthorized")
 

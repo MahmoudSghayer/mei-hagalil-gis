@@ -23,10 +23,14 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";   -- gen_random_uuid()
 
 -- ── ROLES ───────────────────────────────────────────────────────────────
+-- Three-tier model:  viewer (read-only) · editor (edit + export) · admin (all).
 ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
+-- Migrate any legacy role values BEFORE re-adding the constraint, or it fails.
+UPDATE public.profiles SET role = 'editor' WHERE role IN ('engineer');
+UPDATE public.profiles SET role = 'viewer' WHERE role IN ('office', 'user');
 ALTER TABLE public.profiles
   ADD CONSTRAINT profiles_role_check
-  CHECK (role IN ('admin', 'engineer', 'office', 'user'));
+  CHECK (role IN ('admin', 'editor', 'viewer'));
 
 -- is_admin() — defined here so the engine schema is self-contained even if the
 -- app's original db/schema.sql has not been applied to this project. Idempotent.
@@ -36,18 +40,19 @@ RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER STABLE AS $$
     WHERE id = auth.uid() AND role = 'admin' AND is_active = true);
 $$;
 
--- admin → edit GIS + meters | engineer → edit GIS, read meters | office/user → read-only
-CREATE OR REPLACE FUNCTION public.can_edit_gis()
+-- admin|editor → edit GIS + meters + export | viewer → read-only.
+-- Structural ops (layers, fields/schema, bulk import) stay admin-only (RLS uses is_admin()).
+CREATE OR REPLACE FUNCTION public.is_editor()
 RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER STABLE AS $$
   SELECT EXISTS (SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND is_active = true AND role IN ('admin','engineer'));
+    WHERE id = auth.uid() AND is_active = true AND role IN ('admin','editor'));
 $$;
 
+CREATE OR REPLACE FUNCTION public.can_edit_gis()
+RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER STABLE AS $$ SELECT public.is_editor(); $$;
+
 CREATE OR REPLACE FUNCTION public.can_edit_meters()
-RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER STABLE AS $$
-  SELECT EXISTS (SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND is_active = true AND role = 'admin');
-$$;
+RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER STABLE AS $$ SELECT public.is_editor(); $$;
 
 
 -- ════════════════════════════════════════════════════════════════════════

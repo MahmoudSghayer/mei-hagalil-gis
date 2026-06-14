@@ -282,7 +282,7 @@
     linkMeterToFeature: async function (meter, feature) {
       GIS._assert(meter && (meter.id || meter.arad_meter_id), 'linkMeterToFeature requires a meter with id');
       GIS._assert(feature && feature.asset_code, 'linkMeterToFeature requires a feature with asset_code');
-      await GIS._requireRole(['admin'], 'link meters');
+      await GIS._requireRole(['admin', 'editor'], 'link meters');
       var sb = GIS.sb();
       var q = sb.from('meters').update({ asset_code: feature.asset_code, updated_at: new Date().toISOString() });
       q = meter.id ? q.eq('id', meter.id) : q.eq('arad_meter_id', meter.arad_meter_id);
@@ -293,7 +293,7 @@
     // Admin only (RLS). Geometry changes go through importMeters.
     updateMeter: async function (id, data) {
       GIS._assert(id && data, 'updateMeter requires (id, data)');
-      await GIS._requireRole(['admin'], 'edit meters');
+      await GIS._requireRole(['admin', 'editor'], 'edit meters');
       var allowed = ['customer_id', 'asset_code', 'last_reading', 'consumption', 'status', 'install_date', 'raw_data'];
       var patch = { updated_at: new Date().toISOString() };
       allowed.forEach(function (k) { if (data[k] !== undefined) patch[k] = data[k]; });
@@ -322,7 +322,7 @@
     // Returns { targets, connected, unmatched, ambiguous, threshold_m }.
     autoConnect: async function (layerIds, opts) {
       GIS._assert(Array.isArray(layerIds) && layerIds.length, 'autoConnect requires pipe layerIds');
-      await GIS._requireRole(['admin'], 'auto-connect meters');
+      await GIS._requireRole(['admin', 'editor'], 'auto-connect meters');
       opts = opts || {};
       var bb = opts.bbox || {};
       var sb = GIS.sb();
@@ -354,7 +354,7 @@
     // 'MANUAL' so a later auto-connect pass won't touch it. Admin only.
     connectMeter: async function (meterId, pipeId, type) {
       GIS._assert(meterId && pipeId, 'connectMeter requires (meterId, pipeId)');
-      await GIS._requireRole(['admin'], 'connect meters');
+      await GIS._requireRole(['admin', 'editor'], 'connect meters');
       var sb = GIS.sb();
       return GIS._unwrap(await sb.rpc('connect_meter', {
         p_meter_id: meterId, p_pipe_id: pipeId, p_type: type || 'MANUAL'
@@ -364,7 +364,7 @@
     // Remove a meter's connection (sets connection_type 'NONE'). Admin only.
     disconnectMeter: async function (meterId) {
       GIS._assert(meterId, 'disconnectMeter requires a meterId');
-      await GIS._requireRole(['admin'], 'disconnect meters');
+      await GIS._requireRole(['admin', 'editor'], 'disconnect meters');
       var sb = GIS.sb();
       return GIS._unwrap(await sb.rpc('disconnect_meter', {
         p_meter_id: meterId

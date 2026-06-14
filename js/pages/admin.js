@@ -4,7 +4,7 @@ var gUsers = [];
 var gEditMode = false;
 var gPwdTargetUser = null;
 var gDelTargetUser = null;
-var gSelectedRole = 'user';
+var gSelectedRole = 'viewer';
 var gAdminSession = null;
 
 window.addEventListener('load', async function() {
@@ -55,7 +55,9 @@ function renderUsers() {
     var col = avatarColors[i % avatarColors.length];
     var roleBadge = u.role === 'admin'
       ? '<span class="role-pill role-admin">👑 מנהל</span>'
-      : '<span class="role-pill role-user">👤 משתמש</span>';
+      : (u.role === 'editor'
+          ? '<span class="role-pill role-editor">✎ עורך</span>'
+          : '<span class="role-pill role-user">👁 צופה</span>');
     var statusHtml = '<span class="status-dot ' + (u.is_active ? 'active' : 'inactive') + '"></span>' + (u.is_active ? 'פעיל' : 'מושהה');
     var isSelf = (u.id === gAdminId);
     var actions = '';
@@ -82,8 +84,10 @@ function renderUsers() {
 }
 
 function selectRole(r) {
+  if (r !== 'viewer' && r !== 'editor' && r !== 'admin') r = 'viewer';
   gSelectedRole = r;
-  document.getElementById('role-user').classList.toggle('selected', r==='user');
+  document.getElementById('role-viewer').classList.toggle('selected', r==='viewer');
+  document.getElementById('role-editor').classList.toggle('selected', r==='editor');
   document.getElementById('role-admin').classList.toggle('selected', r==='admin');
 }
 
@@ -96,7 +100,7 @@ function openCreateModal() {
   document.getElementById('password-group').style.display = '';
   document.getElementById('edit-user-id').value = '';
   ['f-name','f-email','f-password','f-phone','f-department'].forEach(function(id){document.getElementById(id).value='';});
-  selectRole('user');
+  selectRole('viewer');
   document.getElementById('user-modal-bg').classList.add('open');
 }
 
@@ -113,7 +117,7 @@ function openEditModal(userId) {
   document.getElementById('f-name').value = u.full_name || '';
   document.getElementById('f-phone').value = u.phone || '';
   document.getElementById('f-department').value = u.department || '';
-  selectRole(u.role || 'user');
+  selectRole(u.role || 'viewer');
   document.getElementById('user-modal-bg').classList.add('open');
 }
 

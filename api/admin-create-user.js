@@ -61,7 +61,7 @@ module.exports = async function handler(req, res) {
   b = b && typeof b === 'object' ? b : {};
   const email = String(b.email || '').trim().toLowerCase();
   const password = String(b.password || '');
-  const role = b.role === 'admin' ? 'admin' : 'user';
+  const role = ['admin', 'editor', 'viewer'].includes(b.role) ? b.role : 'viewer';
   const full_name = String(b.full_name || '').slice(0, 200);
   const phone = String(b.phone || '').slice(0, 50);
   const department = String(b.department || '').slice(0, 100);

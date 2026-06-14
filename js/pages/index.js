@@ -68,7 +68,7 @@ var gSelectedLayer = null;
 var PRIORITY_COLORS={high:'#dc2626',medium:'#d97706',low:'#16a34a'};
 var PRIORITY_HE={high:'גבוהה',medium:'בינונית',low:'נמוכה'};
 var STATUS_HE={open:'פתוחה',in_progress:'בטיפול',closed:'סגורה'};
-var ROLE_HE={admin:'מנהל מערכת',user:'משתמש'};
+var ROLE_HE={admin:'מנהל מערכת',editor:'עורך',viewer:'צופה'};
 
 window.addEventListener('load', async function() {
   var res = await gSb.auth.getSession();
@@ -98,6 +98,10 @@ function setUserUI(p) {
     document.getElementById('logs-link').style.display = 'inline-block';
     document.getElementById('upload-link').style.display = 'inline-block';
   }
+  // Viewers are read-only: hide the "new incident" button (DB RLS also blocks it).
+  var canEdit = (p.role === 'admin' || p.role === 'editor');
+  var addBtn = document.getElementById('add-btn');
+  if (addBtn) addBtn.style.display = canEdit ? '' : 'none';
 }
 
 function toggleDD() { document.getElementById('user-dd').classList.toggle('open'); }

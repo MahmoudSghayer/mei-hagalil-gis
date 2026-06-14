@@ -38,6 +38,22 @@ AS $$
   );
 $$;
 
+-- Returns true when the caller is an active admin OR editor. Used to gate
+-- data-write RLS (incidents, GIS features, meters) — viewers are read-only.
+CREATE OR REPLACE FUNCTION is_editor()
+RETURNS BOOLEAN
+LANGUAGE sql
+SECURITY DEFINER
+STABLE
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE id = auth.uid()
+      AND role IN ('admin', 'editor')
+      AND is_active = true
+  );
+$$;
+
 -- Generic updated_at stamper (used by layer_mapping_rules).
 CREATE OR REPLACE FUNCTION update_updated_at()
 RETURNS TRIGGER
@@ -76,11 +92,11 @@ BEGIN
     NEW.id,
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'full_name',   ''),
-    -- SECURITY: never trust a client-supplied role. New users are always 'user';
-    -- admins are promoted afterwards via an authenticated UPDATE (see admin.js +
-    -- the "profiles: admin can update any" policy). Reading role from
-    -- raw_user_meta_data here would let anyone self-signup as admin.
-    'user',
+    -- SECURITY: never trust a client-supplied role. New users start as 'viewer'
+    -- (read-only); admins promote to editor/admin afterwards via an authenticated
+    -- UPDATE (see admin.js + the "profiles: admin can update any" policy). Reading
+    -- role from raw_user_meta_data here would let anyone self-signup as admin.
+    'viewer',
     COALESCE(NEW.raw_user_meta_data->>'phone',       ''),
     COALESCE(NEW.raw_user_meta_data->>'department',  '')
   )
@@ -97,8 +113,8 @@ CREATE TABLE IF NOT EXISTS profiles (
   id          UUID         PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email       TEXT         NOT NULL,
   full_name   TEXT         NOT NULL DEFAULT '',
-  role        TEXT         NOT NULL DEFAULT 'user'
-                           CHECK (role IN ('admin', 'user')),
+  role        TEXT         NOT NULL DEFAULT 'viewer'
+                           CHECK (role IN ('admin', 'editor', 'viewer')),
   phone       TEXT,
   department  TEXT,
   is_active   BOOLEAN      NOT NULL DEFAULT true,
@@ -210,12 +226,12 @@ CREATE POLICY "incidents: authenticated can read"
 
 CREATE POLICY "incidents: authenticated can insert"
   ON incidents FOR INSERT
-  WITH CHECK (auth.uid() IS NOT NULL);
+  WITH CHECK (is_editor());
 
 CREATE POLICY "incidents: authenticated can update"
   ON incidents FOR UPDATE
-  USING (auth.uid() IS NOT NULL)
-  WITH CHECK (auth.uid() IS NOT NULL);
+  USING (is_editor())
+  WITH CHECK (is_editor());
 
 CREATE POLICY "incidents: admin can delete"
   ON incidents FOR DELETE
@@ -275,7 +291,7 @@ CREATE POLICY "logs: admin can read"
 
 CREATE POLICY "logs: authenticated can insert"
   ON incident_logs FOR INSERT
-  WITH CHECK (auth.uid() IS NOT NULL);
+  WITH CHECK (is_editor());
 
 -- SECURITY: the client supplies the action/notes/snapshots, but it must NOT be
 -- able to attribute a log entry to another user. This BEFORE INSERT trigger pins

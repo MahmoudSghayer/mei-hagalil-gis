@@ -180,7 +180,18 @@ function injectUI() {
 }
 
 // ── MODAL CONTROLS ───────────────────────────────────────────────────────────
-function openExportModal() {
+// Resolve the role and run `fn` only if the user may export (admin/editor).
+// Viewers are read-only; the DWG service + DB RLS also enforce this server-side.
+function withExportPermission(fn) {
+  if (!window.GIS || !GIS.currentRole) return fn();
+  GIS.currentRole().then(function (role) {
+    if (GIS.permissions.canExport(role)) { fn(); }
+    else { alert('אין לך הרשאת ייצוא (תצוגה בלבד).'); }
+  }).catch(function () { alert('שגיאה בבדיקת הרשאות'); });
+}
+
+function openExportModal() { withExportPermission(_openExportModal); }
+function _openExportModal() {
   if (!window.gMap) { alert('המפה עדיין לא נטענה'); return; }
   if (!window.GIS || !window.GIS.layers) { alert('מנוע ה-GIS עדיין נטען — נסה שוב בעוד רגע'); return; }
   gExp.step = 1;
@@ -207,7 +218,8 @@ window.closeExportModal = closeExportModal;
 
 // Seed the wizard with a fixed feature set (e.g. the current selection) and open
 // at the FORMAT step — skips category selection; expRun exports gExp.seed directly.
-function openForFeatures(features) {
+function openForFeatures(features) { withExportPermission(function () { _openForFeatures(features); }); }
+function _openForFeatures(features) {
   if (!window.gMap) { alert('המפה עדיין לא נטענה'); return; }
   gExp.seed = (features || []).slice();
   if (!gExp.seed.length) { alert('אין אובייקטים בבחירה'); return; }

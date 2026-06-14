@@ -61,7 +61,7 @@
   // ── Role / permissions (cached for the session) ────────────────────────
   GIS._roleCache = null;
 
-  // Returns the current user's role ('admin'|'engineer'|'office'|'user') or null.
+  // Returns the current user's role ('admin'|'editor'|'viewer') or null.
   GIS.currentRole = async function (force) {
     if (GIS._roleCache && !force) return GIS._roleCache;
     var sb = GIS.sb();
@@ -73,9 +73,12 @@
     return GIS._roleCache;
   };
 
+  // Role tiers:  viewer (read-only) · editor (edit + export) · admin (all).
+  // These are UX hints only — the database RLS is the real enforcement.
   GIS.permissions = {
-    canEditGis: function (role) { return role === 'admin' || role === 'engineer'; },
-    canEditMeters: function (role) { return role === 'admin'; },
+    canEditGis:    function (role) { return role === 'admin' || role === 'editor'; },
+    canEditMeters: function (role) { return role === 'admin' || role === 'editor'; },
+    canExport:     function (role) { return role === 'admin' || role === 'editor'; },
     canEditSchema: function (role) { return role === 'admin'; }
   };
 
