@@ -115,6 +115,12 @@ s.textContent =
   '@keyframes dwgspin{to{transform:rotate(360deg);}}' +
   '.exp-gen-icon{font-size:46px;margin-bottom:12px;line-height:1;}' +
   '.exp-gen-msg{font-size:14px;color:#334155;}' +
+  // standalone busy overlay (used for draw-region export, where the modal is closed)
+  '.exp-busy-bg{display:none;position:fixed;inset:0;background:rgba(15,23,42,0.5);z-index:2000;align-items:center;justify-content:center;}' +
+  '.exp-busy-bg.open{display:flex;}' +
+  '.exp-busy-mod{background:#fff;border-radius:14px;padding:26px 30px;min-width:240px;text-align:center;direction:rtl;font-family:\'Segoe UI\',Tahoma,Arial,sans-serif;box-shadow:0 12px 40px rgba(0,0,0,0.3);}' +
+  '.exp-busy-icon{font-size:44px;line-height:1;margin-bottom:10px;}' +
+  '.exp-busy-msg{font-size:14px;color:#334155;margin-top:6px;}' +
   // scope
   '.exp-scope{display:flex;flex-direction:column;gap:7px;margin-bottom:4px;}' +
   '.exp-scope-opt{display:flex;align-items:center;gap:10px;padding:11px 14px;border:2px solid #e2e8f0;border-radius:9px;cursor:pointer;transition:border-color .15s,background .15s;font-size:13px;color:#334155;user-select:none;}' +
@@ -162,7 +168,7 @@ function injectUI() {
     '<div class="exp-bg" id="exp-modal">' +
       '<div class="exp-mod">' +
         '<div class="exp-head">' +
-          '<div class="exp-title">📥 יצוא נתונים <span style="font-size:10px;font-weight:400;opacity:0.45;font-family:monospace">v13</span></div>' +
+          '<div class="exp-title">📥 יצוא נתונים <span style="font-size:10px;font-weight:400;opacity:0.45;font-family:monospace">v14</span></div>' +
           '<button class="exp-close-btn" onclick="closeExportModal()">✕</button>' +
         '</div>' +
         '<div class="exp-body" id="exp-body"></div>' +
@@ -454,12 +460,44 @@ window.expRun = function () {
   });
 };
 
-function setGenMsg(m) { var el = document.getElementById('exp-gen-msg'); if (el && m) el.textContent = m; }
+// Standalone busy overlay — shown during the draw-region export (the wizard modal is closed then).
+var _busyEl = null;
+function showBusy(msg) {
+  if (!_busyEl) {
+    var bg = document.createElement('div');
+    bg.className = 'exp-busy-bg';
+    bg.innerHTML = '<div class="exp-busy-mod"><div class="exp-gen-spin"></div><div class="exp-busy-msg" id="exp-busy-msg"></div></div>';
+    document.body.appendChild(bg);
+    _busyEl = bg;
+  }
+  _busyEl.querySelector('.exp-busy-mod').innerHTML = '<div class="exp-gen-spin"></div><div class="exp-busy-msg" id="exp-busy-msg">' + (msg || 'מעבד…') + '</div>';
+  _busyEl.classList.add('open');
+}
+function setBusyMsg(m) { if (_busyEl && _busyEl.classList.contains('open') && m) { var el = _busyEl.querySelector('#exp-busy-msg'); if (el) el.textContent = m; } }
+function busyActive() { return !!(_busyEl && _busyEl.classList.contains('open')); }
+function closeBusy() { if (_busyEl) _busyEl.classList.remove('open'); }
+function busyDone(ok, msg) {
+  if (!_busyEl) return;
+  if (ok) {
+    _busyEl.querySelector('.exp-busy-mod').innerHTML = '<div class="exp-busy-icon">✅</div><div class="exp-busy-msg">הייצוא הושלם — הקובץ הורד</div>';
+    if (window.showToast) window.showToast('הייצוא הושלם');
+    setTimeout(closeBusy, 1400);
+  } else {
+    _busyEl.querySelector('.exp-busy-mod').innerHTML = '<div class="exp-busy-icon">⚠️</div><div class="exp-busy-msg">שגיאה ביצוא' + (msg ? ': ' + msg : '') + '</div>';
+    setTimeout(closeBusy, 3500);
+  }
+}
+
+function setGenMsg(m) {
+  var el = document.getElementById('exp-gen-msg');
+  if (el && m) { el.textContent = m; return; }
+  setBusyMsg(m);   // draw-region path → standalone overlay
+}
 
 function finishGen(ok, msg) {
   gExp.busy = false;
   var gen = document.getElementById('exp-gen');
-  if (!gen) { if (!ok && msg) alert('שגיאה ביצוא: ' + msg); return; }  // draw-mode path → no pane
+  if (!gen) { busyDone(ok, msg); return; }  // draw-region path → standalone overlay
   if (ok) {
     gen.innerHTML = '<div class="exp-gen-icon">✅</div><div class="exp-gen-msg">הייצוא הושלם — הקובץ הורד</div>';
     if (window.showToast) window.showToast('הייצוא הושלם');
@@ -507,10 +545,13 @@ function finishDraw(endLatLng, selectedCatsArg) {
   gRect = L.rectangle([gDrawStart, endLatLng], { color: '#16a34a', weight: 2, fillOpacity: 0.08 }).addTo(window.gMap);
   var bounds = gRect.getBounds();
   gDrawStart = null;
+  showBusy('אוסף נתונים…');
   fetchFeaturesForCats(selectedCatsArg, bounds, function (features) {
     if (gRect) { window.gMap.removeLayer(gRect); gRect = null; }
-    if (!features.length) { alert('לא נמצאו אובייקטים באזור שנבחר'); return; }
-    generateAndDownload(features);
+    if (!features.length) { closeBusy(); alert('לא נמצאו אובייקטים באזור שנבחר'); return; }
+    setBusyMsg('מייצא…');
+    // defer so the spinner repaints before a potentially heavy synchronous build
+    setTimeout(function () { generateAndDownload(features); }, 30);
   });
 }
 
@@ -554,6 +595,7 @@ function generateAndDownload(features) {
 
   try {
     if (gExp.format === 'dwg') {
+      closeBusy();                               // DWG has its own dedicated wait modal
       _exportDWG(features, filename);            // own wait modal; success/error handled inside
     } else if (gExp.format === 'dxf') {
       triggerDownload(new Blob([buildDXF(features)], { type: 'application/dxf' }), filename + '.dxf');
