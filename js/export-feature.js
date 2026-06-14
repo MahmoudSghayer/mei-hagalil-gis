@@ -19,9 +19,36 @@ var LABELS = {
   other:'אחר'
 };
 
+// Supported export formats, in display order. DXF/DWG/GeoJSON/CSV are unchanged from before;
+// shapefile/kml/excel are new.
+var FORMATS = {
+  dxf:       { icon:'📐', label:'DXF',       sub:'AutoCAD · ITM' },
+  dwg:       { icon:'🏗️', label:'DWG',       sub:'AutoCAD · ITM' },
+  geojson:   { icon:'🗺️', label:'GeoJSON',   sub:'GIS סטנדרט' },
+  shapefile: { icon:'🗃️', label:'Shapefile', sub:'ZIP · ITM' },
+  kml:       { icon:'🌍', label:'KML',       sub:'Google Earth' },
+  csv:       { icon:'📊', label:'CSV',       sub:'Excel' },
+  excel:     { icon:'📗', label:'Excel',     sub:'XLSX' }
+};
+
+// Lazy-loaded CDN libraries (only fetched when their format is chosen)
+var URL_JSZIP   = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+var URL_SHPWRITE = 'https://cdn.jsdelivr.net/npm/@mapbox/shp-write@0.4.3/shpwrite.js';
+var URL_XLSX    = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+
+// EPSG:2039 (Israel 1993 / Israeli TM Grid) WKT — written into the shapefile .prj so ITM coords place correctly
+var ITM_WKT = 'PROJCS["Israel 1993 / Israeli TM Grid",GEOGCS["Israel 1993",DATUM["Israel_1993",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],TOWGS84[-24.0024,-17.1032,-17.8444,-0.33077,-1.85269,1.66969,5.4262],AUTHORITY["EPSG","6141"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4141"]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",31.73439361111111],PARAMETER["central_meridian",35.20451694444445],PARAMETER["scale_factor",1.0000067],PARAMETER["false_easting",219529.584],PARAMETER["false_northing",626907.39],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],AUTHORITY["EPSG","2039"]]';
+
+// ── DEDICATED EXPORT STATE (separate from map visibility) ─────────────────────
+var gExp = {
+  step: 1,            // 1..4 wizard step
+  format: 'dxf',
+  scope: 'all',       // 'all' | 'draw'
+  busy: false,
+  layers: {}          // catId -> { label, count, visible, selected }
+};
+
 var gRect = null, gDrawing = false, gDrawStart = null, gDrawTemp = null;
-var gExportFormat = 'dxf';
-var gExpScope = 'all';
 
 // ── STYLES ──────────────────────────────────────────────────────────────────
 var s = document.createElement('style');
@@ -30,7 +57,7 @@ s.textContent =
   '#exp-fab:hover{background:#1a7fc1;}' +
   '.exp-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:1500;align-items:center;justify-content:center;}' +
   '.exp-bg.open{display:flex;}' +
-  '.exp-mod{background:#fff;border-radius:14px;width:460px;max-width:95vw;direction:rtl;box-shadow:0 12px 40px rgba(0,0,0,0.25);max-height:90vh;overflow:hidden;display:flex;flex-direction:column;font-family:\'Segoe UI\',Tahoma,Arial,sans-serif;}' +
+  '.exp-mod{background:#fff;border-radius:14px;width:480px;max-width:95vw;direction:rtl;box-shadow:0 12px 40px rgba(0,0,0,0.25);max-height:90vh;overflow:hidden;display:flex;flex-direction:column;font-family:\'Segoe UI\',Tahoma,Arial,sans-serif;}' +
   '.exp-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 16px;border-bottom:1px solid #e2e8f0;flex-shrink:0;}' +
   '.exp-title{font-size:17px;font-weight:700;color:#0d3b5e;}' +
   '.exp-close-btn{background:none;border:none;font-size:18px;cursor:pointer;color:#94a3b8;padding:2px 8px;border-radius:6px;line-height:1;}' +
@@ -40,28 +67,60 @@ s.textContent =
   '.exp-sec-acts{display:flex;gap:5px;}' +
   '.exp-sec-acts button{font-size:10px;padding:2px 8px;border-radius:4px;border:1px solid #e2e8f0;background:#fff;cursor:pointer;color:#64748b;font-family:inherit;}' +
   '.exp-sec-acts button:hover{background:#f1f5f9;}' +
-  '.exp-pills{display:flex;gap:7px;margin-bottom:20px;}' +
-  '.exp-pill{flex:1;padding:10px 6px;border:2px solid #e2e8f0;border-radius:9px;background:#fff;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;color:#64748b;text-align:center;transition:border-color .15s,background .15s;}' +
-  '.exp-pill:hover{border-color:#93c5fd;color:#1a7fc1;}' +
-  '.exp-pill.active{border-color:#0d3b5e;background:#eff6ff;color:#0d3b5e;}' +
-  '.exp-pill-sub{font-size:9px;font-weight:400;display:block;margin-top:2px;opacity:.8;}' +
-  '.exp-chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:20px;}' +
-  '.exp-chip{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border:2px solid #e2e8f0;border-radius:20px;cursor:pointer;font-size:12px;font-weight:600;color:#94a3b8;background:#f8fafc;transition:all .15s;user-select:none;font-family:inherit;}' +
-  '.exp-chip:hover{border-color:#93c5fd;color:#1a7fc1;background:#eff6ff;}' +
-  '.exp-chip.on{border-color:#0d3b5e;background:#0d3b5e;color:#fff;}' +
-  '.exp-chip.on .exp-chip-cnt{background:rgba(255,255,255,0.18);color:#fff;}' +
-  '.exp-chip.on .exp-chip-chk{opacity:1;}' +
-  '.exp-chip-chk{opacity:0;font-size:10px;transition:opacity .15s;}' +
-  '.exp-chip-cnt{font-size:10px;background:#e2e8f0;color:#64748b;padding:1px 7px;border-radius:10px;font-weight:700;}' +
+  // stepper
+  '.exp-stepper{display:flex;gap:4px;margin:-2px 0 20px;}' +
+  '.exp-step{flex:1;text-align:center;font-size:10px;color:#94a3b8;font-weight:600;position:relative;padding-top:26px;}' +
+  '.exp-step::before{content:attr(data-n);position:absolute;top:0;left:50%;transform:translateX(-50%);width:24px;height:24px;border-radius:50%;background:#e2e8f0;color:#94a3b8;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;}' +
+  '.exp-step::after{content:"";position:absolute;top:12px;right:50%;width:100%;height:2px;background:#e2e8f0;z-index:-1;}' +
+  '.exp-step:first-child::after{display:none;}' +
+  '.exp-step.active{color:#0d3b5e;}' +
+  '.exp-step.active::before{background:#0d3b5e;color:#fff;}' +
+  '.exp-step.done::before{content:"✓";background:#16a34a;color:#fff;}' +
+  '.exp-step.done::after{background:#16a34a;}' +
+  // layer rows
+  '.exp-layers{display:flex;flex-direction:column;gap:6px;margin-bottom:20px;max-height:300px;overflow-y:auto;}' +
+  '.exp-lrow{display:flex;align-items:center;gap:10px;padding:10px 12px;border:2px solid #e2e8f0;border-radius:9px;cursor:pointer;user-select:none;transition:border-color .15s,background .15s;}' +
+  '.exp-lrow:hover{border-color:#93c5fd;}' +
+  '.exp-lrow.on{border-color:#0d3b5e;background:#eff6ff;}' +
+  '.exp-lrow input{margin:0;cursor:pointer;accent-color:#0d3b5e;width:16px;height:16px;flex-shrink:0;}' +
+  '.exp-lname{flex:1;font-size:13px;font-weight:600;color:#334155;}' +
+  '.exp-lcount{font-size:11px;font-weight:700;color:#0d3b5e;background:#e0ecf7;padding:2px 9px;border-radius:10px;white-space:nowrap;}' +
+  '.exp-lvis{font-size:10px;font-weight:600;padding:2px 8px;border-radius:6px;white-space:nowrap;}' +
+  '.exp-lvis.vis{color:#16a34a;background:#dcfce7;}' +
+  '.exp-lvis.hid{color:#94a3b8;background:#f1f5f9;}' +
+  // format grid
+  '.exp-fmts{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;}' +
+  '.exp-fmt{width:calc(33.33% - 6px);box-sizing:border-box;padding:13px 6px;border:2px solid #e2e8f0;border-radius:10px;background:#fff;cursor:pointer;font-family:inherit;font-size:12px;font-weight:600;color:#64748b;text-align:center;transition:border-color .15s,background .15s;}' +
+  '.exp-fmt:hover{border-color:#93c5fd;color:#1a7fc1;}' +
+  '.exp-fmt.active{border-color:#0d3b5e;background:#eff6ff;color:#0d3b5e;}' +
+  '.exp-fmt-sub{display:block;font-size:9px;font-weight:400;margin-top:3px;opacity:.8;}' +
+  '.exp-note{font-size:11px;color:#94a3b8;line-height:1.5;background:#f8fafc;border-radius:8px;padding:10px 12px;}' +
+  // summary
+  '.exp-sum{border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:6px;}' +
+  '.exp-sum-row{display:flex;justify-content:space-between;padding:9px 14px;font-size:13px;border-bottom:1px solid #f1f5f9;color:#334155;}' +
+  '.exp-sum-row:last-child{border-bottom:none;}' +
+  '.exp-sum-row .v{font-weight:700;color:#0d3b5e;}' +
+  '.exp-sum-head{font-size:10px;font-weight:700;color:#94a3b8;background:#f8fafc;padding:7px 14px;text-transform:uppercase;letter-spacing:.05em;}' +
+  '.exp-sum-detail{max-height:200px;overflow-y:auto;}' +
+  '.exp-sum-detail .exp-sum-row{font-size:12px;padding:7px 14px;}' +
+  '.exp-sum-total{background:#eff6ff;font-weight:700;color:#0d3b5e;}' +
+  // generate pane
+  '.exp-gen{text-align:center;padding:34px 10px;}' +
+  '.exp-gen-spin{width:44px;height:44px;margin:0 auto 16px;border:4px solid #e2e8f0;border-top-color:#0d3b5e;border-radius:50%;animation:dwgspin .9s linear infinite;}' +
+  '@keyframes dwgspin{to{transform:rotate(360deg);}}' +
+  '.exp-gen-icon{font-size:46px;margin-bottom:12px;line-height:1;}' +
+  '.exp-gen-msg{font-size:14px;color:#334155;}' +
+  // scope
   '.exp-scope{display:flex;flex-direction:column;gap:7px;margin-bottom:4px;}' +
   '.exp-scope-opt{display:flex;align-items:center;gap:10px;padding:11px 14px;border:2px solid #e2e8f0;border-radius:9px;cursor:pointer;transition:border-color .15s,background .15s;font-size:13px;color:#334155;user-select:none;}' +
   '.exp-scope-opt:hover{border-color:#93c5fd;}' +
   '.exp-scope-opt.active{border-color:#0d3b5e;background:#eff6ff;color:#0d3b5e;font-weight:600;}' +
   '.exp-scope-opt input{margin:0;cursor:pointer;accent-color:#0d3b5e;}' +
-  '.exp-foot{padding:14px 20px;border-top:1px solid #e2e8f0;display:flex;gap:8px;justify-content:flex-end;flex-shrink:0;}' +
+  '.exp-foot{padding:14px 20px;border-top:1px solid #e2e8f0;display:flex;gap:8px;justify-content:space-between;flex-shrink:0;}' +
   '.exp-btn{padding:10px 22px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600;font-family:inherit;}' +
   '.exp-btn-primary{background:#0d3b5e;color:#fff;}' +
   '.exp-btn-primary:hover{background:#1a7fc1;}' +
+  '.exp-btn-primary:disabled{opacity:.45;cursor:default;}' +
   '.exp-btn-secondary{background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0;}' +
   '.exp-btn-secondary:hover{background:#e2e8f0;}' +
   '#exp-banner{position:absolute;top:14px;left:50%;transform:translateX(-50%);background:#0d3b5e;color:#fff;padding:10px 22px;border-radius:10px;font-size:13px;font-weight:600;z-index:500;display:none;white-space:nowrap;font-family:\'Segoe UI\',Tahoma,Arial,sans-serif;box-shadow:0 4px 12px rgba(0,0,0,0.25);}' +
@@ -98,37 +157,11 @@ function injectUI() {
     '<div class="exp-bg" id="exp-modal">' +
       '<div class="exp-mod">' +
         '<div class="exp-head">' +
-          '<div class="exp-title">📥 יצוא נתונים <span style="font-size:10px;font-weight:400;opacity:0.45;font-family:monospace">v8</span></div>' +
+          '<div class="exp-title">📥 יצוא נתונים <span style="font-size:10px;font-weight:400;opacity:0.45;font-family:monospace">v11</span></div>' +
           '<button class="exp-close-btn" onclick="closeExportModal()">✕</button>' +
         '</div>' +
-        '<div class="exp-body">' +
-
-          '<div class="exp-sec">פורמט</div>' +
-          '<div class="exp-pills">' +
-            '<button class="exp-pill active" data-fmt="dxf" onclick="expSetFmt(\'dxf\')">📐 DXF<span class="exp-pill-sub">AutoCAD · ITM</span></button>' +
-            '<button class="exp-pill" data-fmt="dwg" onclick="expSetFmt(\'dwg\')">🏗️ DWG<span class="exp-pill-sub">AutoCAD · ITM</span></button>' +
-            '<button class="exp-pill" data-fmt="geojson" onclick="expSetFmt(\'geojson\')">🗺️ GeoJSON<span class="exp-pill-sub">GIS סטנדרט</span></button>' +
-            '<button class="exp-pill" data-fmt="csv" onclick="expSetFmt(\'csv\')">📊 CSV<span class="exp-pill-sub">Excel</span></button>' +
-          '</div>' +
-
-          '<div class="exp-sec">שכבות<div class="exp-sec-acts"><button onclick="expSelectAll()">הכל</button><button onclick="expSelectNone()">נקה</button></div></div>' +
-          '<div id="exp-cats"></div>' +
-
-          '<div class="exp-sec">אזור</div>' +
-          '<div class="exp-scope">' +
-            '<label class="exp-scope-opt active" id="exp-scope-all" onclick="expSetScope(\'all\')">' +
-              '<input type="radio" name="exp-scope" value="all" checked> כל הנתונים' +
-            '</label>' +
-            '<label class="exp-scope-opt" id="exp-scope-draw" onclick="expSetScope(\'draw\')">' +
-              '<input type="radio" name="exp-scope" value="draw"> 🖱️ סמן אזור על המפה' +
-            '</label>' +
-          '</div>' +
-
-        '</div>' +
-        '<div class="exp-foot">' +
-          '<button class="exp-btn exp-btn-secondary" onclick="closeExportModal()">ביטול</button>' +
-          '<button class="exp-btn exp-btn-primary" onclick="expGo()">📥 ייצא</button>' +
-        '</div>' +
+        '<div class="exp-body" id="exp-body"></div>' +
+        '<div class="exp-foot" id="exp-foot"></div>' +
       '</div>' +
     '</div>';
   document.body.appendChild(wrap);
@@ -137,80 +170,231 @@ function injectUI() {
 // ── MODAL CONTROLS ───────────────────────────────────────────────────────────
 function openExportModal() {
   if (!window.gMap) { alert('המפה עדיין לא נטענה'); return; }
-  renderCatsList();
+  gExp.step = 1;
+  gExp.busy = false;
+  buildLayerModel();
+  renderWizard();
   document.getElementById('exp-modal').classList.add('open');
 }
 function closeExportModal() { document.getElementById('exp-modal').classList.remove('open'); }
 window.closeExportModal = closeExportModal;
 
-function renderCatsList() {
-  var counts = {};
-  if (window.gVillageState) {
-    Object.keys(window.gVillageState).forEach(function (vid) {
-      var st = window.gVillageState[vid];
-      Object.keys(st.counts || {}).forEach(function (c) {
-        counts[c] = (counts[c] || 0) + st.counts[c];
-      });
+// Build the export layer model from gVillageState. Selection is OWNED by gExp and never
+// derived from visibility — visibility is read once, only to show an informational badge.
+function buildLayerModel() {
+  var counts = {}, vis = {};
+  var st = window.gVillageState || {};
+  Object.keys(st).forEach(function (vid) {
+    var v = st[vid];
+    Object.keys(v.counts || {}).forEach(function (c) {
+      counts[c] = (counts[c] || 0) + v.counts[c];
+      if (v.masterOn !== false && v.cats && v.cats[c]) vis[c] = true;
     });
-  }
-  var el = document.getElementById('exp-cats');
-  var keys = Object.keys(counts).sort();
-  if (!keys.length) {
-    el.innerHTML = '<div style="padding:16px;text-align:center;color:#94a3b8;font-size:13px">אין שכבות טעונות במפה</div>';
-    return;
-  }
-  el.innerHTML = '<div class="exp-chips">' + keys.map(function (k) {
-    return '<button class="exp-chip on" data-cat="' + k + '" onclick="expToggleChip(this)">' +
-      '<span class="exp-chip-chk">✓</span>' +
-      '<span>' + (LABELS[k] || k) + '</span>' +
-      '<span class="exp-chip-cnt">' + counts[k] + '</span>' +
-      '</button>';
+  });
+  var prev = gExp.layers;
+  var layers = {};
+  Object.keys(counts).sort().forEach(function (c) {
+    layers[c] = {
+      label:    LABELS[c] || c,
+      count:    counts[c],
+      visible:  !!vis[c],
+      selected: prev[c] ? prev[c].selected : true   // default: everything selected
+    };
+  });
+  gExp.layers = layers;
+}
+
+function selectedCats() {
+  return Object.keys(gExp.layers).filter(function (c) { return gExp.layers[c].selected; });
+}
+function fmtNum(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+// ── WIZARD RENDER ─────────────────────────────────────────────────────────────
+function renderWizard() {
+  var body = document.getElementById('exp-body');
+  var foot = document.getElementById('exp-foot');
+  if (!body) return;
+  var html = stepperHTML();
+  if      (gExp.step === 1) html += step1HTML();
+  else if (gExp.step === 2) html += step2HTML();
+  else if (gExp.step === 3) html += step3HTML();
+  else                      html += step4HTML();
+  body.innerHTML = html;
+  foot.innerHTML = footHTML();
+}
+
+function stepperHTML() {
+  var names = ['שכבות', 'פורמט', 'סיכום', 'ייצוא'];
+  return '<div class="exp-stepper">' + names.map(function (n, i) {
+    var step = i + 1, cls = 'exp-step';
+    if (step === gExp.step) cls += ' active';
+    else if (step < gExp.step) cls += ' done';
+    return '<div class="' + cls + '" data-n="' + step + '">' + n + '</div>';
   }).join('') + '</div>';
 }
 
-window.expToggleChip = function(btn) { btn.classList.toggle('on'); };
-window.expSelectAll  = function () { document.querySelectorAll('#exp-cats .exp-chip').forEach(function (c) { c.classList.add('on'); }); };
-window.expSelectNone = function () { document.querySelectorAll('#exp-cats .exp-chip').forEach(function (c) { c.classList.remove('on'); }); };
-
-window.expSetFmt = function (fmt) {
-  gExportFormat = fmt;
-  document.querySelectorAll('.exp-pill').forEach(function (p) {
-    p.classList.toggle('active', p.getAttribute('data-fmt') === fmt);
-  });
-};
-
-window.expSetScope = function (scope) {
-  gExpScope = scope;
-  document.getElementById('exp-scope-all').classList.toggle('active',  scope === 'all');
-  document.getElementById('exp-scope-draw').classList.toggle('active', scope === 'draw');
-  document.querySelector('#exp-scope-all  input').checked = scope === 'all';
-  document.querySelector('#exp-scope-draw input').checked = scope === 'draw';
-};
-
-// ── EXPORT GO ────────────────────────────────────────────────────────────────
-window.expGo = function () {
-  var selectedCats = [];
-  document.querySelectorAll('#exp-cats .exp-chip.on').forEach(function (c) { selectedCats.push(c.getAttribute('data-cat')); });
-  if (!selectedCats.length) { alert('בחר לפחות שכבה אחת'); return; }
-
-  closeExportModal();
-
-  if (gExpScope === 'draw') {
-    startDrawMode(selectedCats);
+// Step 1 — layer manager + area scope
+function step1HTML() {
+  var keys = Object.keys(gExp.layers);
+  var rows;
+  if (!keys.length) {
+    rows = '<div style="padding:16px;text-align:center;color:#94a3b8;font-size:13px">אין שכבות טעונות במפה</div>';
   } else {
-    loadAllFeatures(selectedCats, function (features) {
+    rows = keys.map(function (c) {
+      var L = gExp.layers[c];
+      return '<label class="exp-lrow' + (L.selected ? ' on' : '') + '">' +
+        '<input type="checkbox" ' + (L.selected ? 'checked' : '') + ' onchange="expToggle(\'' + c + '\',this)">' +
+        '<span class="exp-lname">' + L.label + '</span>' +
+        '<span class="exp-lcount">' + fmtNum(L.count) + '</span>' +
+        '<span class="exp-lvis ' + (L.visible ? 'vis' : 'hid') + '">' + (L.visible ? '👁 גלוי' : '🚫 מוסתר') + '</span>' +
+      '</label>';
+    }).join('');
+  }
+  return '<div class="exp-sec">שכבות לייצוא<div class="exp-sec-acts">' +
+      '<button onclick="expSelAll()">הכל</button>' +
+      '<button onclick="expSelNone()">נקה</button>' +
+      '<button onclick="expSelVisible()">גלויות</button>' +
+    '</div></div>' +
+    '<div class="exp-layers">' + rows + '</div>' +
+    '<div class="exp-sec">אזור</div>' +
+    '<div class="exp-scope">' +
+      '<label class="exp-scope-opt' + (gExp.scope === 'all' ? ' active' : '') + '" onclick="expSetScope(\'all\')">' +
+        '<input type="radio" name="exp-scope" ' + (gExp.scope === 'all' ? 'checked' : '') + '> כל הנתונים</label>' +
+      '<label class="exp-scope-opt' + (gExp.scope === 'draw' ? ' active' : '') + '" onclick="expSetScope(\'draw\')">' +
+        '<input type="radio" name="exp-scope" ' + (gExp.scope === 'draw' ? 'checked' : '') + '> 🖱️ סמן אזור על המפה</label>' +
+    '</div>';
+}
+
+// Step 2 — format picker
+function step2HTML() {
+  var pills = Object.keys(FORMATS).map(function (f) {
+    var F = FORMATS[f];
+    return '<button class="exp-fmt' + (gExp.format === f ? ' active' : '') + '" onclick="expSetFmt(\'' + f + '\')">' +
+      F.icon + ' ' + F.label + '<span class="exp-fmt-sub">' + F.sub + '</span></button>';
+  }).join('');
+  var note = '';
+  if (gExp.format === 'csv' || gExp.format === 'excel')
+    note = '<div class="exp-note">פורמטים טבלאיים — מתאימים בעיקר לשכבות נקודה (מדי מים, שוחות וכו\'). עבור גאומטריה מורכבת תישמר הקואורדינטה הראשונה בלבד; הגאומטריה המלאה נשמרת בעמודת JSON.</div>';
+  else if (gExp.format === 'shapefile')
+    note = '<div class="exp-note">לכל שכבה נוצר Shapefile נפרד בתוך קובץ ZIP אחד, בקואורדינטות רשת ישראל החדשה (ITM / EPSG:2039).</div>';
+  return '<div class="exp-sec">פורמט ייצוא</div><div class="exp-fmts">' + pills + '</div>' + note;
+}
+
+// Step 3 — review summary (rendered from gExp only)
+function step3HTML() {
+  var cats = selectedCats(), total = 0;
+  var detail = cats.map(function (c) {
+    var L = gExp.layers[c];
+    total += L.count;
+    return '<div class="exp-sum-row"><span>' + L.label + '</span><span class="v">' + fmtNum(L.count) + '</span></div>';
+  }).join('');
+  var F = FORMATS[gExp.format] || { label: gExp.format };
+  return '<div class="exp-sec">סיכום ייצוא</div>' +
+    '<div class="exp-sum">' +
+      '<div class="exp-sum-row"><span>שכבות נבחרו</span><span class="v">' + cats.length + '</span></div>' +
+      '<div class="exp-sum-head">פירוט שכבות</div>' +
+      '<div class="exp-sum-detail">' + (detail || '<div class="exp-sum-row"><span style="color:#94a3b8">לא נבחרו שכבות</span></div>') + '</div>' +
+      '<div class="exp-sum-row exp-sum-total"><span>סה"כ אובייקטים</span><span class="v">' + fmtNum(total) + '</span></div>' +
+      '<div class="exp-sum-row"><span>פורמט</span><span class="v">' + F.label + '</span></div>' +
+      '<div class="exp-sum-row"><span>אזור</span><span class="v">' + (gExp.scope === 'draw' ? 'אזור מסומן' : 'כל הנתונים') + '</span></div>' +
+    '</div>';
+}
+
+// Step 4 — generation progress
+function step4HTML() {
+  return '<div class="exp-gen" id="exp-gen">' +
+    '<div class="exp-gen-spin"></div>' +
+    '<div class="exp-gen-msg" id="exp-gen-msg">מתחיל…</div>' +
+    '</div>';
+}
+
+function footHTML() {
+  if (gExp.step === 4) return '';  // footer for step 4 is managed by finishGen()
+  var s2 = gExp.step;
+  var left = s2 === 1
+    ? '<button class="exp-btn exp-btn-secondary" onclick="closeExportModal()">ביטול</button>'
+    : '<button class="exp-btn exp-btn-secondary" onclick="expBack()">→ הקודם</button>';
+  var right;
+  if (s2 === 3) {
+    right = '<button class="exp-btn exp-btn-primary" onclick="expRun()">📥 ייצא</button>';
+  } else {
+    var dis = (s2 === 1 && selectedCats().length === 0) ? ' disabled' : '';
+    right = '<button class="exp-btn exp-btn-primary" onclick="expNext()"' + dis + '>הבא →</button>';
+  }
+  return left + right;
+}
+
+// ── WIZARD ACTIONS (exposed for inline handlers) ──────────────────────────────
+window.expToggle = function (cat, input) {
+  if (!gExp.layers[cat]) return;
+  gExp.layers[cat].selected = input.checked;
+  var row = input.closest('.exp-lrow');
+  if (row) row.classList.toggle('on', input.checked);
+  document.getElementById('exp-foot').innerHTML = footHTML();
+};
+window.expSelAll     = function () { Object.keys(gExp.layers).forEach(function (c) { gExp.layers[c].selected = true; }); renderWizard(); };
+window.expSelNone    = function () { Object.keys(gExp.layers).forEach(function (c) { gExp.layers[c].selected = false; }); renderWizard(); };
+window.expSelVisible = function () { Object.keys(gExp.layers).forEach(function (c) { gExp.layers[c].selected = gExp.layers[c].visible; }); renderWizard(); };
+window.expSetFmt     = function (f) { gExp.format = f; renderWizard(); };
+window.expSetScope   = function (sc) { gExp.scope = sc; renderWizard(); };
+window.expBack  = function () { if (gExp.step > 1) { gExp.step--; renderWizard(); } };
+window.expNext  = function () { if (gExp.step < 3) { gExp.step++; renderWizard(); } };
+window.expBackTo3 = function () { gExp.step = 3; renderWizard(); };
+
+// ── EXPORT RUN ────────────────────────────────────────────────────────────────
+window.expRun = function () {
+  var cats = selectedCats();
+  if (!cats.length) { alert('בחר לפחות שכבה אחת'); return; }
+
+  // Draw scope keeps the existing on-map flow (modal closes, user drags a box)
+  if (gExp.scope === 'draw') { closeExportModal(); startDrawMode(cats); return; }
+
+  // DWG keeps its dedicated wait modal exactly as before
+  if (gExp.format === 'dwg') {
+    closeExportModal();
+    loadAllFeatures(cats, function (features) {
       if (!features.length) { alert('לא נמצאו אובייקטים'); return; }
       generateAndDownload(features);
     });
+    return;
   }
+
+  // Everything else generates inside the wizard step-4 pane
+  gExp.step = 4; gExp.busy = true;
+  renderWizard();
+  setGenMsg('אוסף נתונים…');
+  loadAllFeatures(cats, function (features) {
+    if (!features.length) { finishGen(false, 'לא נמצאו אובייקטים'); return; }
+    setGenMsg('מייצא…');
+    generateAndDownload(features);
+  });
 };
 
-// ── LOAD FEATURES ────────────────────────────────────────────────────────────
-function loadAllFeatures(selectedCats, cb) {
-  collectFeatures(selectedCats, null, cb);
+function setGenMsg(m) { var el = document.getElementById('exp-gen-msg'); if (el && m) el.textContent = m; }
+
+function finishGen(ok, msg) {
+  gExp.busy = false;
+  var gen = document.getElementById('exp-gen');
+  if (!gen) { if (!ok && msg) alert('שגיאה ביצוא: ' + msg); return; }  // draw-mode path → no pane
+  if (ok) {
+    gen.innerHTML = '<div class="exp-gen-icon">✅</div><div class="exp-gen-msg">הייצוא הושלם — הקובץ הורד</div>';
+    if (window.showToast) window.showToast('הייצוא הושלם');
+  } else {
+    gen.innerHTML = '<div class="exp-gen-icon">⚠️</div><div class="exp-gen-msg">שגיאה ביצוא' + (msg ? ': ' + msg : '') + '</div>';
+  }
+  var foot = document.getElementById('exp-foot');
+  if (foot) {
+    foot.innerHTML = (ok ? '' : '<button class="exp-btn exp-btn-secondary" onclick="expBackTo3()">→ חזור</button>') +
+      '<button class="exp-btn exp-btn-primary" onclick="closeExportModal()">סגור</button>';
+  }
 }
 
-function collectFeatures(selectedCats, bounds, cb) {
+// ── LOAD FEATURES ────────────────────────────────────────────────────────────
+function loadAllFeatures(selectedCatsArg, cb) {
+  collectFeatures(selectedCatsArg, null, cb);
+}
+
+function collectFeatures(selectedCatsArg, bounds, cb) {
   var features = [];
   var villages = window.gVillages || [];
   if (!villages.length) { cb([]); return; }
@@ -231,7 +415,7 @@ function collectFeatures(selectedCats, bounds, cb) {
         (data.features || []).forEach(function (f) {
           if (!f.geometry) return;
           var cat = (f.properties && f.properties._category) || 'other';
-          if (selectedCats.indexOf(cat) === -1) return;
+          if (selectedCatsArg.indexOf(cat) === -1) return;
           if (bounds && !isInBounds(f.geometry, bounds)) return;
           if (!f.properties) f.properties = {};
           f.properties._village = v.village_name;
@@ -244,7 +428,7 @@ function collectFeatures(selectedCats, bounds, cb) {
 }
 
 // ── DRAW MODE ────────────────────────────────────────────────────────────────
-function startDrawMode(selectedCats) {
+function startDrawMode(selectedCatsArg) {
   if (gRect) { window.gMap.removeLayer(gRect); gRect = null; }
   gDrawing = true;
   document.getElementById('exp-banner').classList.add('show');
@@ -257,7 +441,7 @@ function startDrawMode(selectedCats) {
     window.gMap.once('mouseup', function (e2) {
       window.gMap.off('mousemove', onDrawMove);
       if (gDrawTemp) { window.gMap.removeLayer(gDrawTemp); gDrawTemp = null; }
-      finishDraw(e2.latlng, selectedCats);
+      finishDraw(e2.latlng, selectedCatsArg);
     });
   });
 }
@@ -268,7 +452,7 @@ function onDrawMove(e) {
   gDrawTemp = L.rectangle([gDrawStart, e.latlng], { color: '#0d3b5e', weight: 2, fillOpacity: 0.1, dashArray: '5,5' }).addTo(window.gMap);
 }
 
-function finishDraw(endLatLng, selectedCats) {
+function finishDraw(endLatLng, selectedCatsArg) {
   gDrawing = false;
   document.getElementById('exp-banner').classList.remove('show');
   document.getElementById('exp-cancel-draw').classList.remove('show');
@@ -277,7 +461,7 @@ function finishDraw(endLatLng, selectedCats) {
   gRect = L.rectangle([gDrawStart, endLatLng], { color: '#16a34a', weight: 2, fillOpacity: 0.08 }).addTo(window.gMap);
   var bounds = gRect.getBounds();
   gDrawStart = null;
-  collectFeatures(selectedCats, bounds, function (features) {
+  collectFeatures(selectedCatsArg, bounds, function (features) {
     if (gRect) { window.gMap.removeLayer(gRect); gRect = null; }
     if (!features.length) { alert('לא נמצאו אובייקטים באזור שנבחר'); return; }
     generateAndDownload(features);
@@ -295,32 +479,60 @@ function cancelDrawing() {
 }
 window.cancelDrawing = cancelDrawing;
 
+// ── LAZY SCRIPT LOADER ────────────────────────────────────────────────────────
+var _scriptCache = {};
+function loadScript(url) {
+  if (_scriptCache[url]) return _scriptCache[url];
+  _scriptCache[url] = new Promise(function (resolve, reject) {
+    var sc = document.createElement('script');
+    sc.src = url;
+    sc.onload = function () { resolve(); };
+    sc.onerror = function () { _scriptCache[url] = null; reject(new Error('טעינת ספרייה נכשלה: ' + url)); };
+    document.head.appendChild(sc);
+  });
+  return _scriptCache[url];
+}
+
+function triggerDownload(blob, name) {
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+}
+
 // ── GENERATE & DOWNLOAD ───────────────────────────────────────────────────────
 function generateAndDownload(features) {
   var ts = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
   var filename = 'mei-hagalil-' + ts;
 
-  if (gExportFormat === 'dwg') {
-    _exportDWG(features, filename);
-    return;
+  try {
+    if (gExp.format === 'dwg') {
+      _exportDWG(features, filename);            // own wait modal; success/error handled inside
+    } else if (gExp.format === 'dxf') {
+      triggerDownload(new Blob([buildDXF(features)], { type: 'application/dxf' }), filename + '.dxf');
+      finishGen(true);
+    } else if (gExp.format === 'geojson') {
+      triggerDownload(new Blob([JSON.stringify({ type: 'FeatureCollection', features: features }, null, 2)], { type: 'application/geo+json' }), filename + '.geojson');
+      finishGen(true);
+    } else if (gExp.format === 'csv') {
+      triggerDownload(new Blob(['﻿' + buildCSV(features)], { type: 'text/csv;charset=utf-8' }), filename + '.csv');
+      finishGen(true);
+    } else if (gExp.format === 'kml') {
+      triggerDownload(new Blob([buildKML(features)], { type: 'application/vnd.google-earth.kml+xml' }), filename + '.kml');
+      finishGen(true);
+    } else if (gExp.format === 'shapefile') {
+      setGenMsg('בונה Shapefile…');
+      exportShapefile(features, filename).then(function () { finishGen(true); })
+        .catch(function (e) { finishGen(false, e && e.message ? e.message : String(e)); });
+    } else if (gExp.format === 'excel') {
+      setGenMsg('בונה Excel…');
+      exportExcel(features, filename).then(function () { finishGen(true); })
+        .catch(function (e) { finishGen(false, e && e.message ? e.message : String(e)); });
+    }
+  } catch (e) {
+    finishGen(false, e && e.message ? e.message : String(e));
   }
-
-  var blob, name;
-  if (gExportFormat === 'dxf') {
-    blob = new Blob([buildDXF(features)], { type: 'application/dxf' });
-    name = filename + '.dxf';
-  } else if (gExportFormat === 'geojson') {
-    blob = new Blob([JSON.stringify({ type: 'FeatureCollection', features: features }, null, 2)], { type: 'application/geo+json' });
-    name = filename + '.geojson';
-  } else {
-    blob = new Blob(['﻿' + buildCSV(features)], { type: 'text/csv;charset=utf-8' });
-    name = filename + '.csv';
-  }
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement('a');
-  a.href = url; a.download = name;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
 }
 
 function _exportDWG(features, filename) {
@@ -355,7 +567,6 @@ function injectDwgWaitStyles() {
     '.dwg-wait-bg.open{display:flex;}' +
     '.dwg-wait-mod{background:#fff;border-radius:14px;padding:26px 28px;width:340px;max-width:92vw;text-align:center;direction:rtl;font-family:\'Segoe UI\',Tahoma,Arial,sans-serif;box-shadow:0 12px 40px rgba(0,0,0,0.3);}' +
     '.dwg-wait-spin{width:42px;height:42px;margin:0 auto 14px;border:4px solid #e2e8f0;border-top-color:#0d3b5e;border-radius:50%;animation:dwgspin .9s linear infinite;}' +
-    '@keyframes dwgspin{to{transform:rotate(360deg);}}' +
     '.dwg-wait-title{font-size:16px;font-weight:700;color:#0d3b5e;margin-bottom:6px;}' +
     '.dwg-wait-msg{font-size:13px;color:#334155;margin-bottom:4px;min-height:18px;}' +
     '.dwg-wait-elapsed{font-size:12px;color:#94a3b8;margin-bottom:10px;}' +
@@ -550,9 +761,9 @@ function buildDXF(features) {
       labelPt = toITM(rpt[0], rpt[1]);
     } else if (g.type === 'MultiPolygon') {
       g.coordinates.forEach(function (poly) { dxfPolyline(lines, poly[0], layer, true, toITM, f.properties); });
-      var ring = g.coordinates[0][0];
-      var rpt  = ring[Math.floor(ring.length / 2)];
-      labelPt = toITM(rpt[0], rpt[1]);
+      var ring2 = g.coordinates[0][0];
+      var rpt2  = ring2[Math.floor(ring2.length / 2)];
+      labelPt = toITM(rpt2[0], rpt2[1]);
     }
     // Write labels only for manholes and pipes (skip buildings, parcels, annotations, etc.)
     if (labelPt) {
@@ -655,8 +866,169 @@ function buildCSV(features) {
     rows.push([p._village||'', p._category||'', lon, lat, g.type, p.Text||'', p.Layer||'', JSON.stringify(p)]);
   });
   return rows.map(function (r) {
-    return r.map(function (v) { var s = String(v==null?'':v).replace(/"/g,'""'); return '"'+s+'"'; }).join(',');
+    return r.map(function (v) { var s2 = String(v==null?'':v).replace(/"/g,'""'); return '"'+s2+'"'; }).join(',');
   }).join('\n');
+}
+
+// ── KML (pure JS, no dependency; GeoJSON is already WGS84 lon/lat) ─────────────
+function kmlEsc(v) {
+  return String(v == null ? '' : v)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function kmlCoord(c) { return c[0] + ',' + c[1] + ',' + (c[2] != null ? c[2] : 0); }
+function kmlPoly(rings) {
+  var s2 = '<Polygon><outerBoundaryIs><LinearRing><coordinates>' +
+    rings[0].map(kmlCoord).join(' ') + '</coordinates></LinearRing></outerBoundaryIs>';
+  for (var i = 1; i < rings.length; i++) {
+    s2 += '<innerBoundaryIs><LinearRing><coordinates>' +
+      rings[i].map(kmlCoord).join(' ') + '</coordinates></LinearRing></innerBoundaryIs>';
+  }
+  return s2 + '</Polygon>';
+}
+function kmlGeom(g) {
+  if (g.type === 'Point') return '<Point><coordinates>' + kmlCoord(g.coordinates) + '</coordinates></Point>';
+  if (g.type === 'LineString') return '<LineString><coordinates>' + g.coordinates.map(kmlCoord).join(' ') + '</coordinates></LineString>';
+  if (g.type === 'MultiLineString') return '<MultiGeometry>' + g.coordinates.map(function (l) {
+    return '<LineString><coordinates>' + l.map(kmlCoord).join(' ') + '</coordinates></LineString>';
+  }).join('') + '</MultiGeometry>';
+  if (g.type === 'Polygon') return kmlPoly(g.coordinates);
+  if (g.type === 'MultiPolygon') return '<MultiGeometry>' + g.coordinates.map(kmlPoly).join('') + '</MultiGeometry>';
+  return '';
+}
+function buildKML(features) {
+  var byCat = groupByCategory(features);
+  var out = ['<?xml version="1.0" encoding="UTF-8"?>',
+    '<kml xmlns="http://www.opengis.net/kml/2.2"><Document>',
+    '<name>Mei HaGalil GIS Export</name>'];
+  Object.keys(byCat).forEach(function (c) {
+    out.push('<Folder><name>' + kmlEsc(LABELS[c] || c) + '</name>');
+    byCat[c].forEach(function (f) {
+      var p = f.properties || {}, g = f.geometry;
+      if (!g) return;
+      out.push('<Placemark>');
+      if (p.Text) out.push('<name>' + kmlEsc(p.Text) + '</name>');
+      var data = [];
+      Object.keys(p).forEach(function (k) {
+        if (k.charAt(0) === '_') return;
+        var v = p[k];
+        if (v === null || v === undefined || v === '') return;
+        data.push('<Data name="' + kmlEsc(k) + '"><value>' + kmlEsc(v) + '</value></Data>');
+      });
+      if (data.length) out.push('<ExtendedData>' + data.join('') + '</ExtendedData>');
+      out.push(kmlGeom(g));
+      out.push('</Placemark>');
+    });
+    out.push('</Folder>');
+  });
+  out.push('</Document></kml>');
+  return out.join('\n');
+}
+
+// ── Shapefile (ZIP) — one shapefile per category, ITM coords + .prj ───────────
+function groupByCategory(features) {
+  var by = {};
+  features.forEach(function (f) {
+    var c = (f.properties && f.properties._category) || 'other';
+    (by[c] = by[c] || []).push(f);
+  });
+  return by;
+}
+function reprojCoords(g, t) {
+  function pt(c) { var p = t(c[0], c[1]); return (c.length > 2) ? [p[0], p[1], c[2]] : [p[0], p[1]]; }
+  function arr(a) { return a.map(pt); }
+  if (g.type === 'Point') return { type: 'Point', coordinates: pt(g.coordinates) };
+  if (g.type === 'LineString') return { type: 'LineString', coordinates: arr(g.coordinates) };
+  if (g.type === 'MultiLineString') return { type: 'MultiLineString', coordinates: g.coordinates.map(arr) };
+  if (g.type === 'Polygon') return { type: 'Polygon', coordinates: g.coordinates.map(arr) };
+  if (g.type === 'MultiPolygon') return { type: 'MultiPolygon', coordinates: g.coordinates.map(function (poly) { return poly.map(arr); }) };
+  return g;
+}
+function cleanProps(p) {  // shp/dbf can't hold nested objects; drop internal _keys
+  var out = {};
+  Object.keys(p || {}).forEach(function (k) {
+    if (k.charAt(0) === '_') return;
+    var v = p[k];
+    if (v === null || v === undefined) return;
+    out[k] = (typeof v === 'object') ? JSON.stringify(v) : v;
+  });
+  return out;
+}
+function exportShapefile(features, filename) {
+  return loadScript(URL_JSZIP)
+    .then(function () { return loadScript(URL_SHPWRITE); })
+    .then(function () {
+      var JSZip = window.JSZip, shpwrite = window.shpwrite;
+      if (!JSZip || !shpwrite) throw new Error('ספריית Shapefile לא נטענה');
+      var toITM = makeToITM();
+      var byCat = groupByCategory(features);
+      var master = new JSZip();
+      var cats = Object.keys(byCat);
+
+      return cats.reduce(function (chain, c) {
+        return chain.then(function () {
+          var safe = (c || 'other').replace(/[^a-zA-Z0-9_]/g, '_');
+          var fc = { type: 'FeatureCollection', features: byCat[c].map(function (f) {
+            return { type: 'Feature', properties: cleanProps(f.properties), geometry: reprojCoords(f.geometry, toITM) };
+          }) };
+          var opts = {
+            outputType: 'blob', compression: 'STORE', prj: ITM_WKT,
+            types: { point: safe, polygon: safe, polyline: safe, line: safe, multipolygon: safe }
+          };
+          // zip() may return a Blob/ArrayBuffer/base64 synchronously, or (older builds) a Promise
+          return Promise.resolve(shpwrite.zip(fc, opts)).then(function (res) {
+            if (typeof res === 'string') return JSZip.loadAsync(res, { base64: true });
+            return JSZip.loadAsync(res);   // Blob or ArrayBuffer
+          }).then(function (sub) {
+            return Promise.all(Object.keys(sub.files).map(function (path) {
+              if (sub.files[path].dir) return null;
+              return sub.files[path].async('uint8array').then(function (content) {
+                master.file(safe + '/' + path.split('/').pop(), content);
+              });
+            }));
+          });
+        });
+      }, Promise.resolve())
+      .then(function () { return master.generateAsync({ type: 'blob' }); })
+      .then(function (zipBlob) { triggerDownload(zipBlob, filename + '.zip'); });
+    });
+}
+
+// ── Excel (XLSX via SheetJS) — one worksheet per category ─────────────────────
+function sheetName(name, used) {
+  var s2 = String(name).replace(/[\\\/\?\*\[\]:]/g, ' ').trim().slice(0, 28) || 'Sheet';
+  var base = s2, i = 1;
+  while (used[s2]) { s2 = base.slice(0, 24) + ' ' + (++i); }
+  used[s2] = 1;
+  return s2;
+}
+function exportExcel(features, filename) {
+  return loadScript(URL_XLSX).then(function () {
+    var XLSX = window.XLSX;
+    if (!XLSX) throw new Error('ספריית Excel לא נטענה');
+    var byCat = groupByCategory(features);
+    var wb = XLSX.utils.book_new();
+    var used = {};
+    Object.keys(byCat).forEach(function (c) {
+      var rows = byCat[c].map(function (f) {
+        var p = f.properties || {}, g = f.geometry, lon = '', lat = '';
+        if (g) {
+          if (g.type === 'Point') { lon = g.coordinates[0]; lat = g.coordinates[1]; }
+          else if (g.type === 'LineString' && g.coordinates.length) { lon = g.coordinates[0][0]; lat = g.coordinates[0][1]; }
+          else if (g.type === 'Polygon' && g.coordinates[0] && g.coordinates[0].length) { lon = g.coordinates[0][0][0]; lat = g.coordinates[0][0][1]; }
+        }
+        var row = { village: p._village || '', category: p._category || '', lon: lon, lat: lat, geometry_type: g ? g.type : '' };
+        Object.keys(p).forEach(function (k) {
+          if (k.charAt(0) === '_') return;
+          var v = p[k];
+          row[k] = (v && typeof v === 'object') ? JSON.stringify(v) : v;
+        });
+        return row;
+      });
+      var ws = XLSX.utils.json_to_sheet(rows);
+      XLSX.utils.book_append_sheet(wb, ws, sheetName(LABELS[c] || c, used));
+    });
+    XLSX.writeFile(wb, filename + '.xlsx');
+  });
 }
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
