@@ -138,12 +138,12 @@
         return L.circleMarker(latlng, { pane: pane, radius: 1, opacity: 0, fillOpacity: 0 });
       }
     });
-    for (var i = 0; i < layers.length; i++) {
-      try {
-        var fc = await GIS.features.getInBBox(layers[i].id, bbox, SNAP_LIMIT);
-        grp.addData(fc);
-      } catch (e) { /* skip a layer that fails to load */ }
-    }
+    // Fetch every layer's snap features in parallel (was sequential await-in-loop,
+    // which blocked the editor ~Nx200ms before snapping was ready).
+    var fcs = await Promise.all(layers.map(function (l) {
+      return GIS.features.getInBBox(l.id, bbox, SNAP_LIMIT).catch(function () { return null; });
+    }));
+    fcs.forEach(function (fc) { if (fc) grp.addData(fc); });
     grp.eachLayer(function (lyr) { lyr.options.snapIgnore = false; });
     state.snapGuide = grp.addTo(window.gMap);
   }

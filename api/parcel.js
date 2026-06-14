@@ -50,8 +50,13 @@ module.exports = async function handler(req, res) {
     { g: 'GUS_NUM',   h: 'HLK_NUM'    },
   ];
 
+  // Overall time budget: a genuine "not found" otherwise brute-forces up to
+  // 8 datasets × 7 field combos × ~6s each (~5 min). Cap the total wait instead.
+  const DEADLINE = Date.now() + 12000;
   for (const resource of resources.slice(0, 8)) {
+    if (Date.now() > DEADLINE) break;
     for (const combo of fieldCombos) {
+      if (Date.now() > DEADLINE) break;
       const filters = encodeURIComponent(JSON.stringify({ [combo.g]: g, [combo.h]: h }));
       const r = await get(
         `https://data.gov.il/api/3/action/datastore_search` +
@@ -83,6 +88,7 @@ module.exports = async function handler(req, res) {
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   const sqlResources = resources.slice(0, 3).map(r => r.id).filter(id => UUID_RE.test(id));
   for (const rid of sqlResources) {
+    if (Date.now() > DEADLINE) break;
     // `g` is parseInt'd above (numeric), `rid` is UUID-validated → no injection vector.
     const sql = `SELECT * FROM "${rid}" WHERE "GUSH_NUM"=${g} OR "GUSH"=${g} OR "gush_num"=${g} LIMIT 1`;
     const r = await get(

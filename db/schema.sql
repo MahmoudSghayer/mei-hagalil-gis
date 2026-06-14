@@ -466,12 +466,7 @@ CREATE POLICY "infra: admin can write"
 
 
 -- ════════════════════════════════════════════════════════════════════════
---  SAMPLE DATA  (5 seed incidents — remove before production)
+--  SAMPLE DATA — intentionally omitted from the production schema.
+--  Demo seed incidents live in a separate file so they never land in prod.
+--  For a local/demo environment only, run db/seed.sample.sql manually.
 -- ════════════════════════════════════════════════════════════════════════
-INSERT INTO incidents (title, description, village, lat, lng, priority, status) VALUES
-  ('נזילה בצנרת ראשית',       'נזילה גדולה ברחוב הראשי, נדרש תיקון דחוף',          'מגד אל-כרום', 32.9250, 35.1580, 'high',   'open'),
-  ('לחץ מים נמוך',             'תושבים מדווחים על לחץ נמוך בשכונה המזרחית',         'סחנין',        32.8620, 35.2040, 'medium', 'in_progress'),
-  ('תקלת מד מים',              'מד מים לא מציג קריאה תקינה',                        'עראבה',        32.8490, 35.3300, 'low',    'open'),
-  ('חסימה בקו ביוב',           'קו ביוב חסום ברחוב הגפן',                           'נחף',          32.9780, 35.1920, 'high',   'open'),
-  ('תחנת שאיבה בתחזוקה',      'תחנת השאיבה יצאה לתחזוקה מתוכננת',                 'דיר חנא',      32.9228, 35.2083, 'medium', 'in_progress')
-ON CONFLICT DO NOTHING;
