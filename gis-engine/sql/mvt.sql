@@ -12,9 +12,11 @@
 --  • SECURITY INVOKER → the caller's RLS still applies (read auth unchanged).
 --  • Geometry stored in EPSG:4326; ST_TileEnvelope is EPSG:3857, so transform.
 --  • bbox prefilter (&&) uses the GIST index; ST_AsMVTGeom clips to the tile.
---  • Exposed MVT feature props: __id, asset_code, and `props` (the full
---    properties jsonb as a JSON string — client JSON.parses it when needed,
---    e.g. to open the attribute panel / derive a label).
+--  • SLIM tiles: only the fields needed to STYLE, LABEL and IDENTIFY ride in
+--    the tile — __id, asset_code, and the symbology inputs (diameter / status /
+--    valve size). The full attribute row is fetched on CLICK via
+--    GIS.features.getFeatureById, so tiles stay tiny even for the 18k-pipe layer
+--    (shipping the whole properties jsonb per feature defeated the point of MVT).
 --
 --  Requires PostGIS ≥ 3.0 (ST_TileEnvelope). Supabase ships PostGIS 3.x.
 -- ════════════════════════════════════════════════════════════════════════
@@ -30,9 +32,12 @@ AS $$
   mvtgeom AS (
     SELECT
       ST_AsMVTGeom(ST_Transform(f.geometry, 3857), b.env, 4096, 64, true) AS geom,
-      f.id::text       AS __id,
-      f.asset_code     AS asset_code,
-      f.properties::text AS props
+      f.id::text   AS __id,
+      f.asset_code AS asset_code,
+      -- symbology inputs only (client reads these names; full row via click RPC)
+      COALESCE(f.properties->>'LineDiamet', f.properties->>'diameter', f.properties->>'Diameter') AS "LineDiamet",
+      COALESCE(f.properties->>'Status',     f.properties->>'status')                              AS "Status",
+      f.properties->>'ValveDiame' AS "ValveDiame"
     FROM public.features f, bounds b
     WHERE f.layer_id = p_layer_id
       -- index-friendly prefilter in the layer's own SRID (4326)

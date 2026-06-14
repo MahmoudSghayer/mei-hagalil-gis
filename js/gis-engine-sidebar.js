@@ -119,12 +119,8 @@ function createLoader(layer) {
 
 // ── Vector-tile path (preferred when features_mvt exists) ────────────────
 // Builds a VectorGrid controller with the same interface as the tile loader.
-// Style/click reuse GISSymbology + the shared attribute panel. The full
-// attribute jsonb rides in props.props (a JSON string) for symbology/labels.
-function parseMvtProps(p) {
-  if (p && typeof p.props === 'string') { try { return JSON.parse(p.props); } catch (e) {} }
-  return p || {};
-}
+// Tiles are SLIM: they carry only the symbology inputs (LineDiamet/Status/
+// ValveDiame) + __id/asset_code. The full attribute row is loaded on click.
 function createMvtLayer(layer) {
   var color = colorFor(layer);
   return GISMvtLayer.create({
@@ -132,8 +128,7 @@ function createMvtLayer(layer) {
     layerId: layer.id,
     getFeatureId: function (p) { return p.__id; },
     style: function (p) {
-      var attrs = parseMvtProps(p);
-      var f = { properties: attrs };
+      var f = { properties: p };   // p already has LineDiamet/Status/ValveDiame
       var base = (window.GISSymbology && GISSymbology.lineStyle) ? GISSymbology.lineStyle(layer, f, color) : { color: color, weight: 3, opacity: .9 };
       // One style object serves lines, polygons and points (points use radius/fill).
       return Object.assign({ radius: 5, fill: true, fillColor: base.color || color, fillOpacity: .9,
@@ -141,8 +136,14 @@ function createMvtLayer(layer) {
         opacity: base.opacity != null ? base.opacity : .9 }, base);
     },
     onClick: function (p) {
-      var f = { type: 'Feature', properties: Object.assign({ asset_code: p.asset_code, __id: p.__id, __layer_id: layer.id }, parseMvtProps(p)) };
-      openPanelFor(f, layer);
+      // Tile only has id/asset_code → fetch the full feature (attrs + meters) on demand.
+      if (GIS.features && GIS.features.getFeatureById && p.__id) {
+        GIS.features.getFeatureById(p.__id)
+          .then(function (f) { openPanelFor(f, layer); })
+          .catch(function () { openPanelFor({ type: 'Feature', properties: { asset_code: p.asset_code, __id: p.__id, __layer_id: layer.id } }, layer); });
+      } else {
+        openPanelFor({ type: 'Feature', properties: { asset_code: p.asset_code, __id: p.__id, __layer_id: layer.id } }, layer);
+      }
     },
     onStatus: function (s) {
       if (!layer._statEl) return;
