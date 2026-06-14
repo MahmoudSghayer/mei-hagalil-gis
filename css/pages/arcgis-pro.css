@@ -395,3 +395,25 @@ body.dark-basemap .gis-sym-label { color: #fff; text-shadow: 1px 1px 0 #000, -1p
 #gis-find-card .gf-code { font-size: 13px; font-weight: 600; color: #0d3b5e; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #gis-find-card .gf-layer { font-size: 10.5px; color: #94a3b8; white-space: nowrap; flex-shrink: 0; }
 #gis-find-card .gf-hint { padding: 12px; font-size: 12px; color: #94a3b8; text-align: center; }
+
+/* ── Print / map-sheet overlays (captured into the printout) ───────────────── */
+.gis-print-ov { position: absolute; z-index: 700; background: rgba(255,255,255,0.96); border: 1px solid #0d3b5e; box-shadow: 0 2px 8px rgba(0,0,0,0.2); font-family: 'Rubik', sans-serif; direction: rtl; }
+.gis-print-title { top: 8px; left: 50%; transform: translateX(-50%); padding: 8px 22px; text-align: center; border-radius: 8px; }
+.gis-print-title .gpt-t { font-size: 18px; font-weight: 800; color: #0d3b5e; }
+.gis-print-title .gpt-m { font-size: 11px; color: #475569; margin-top: 2px; }
+.gis-print-legend { bottom: 28px; left: 14px; padding: 8px 12px; border-radius: 8px; max-width: 210px; }
+.gis-print-legend .gpl-h { font-size: 12px; font-weight: 700; color: #0d3b5e; margin-bottom: 4px; }
+.gis-print-ns { bottom: 28px; right: 14px; padding: 8px 14px; border-radius: 8px; text-align: center; }
+.gis-print-ns .gpn-arrow { font-size: 22px; font-weight: 800; color: #0d3b5e; line-height: 1; }
+.gis-print-ns .gpn-n { font-size: 10px; font-weight: 700; color: #0d3b5e; }
+.gis-print-ns .gpn-scale { font-size: 11px; color: #475569; margin-top: 4px; border-top: 1px solid #cbd5e1; padding-top: 3px; }
+
+/* native-print fallback: hide app chrome, keep the map + sheet overlays */
+@media print {
+  @page { margin: 8mm; }
+  body.gis-printing #ags-ribbon, body.gis-printing #sidebar, body.gis-printing #statusbar, body.gis-printing #topbar,
+  body.gis-printing #gis-trace-card, body.gis-printing #gis-anly-card, body.gis-printing #gis-bm-card,
+  body.gis-printing #gis-find-card, body.gis-printing #gis-legend, body.gis-printing #search-bar, body.gis-printing #search-help,
+  body.gis-printing .leaflet-control-zoom, body.gis-printing .leaflet-control-attribution,
+  body.gis-printing #gis-trace-banner, body.gis-printing #sidebar-collapse-btn { display: none !important; }
+}

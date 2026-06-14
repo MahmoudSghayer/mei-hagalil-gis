@@ -125,7 +125,7 @@
         { ic: '📥', lb: 'ייצא מפה', size: 'lg', act: function () { clickFab('exp-fab'); } }
       ] },
       { label: 'פריסת הדפסה', cmds: [
-        { ic: '🖨️', lb: 'גיליון מפה', size: 'lg', act: soon, disabled: true }
+        { ic: '🖨️', lb: 'גיליון מפה', size: 'lg', act: printMap }
       ] }
     ]
   };
@@ -154,6 +154,7 @@
   function anlyClear() { if (window.GISAnalysis) { window.GISAnalysis.clear(); } }
   function toggleBookmarks() { if (window.GISBookmarks) { window.GISBookmarks.toggle(); } else { toast('הסימניות עדיין נטענות…'); } }
   function toggleFind() { if (window.GISFind) { window.GISFind.toggle(); } else { toast('כלי האיתור עדיין נטען…'); } }
+  function printMap() { if (window.GISPrint) { window.GISPrint.open(); } else { toast('כלי ההדפסה עדיין נטען…'); } }
   function focusSearch() {
     var inp = document.querySelector('#search-bar input');
     if (inp) { inp.focus(); inp.select && inp.select(); }

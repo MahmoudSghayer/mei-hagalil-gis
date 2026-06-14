@@ -168,6 +168,8 @@
     labelText: labelText,
     toggleLegend: toggleLegend,
     refreshLegend: refreshLegend,
+    legendHTML: buildLegend,
+    breaksFor: breaksFor,
     toggleLabels: toggleLabels,
     labelsOn: function () { return LABELS_ON; }
   };
