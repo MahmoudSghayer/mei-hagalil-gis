@@ -347,3 +347,12 @@ RETURNS JSONB LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $
     LIMIT p_limit
   ) s;
 $$;
+
+-- Speed-up for search_meters on large fleets (~32k meters): pg_trgm GIN indexes
+-- so the ILIKE '%...%' lookups use an index instead of scanning every row.
+-- Safe to run once; CREATE INDEX IF NOT EXISTS is idempotent.
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE INDEX IF NOT EXISTS meters_arad_trgm ON public.meters USING gin ((arad_meter_id::text) gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS meters_cust_trgm ON public.meters USING gin ((customer_id::text) gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS meters_name_trgm ON public.meters USING gin ((raw_data->>'customer_name') gin_trgm_ops);
+CREATE INDEX IF NOT EXISTS meters_addr_trgm ON public.meters USING gin ((raw_data->>'address') gin_trgm_ops);

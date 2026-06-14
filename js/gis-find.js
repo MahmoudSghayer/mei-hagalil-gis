@@ -1,25 +1,36 @@
 /* ══════════════════════════════════════════════════════════════════════════
    Find / Locate — unified ArcGIS-style search.
-   One box finds, in parallel:
-     • Assets   — any attribute (valve #, section, asset_code, hydrant id…)
-                  across the active engine layers (or all if none active).
+   One box finds, IN PARALLEL and rendered the moment each source returns
+   (meters first — assets/addresses never hold them up):
      • Meters   — Arad watermeters by id / customer id / name / address
                   (GIS.meters.search → search_meters RPC).
-     • Addresses— real street addresses (Nominatim/OSM, Israel-biased).
-   Click a result → fly to it + open its panel (asset/meter) or drop a marker
-   (address). Self-contained IIFE. Opens from the ribbon Map → איתור tab.
+     • Assets   — any attribute (valve #, section, asset_code, hydrant id…).
+     • Addresses— real street addresses (Nominatim; skipped for pure-number
+                  queries, since meter/customer ids are never addresses).
+   Click a result → fly to it + a BOLD pulsing highlight is dropped on the map
+   (so the picked meter stands out from the small dots) + its panel opens.
+   Self-contained IIFE. Opens from the ribbon Map → איתור tab.
    ══════════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
 
-  // id-ish fields tried first for the asset result label / match priority
   var ID_FIELDS = ['asset_code', 'ValveNum', 'HydrantNum', 'SectionNum', 'arad_meter_id', 'GlobalID', 'OBJECTID', 'ManholeNum'];
-  var SCAN_CAP = 60000;   // max features scanned when no layer is active
-  var ASSET_MAX = 15, METER_MAX = 15, ADDR_MAX = 6;
+  var SCAN_CAP = 60000;            // max features scanned when no layer is active
+  var ASSET_MAX = 15, METER_MAX = 20, ADDR_MAX = 6;
+
+  // sections render top→bottom; meters first because that's the priority search.
+  var SECTIONS = [
+    { key: 'meters', title: '🔢 מדי מים' },
+    { key: 'assets', title: '🔹 נכסים' },
+    { key: 'addr',   title: '📍 כתובות' }
+  ];
 
   var _cache = {};
-  var _runToken = 0;       // guards against an older query overwriting a newer one
-  var _addrMarker = null;  // temporary marker for a picked address
+  var _runToken = 0;     // guards against an older query overwriting a newer one
+  var _picks = {};       // pickId → result object (rebuilt per run)
+  var _pickSeq = 0;
+  var _hi = null;        // current feature highlight on the map (persists until next pick)
+  var _addrMarker = null;
 
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
   function toast(m) { var t = document.getElementById('toast'); if (!t) return; t.textContent = m; t.className = 'show'; setTimeout(function () { t.className = ''; }, 2200); }
@@ -52,7 +63,7 @@
     return false;
   }
 
-  // ── the three searches (each returns a small result object) ────────────────
+  // ── the three searches ──────────────────────────────────────────────────────
   async function searchAssets(q) {
     var ql = q.toLowerCase();
     var cand;
@@ -97,69 +108,118 @@
     } catch (e) { return { items: [] }; }
   }
 
-  // ── run + render ───────────────────────────────────────────────────────────
+  // ── run: scaffold sections, then fill each independently as it returns ──────
   async function run(q) {
     var token = ++_runToken;
     q = (q || '').trim();
     var box = document.getElementById('gf-results'); if (!box) return;
     if (q.length < 2) { box.innerHTML = hint('הקלד לפחות 2 תווים…'); return; }
-    box.innerHTML = hint('מחפש…');
 
-    var res = await Promise.all([searchAssets(q), searchMeters(q), searchAddresses(q)]);
-    if (token !== _runToken) return;                 // a newer keystroke superseded this
-    renderResults(box, res[0], res[1], res[2]);
-  }
+    _picks = {};
+    var runAddr = /\D/.test(q);     // pure-digit queries (meter/customer id) skip the slow geocoder
+    box.innerHTML = SECTIONS.map(function (s) {
+      if (s.key === 'addr' && !runAddr) return '';
+      return '<div class="gf-secwrap" id="gf-w-' + s.key + '"><div class="gf-sec">' + s.title + '</div>' +
+        '<div class="gf-secbody" id="gf-b-' + s.key + '">' + hint('מחפש…') + '</div></div>';
+    }).join('');
 
-  function renderResults(box, assets, meters, addrs) {
-    var all = [], html = '';
-    function section(title, items, render) {
-      if (!items || !items.length) return '';
-      var h = '<div class="gf-sec">' + title + '</div>';
-      items.forEach(function (it) { var idx = all.length; all.push(it); h += render(it, idx); });
-      return h;
-    }
-    html += section('🔹 נכסים', assets.items, function (it, idx) {
-      return '<div class="gf-item" data-i="' + idx + '"><span class="gf-code">' + esc(resultLabel(it.f)) + '</span>' +
-        '<span class="gf-layer">' + esc(layerLabel(it.layer)) + '</span></div>';
+    var pm = searchMeters(q).then(function (r) { if (token === _runToken) putItems('meters', r.items, meterRow); });
+    var pa = searchAssets(q).then(function (r) {
+      if (token !== _runToken) return;
+      putItems('assets', r.items, assetRow);
+      if (r.capped && r.items.length) appendHint('assets', 'הצגת ' + r.items.length + ' ראשונות — צמצם בשכבה פעילה לדיוק');
     });
-    html += section('🔢 מדי מים', meters.items, function (it, idx) {
-      var p = it.f.properties || {};
-      var nm = p.customer_name || (p.raw_data && p.raw_data.customer_name) || '';
-      var sub = [p.customer_id != null && p.customer_id !== '' ? 'צרכן ' + p.customer_id : '', p.address || ''].filter(Boolean).join(' · ');
-      return '<div class="gf-item" data-i="' + idx + '"><span class="gf-code">🔢 ' + esc(p.arad_meter_id || '—') + (nm ? ' · ' + esc(nm) : '') + '</span>' +
-        '<span class="gf-layer">' + esc(sub) + '</span></div>';
-    });
-    html += section('📍 כתובות', addrs.items, function (it, idx) {
-      return '<div class="gf-item" data-i="' + idx + '"><span class="gf-code">📍 ' + esc(it.label) + '</span>' +
-        '<span class="gf-layer">' + it.lat.toFixed(4) + ', ' + it.lng.toFixed(4) + '</span></div>';
-    });
+    var px = runAddr ? searchAddresses(q).then(function (r) { if (token === _runToken) putItems('addr', r.items, addrRow); }) : Promise.resolve();
 
-    if (!all.length) { box.innerHTML = hint('לא נמצאו תוצאות' + (assets.all ? ' (חיפוש בכל השכבות)' : '')); return; }
-    if (assets.capped) html += hint('נכסים: הצגת ' + assets.items.length + ' ראשונות — צמצם בשכבה פעילה לדיוק');
-    box.innerHTML = html;
-    Array.prototype.forEach.call(box.querySelectorAll('.gf-item'), function (el) {
-      el.onclick = function () { pick(all[+el.getAttribute('data-i')]); };
+    Promise.all([pm, pa, px]).then(function () {
+      if (token === _runToken && !box.querySelector('.gf-item')) box.innerHTML = hint('לא נמצאו תוצאות');
     });
   }
 
-  // ── pick a result ──────────────────────────────────────────────────────────
+  function register(it) { var id = String(++_pickSeq); _picks[id] = it; return id; }
+  function putItems(key, items, renderRow) {
+    var wrap = document.getElementById('gf-w-' + key), body = document.getElementById('gf-b-' + key);
+    if (!wrap || !body) return;
+    if (!items || !items.length) { wrap.style.display = 'none'; return; }
+    body.innerHTML = items.map(function (it) { return renderRow(it, register(it)); }).join('');
+    Array.prototype.forEach.call(body.querySelectorAll('.gf-item'), function (el) {
+      el.onclick = function () { var p = _picks[el.getAttribute('data-pid')]; if (p) pick(p); };
+    });
+    wrap.style.display = '';
+  }
+  function appendHint(key, msg) { var body = document.getElementById('gf-b-' + key); if (body) body.insertAdjacentHTML('beforeend', hint(msg)); }
+
+  function meterRow(it, id) {
+    var p = it.f.properties || {};
+    var nm = p.customer_name || (p.raw_data && p.raw_data.customer_name) || '';
+    var sub = [(p.customer_id != null && p.customer_id !== '') ? 'צרכן ' + p.customer_id : '', p.address || ''].filter(Boolean).join(' · ');
+    return '<div class="gf-item" data-pid="' + id + '"><span class="gf-code">🔢 ' + esc(p.arad_meter_id || '—') + (nm ? ' · ' + esc(nm) : '') + '</span>' +
+      '<span class="gf-layer">' + esc(sub) + '</span></div>';
+  }
+  function assetRow(it, id) {
+    return '<div class="gf-item" data-pid="' + id + '"><span class="gf-code">' + esc(resultLabel(it.f)) + '</span>' +
+      '<span class="gf-layer">' + esc(layerLabel(it.layer)) + '</span></div>';
+  }
+  function addrRow(it, id) {
+    return '<div class="gf-item" data-pid="' + id + '"><span class="gf-code">📍 ' + esc(it.label) + '</span>' +
+      '<span class="gf-layer">' + it.lat.toFixed(4) + ', ' + it.lng.toFixed(4) + '</span></div>';
+  }
+
+  // ── pick + on-map highlight ─────────────────────────────────────────────────
   function flyToGeom(g) {
     if (g.type === 'Point') { window.gMap.flyTo([g.coordinates[1], g.coordinates[0]], 19, { duration: 0.7 }); return; }
     try { var tmp = L.geoJSON(g); window.gMap.flyToBounds(tmp.getBounds(), { maxZoom: 19, duration: 0.7, padding: [60, 60] }); } catch (e) {}
   }
+  function ensureHiPane() {
+    if (!window.gMap.getPane('gisFindHi')) {
+      var p = window.gMap.createPane('gisFindHi'); p.style.zIndex = 702; p.style.pointerEvents = 'none';
+    }
+    return 'gisFindHi';
+  }
+  function clearHighlight() {
+    if (_hi) { try { window.gMap.removeLayer(_hi); } catch (e) {} _hi = null; }
+    if (_addrMarker) { try { window.gMap.removeLayer(_addrMarker); } catch (e) {} _addrMarker = null; }
+  }
+  // Bold, pulsing, distinct-colour marker so the picked feature pops out from the
+  // small same-colour dots around it. Persists until the next pick (or clear).
+  function highlightFeature(g, label) {
+    clearHighlight();
+    if (!g || !window.gMap) return;
+    var pane = ensureHiPane();
+    if (g.type === 'Point') {
+      var icon = L.divIcon({ className: '', html: '<div class="gis-find-pulse"></div>', iconSize: [28, 28], iconAnchor: [14, 14] });
+      _hi = L.marker([g.coordinates[1], g.coordinates[0]], { icon: icon, pane: pane, interactive: false, zIndexOffset: 1000 }).addTo(window.gMap);
+      if (label) _hi.bindTooltip(String(label), { permanent: true, direction: 'top', offset: [0, -14], className: 'gis-find-hilabel' });
+    } else {
+      _hi = L.geoJSON(g, {
+        pane: pane, interactive: false,
+        style: { color: '#7c3aed', weight: 7, opacity: 0.95, fillColor: '#a855f7', fillOpacity: 0.25 },
+        pointToLayer: function (f, ll) { return L.circleMarker(ll, { pane: pane, radius: 11, color: '#7c3aed', weight: 4, fillColor: '#a855f7', fillOpacity: 0.9 }); }
+      }).addTo(window.gMap);
+    }
+  }
+
   function pick(r) {
     if (!window.gMap) return;
-    if (r.kind === 'address') { goAddress(r); return; }
+    if (r.kind === 'address') {
+      clearHighlight();
+      window.gMap.flyTo([r.lat, r.lng], 18, { duration: 0.8 });
+      var pane = ensureHiPane();
+      _addrMarker = L.circleMarker([r.lat, r.lng], { pane: pane, radius: 10, color: '#dc2626', weight: 3, fillColor: '#fff', fillOpacity: 1 })
+        .bindTooltip('📍 ' + esc(r.label), { permanent: false, direction: 'top' });
+      _addrMarker.addTo(window.gMap);
+      return;
+    }
     var g = r.f.geometry; if (!g) { toast('לפריט אין גאומטריה'); return; }
     flyToGeom(g);
-    if (r.kind === 'meter') { if (window.GISPanel && GISPanel.openMeter) GISPanel.openMeter(r.f); }
-    else if (window.GISPanel) GISPanel.open(r.f, { layerId: r.layer.id, sub: layerLabel(r.layer) });
-  }
-  function goAddress(r) {
-    window.gMap.flyTo([r.lat, r.lng], 18, { duration: 0.8 });
-    if (_addrMarker) { try { window.gMap.removeLayer(_addrMarker); } catch (e) {} }
-    _addrMarker = L.circleMarker([r.lat, r.lng], { radius: 9, color: '#dc2626', weight: 3, fillColor: '#fff', fillOpacity: 1 })
-      .addTo(window.gMap).bindPopup('📍 ' + esc(r.label)).openPopup();
+    if (r.kind === 'meter') {
+      var p = r.f.properties || {};
+      highlightFeature(g, p.arad_meter_id || p.customer_name || '');
+      if (window.GISPanel && GISPanel.openMeter) GISPanel.openMeter(r.f);
+    } else {
+      highlightFeature(g, resultLabel(r.f));
+      if (window.GISPanel) GISPanel.open(r.f, { layerId: r.layer.id, sub: layerLabel(r.layer) });
+    }
   }
 
   // ── card ───────────────────────────────────────────────────────────────────
@@ -169,25 +229,28 @@
     if (!window.GIS || !window.gMap) { toast('המנוע עדיין נטען…'); return; }
     c = document.createElement('div'); c.id = 'gis-find-card';
     c.innerHTML =
-      '<div class="gf-head"><input id="gf-input" class="gf-input" placeholder="אתר: מס׳ מגוף/נכס · מד מים (Arad) · כתובת…" autocomplete="off"><button class="gf-x" title="סגור">✕</button></div>' +
-      '<div class="gf-results" id="gf-results"><div class="gf-hint">הקלד לחיפוש נכסים, מדי מים וכתובות</div></div>';
+      '<div class="gf-head"><input id="gf-input" class="gf-input" placeholder="אתר: מד מים (Arad) · מס׳ צרכן/שם · נכס · כתובת…" autocomplete="off"><button class="gf-x" title="סגור">✕</button></div>' +
+      '<div class="gf-results" id="gf-results"><div class="gf-hint">הקלד לחיפוש מדי מים, נכסים וכתובות</div></div>';
     document.body.appendChild(c);
     var inp = document.getElementById('gf-input'); inp.focus();
-    var t; inp.oninput = function () { clearTimeout(t); t = setTimeout(function () { run(inp.value); }, 300); };
+    var t; inp.oninput = function () { clearTimeout(t); t = setTimeout(function () { run(inp.value); }, 260); };
     inp.onkeydown = function (e) { if (e.key === 'Escape') c.remove(); };
     c.querySelector('.gf-x').onclick = function () { c.remove(); };
   }
 
-  // section-header style (the rest reuses the .gf-* styles in arcgis-pro.css)
+  // styles: section headers + the pulsing highlight (rest reuses arcgis-pro.css)
   (function injectCSS() {
     if (document.getElementById('gis-find-style')) return;
     var s = document.createElement('style'); s.id = 'gis-find-style';
     s.textContent =
-      '#gis-find-card .gf-sec{padding:5px 10px;background:#f1f5f9;font-size:10px;font-weight:700;' +
-      'color:#64748b;letter-spacing:.4px;position:sticky;top:0}' +
-      '#gis-find-card .gf-item .gf-code{display:block}';
+      '#gis-find-card .gf-sec{padding:5px 10px;background:#f1f5f9;font-size:10px;font-weight:700;color:#64748b;letter-spacing:.4px;position:sticky;top:0}' +
+      '#gis-find-card .gf-item .gf-code{display:block}' +
+      '.gis-find-pulse{width:28px;height:28px;border-radius:50%;background:rgba(124,58,237,.35);border:3px solid #7c3aed;animation:gis-find-pulse 1.4s infinite}' +
+      '@keyframes gis-find-pulse{0%{box-shadow:0 0 0 0 rgba(124,58,237,.55)}70%{box-shadow:0 0 0 18px rgba(124,58,237,0)}100%{box-shadow:0 0 0 0 rgba(124,58,237,0)}}' +
+      '.gis-find-hilabel{background:#7c3aed;color:#fff;border:none;font-weight:700;font-size:11px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.25)}' +
+      '.gis-find-hilabel:before{border-top-color:#7c3aed}';
     document.head.appendChild(s);
   })();
 
-  window.GISFind = { toggle: toggle };
+  window.GISFind = { toggle: toggle, clearHighlight: clearHighlight };
 })();
