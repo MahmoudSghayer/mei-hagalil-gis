@@ -27,7 +27,7 @@
   }
   function exit() {
     active = false;
-    Object.keys(els).forEach(function (k) { if (els[k] && els[k].el) els[k].el.remove(); });
+    Object.keys(els).forEach(function (k) { if (els[k] && els[k].el) { if (els[k].el._ro) els[k].el._ro.disconnect(); els[k].el.remove(); } });
     els = {};
     clearArea();
     var bar = document.getElementById('gis-layout-bar'); if (bar) bar.remove();
@@ -99,25 +99,28 @@
       el.innerHTML = '<span class="ls-line"></span><span class="ls-lbl">—</span>';
       el.style.bottom = '24px'; el.style.right = '12px';
     }
-    // size control (− / +) — scales the whole element via --ov-scale
-    var sz = document.createElement('div'); sz.className = 'ov-size';
-    sz.innerHTML = '<button class="ov-b ov-minus" title="הקטן">−</button><button class="ov-b ov-plus" title="הגדל">+</button>';
-    el.appendChild(sz);
-
     host.appendChild(el);
     if (window.L && L.DomEvent) { L.DomEvent.disableClickPropagation(el); L.DomEvent.disableScrollPropagation(el); }
     makeDraggable(el);
     if (key === 'legend') wireLegend(el);
-    els[key] = { el: el, on: true, scale: 1 };
-    sz.querySelector('.ov-minus').onclick = function (e) { e.stopPropagation(); setScale(key, -0.2); };
-    sz.querySelector('.ov-plus').onclick = function (e) { e.stopPropagation(); setScale(key, 0.2); };
+    els[key] = { el: el, on: true };
+    observeResize(el, key);
     if (key === 'scale') updateScale();
   }
-  function setScale(key, d) {
-    var o = els[key]; if (!o || !o.el) return;
-    o.scale = Math.max(0.6, Math.min(3.2, (o.scale || 1) + d));
-    o.el.style.setProperty('--ov-scale', o.scale);
-    if (key === 'scale') updateScale();
+  // Free drag-resize (CSS resize:both): scale the content to fill the box, so
+  // the legend / arrow / scale / title grow as the corner is dragged.
+  function observeResize(el, key) {
+    if (!window.ResizeObserver) return;
+    requestAnimationFrame(function () {
+      var baseW = el.offsetWidth || 1, baseH = el.offsetHeight || 1;
+      var ro = new ResizeObserver(function () {
+        var s = Math.min((el.offsetWidth || baseW) / baseW, (el.offsetHeight || baseH) / baseH);
+        s = Math.max(0.6, Math.min(5, s));
+        el.style.setProperty('--ov-scale', s);
+        if (key === 'scale') updateScale();
+      });
+      ro.observe(el); el._ro = ro;
+    });
   }
   function toggleEl(key, on) {
     if (on) { if (!els[key] || !els[key].el) addEl(key); else els[key].el.style.display = ''; }
@@ -162,6 +165,9 @@
   function makeDraggable(el) {
     el.addEventListener('mousedown', function (ev) {
       if (ev.target.closest('input,select,button,[contenteditable="true"]')) return;
+      // leave the bottom corners free for the native resize handle
+      var rr = el.getBoundingClientRect();
+      if ((rr.bottom - ev.clientY) < 22 && ((ev.clientX - rr.left) < 22 || (rr.right - ev.clientX) < 22)) return;
       ev.preventDefault(); ev.stopPropagation();
       var host = mapHost().getBoundingClientRect(), r = el.getBoundingClientRect();
       var baseLeft = r.left - host.left, baseTop = r.top - host.top, sx = ev.clientX, sy = ev.clientY;

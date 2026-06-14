@@ -408,11 +408,13 @@ body.dark-basemap .gis-sym-label { color: #fff; text-shadow: 1px 1px 0 #000, -1p
 
 /* overlays sized in em off a per-element --ov-scale so the − / + control grows
    everything (icon, text, swatches) uniformly to fit larger map sheets */
-.gis-lay-ov { position: absolute; z-index: 800; background: rgba(255,255,255,0.96); border: 1px solid #0d3b5e; border-radius: 7px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); font-family: 'Rubik', sans-serif; direction: rtl; cursor: move; user-select: none; font-size: calc(13px * var(--ov-scale, 1)); }
+.gis-lay-ov { position: absolute; z-index: 800; background: rgba(255,255,255,0.96); border: 1px solid #0d3b5e; border-radius: 7px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); font-family: 'Rubik', sans-serif; direction: rtl; cursor: move; user-select: none; font-size: calc(13px * var(--ov-scale, 1)); resize: both; overflow: hidden; min-width: 60px; min-height: 28px; box-sizing: border-box; }
+/* resize-corner affordance (bottom-left for RTL) */
+.gis-lay-ov::after { content: ''; position: absolute; bottom: 3px; left: 3px; width: 9px; height: 9px; border-left: 2px solid #0d3b5e; border-bottom: 2px solid #0d3b5e; opacity: 0.45; pointer-events: none; }
 .gis-lay-title { padding: 0.4em 1.2em; text-align: center; }
 .gis-lay-title .lt-t { font-size: 1.18em; font-weight: 800; color: #0d3b5e; line-height: 1.15; }
 .gis-lay-title .lt-m { font-size: 0.72em; color: #475569; margin-top: 1px; }
-.gis-lay-legend { padding: 0.5em 0.7em; min-width: 10em; max-width: 18em; }
+.gis-lay-legend { padding: 0.5em 0.7em; min-width: 9em; }
 .gis-lay-legend .ll-h { font-size: 0.95em; font-weight: 700; color: #0d3b5e; margin-bottom: 0.4em; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.25em; outline: none; }
 .gis-lay-legend .ll-rows { display: flex; flex-direction: column; gap: 1px; }
 .gis-lay-legend .ll-row { display: flex; align-items: center; gap: 0.6em; padding: 0.22em 0.15em; border-radius: 5px; }
@@ -423,10 +425,6 @@ body.dark-basemap .gis-sym-label { color: #fff; text-shadow: 1px 1px 0 #000, -1p
 .gis-lay-legend .ll-del { background: none; border: none; color: #cbd5e1; font-size: 1.05em; cursor: pointer; line-height: 1; padding: 0 2px; }
 .gis-lay-legend .ll-del:hover { color: #dc2626; }
 .gis-lay-legend .ll-empty { font-size: 0.85em; color: #94a3b8; line-height: 1.5; }
-.gis-lay-ov .ov-size { position: absolute; top: -11px; left: -11px; display: none; gap: 2px; background: #0d3b5e; border-radius: 6px; padding: 2px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); z-index: 2; }
-.gis-lay-ov:hover .ov-size { display: flex; }
-.gis-lay-ov .ov-b { width: 19px; height: 19px; border: none; border-radius: 4px; background: rgba(255,255,255,0.16); color: #fff; font-size: 14px; line-height: 1; cursor: pointer; font-family: inherit; padding: 0; }
-.gis-lay-ov .ov-b:hover { background: rgba(255,255,255,0.34); }
 #gis-layout-bar .glb-area { background: #fff7ed; color: #b45309; border: 1px solid #fdba74; border-radius: 7px; padding: 6px 12px; cursor: pointer; font-family: inherit; font-weight: 600; }
 #gis-layout-bar .glb-area:hover { background: #ffedd5; }
 .gis-lay-north { padding: 0.35em 0.8em; text-align: center; }
@@ -435,6 +433,7 @@ body.dark-basemap .gis-sym-label { color: #fff; text-shadow: 1px 1px 0 #000, -1p
 .gis-lay-scale { padding: 0.4em 0.7em; text-align: center; }
 .gis-lay-scale .ls-line { display: block; height: 0.55em; border: 2px solid #0d3b5e; border-top: none; margin: 0 auto; }
 .gis-lay-scale .ls-lbl { font-size: 0.82em; color: #0d3b5e; font-weight: 600; display: block; margin-top: 2px; }
+@media print { .gis-lay-ov { resize: none !important; overflow: visible !important; } .gis-lay-ov::after { display: none !important; } }
 
 /* native print: lock map size (JS), hide app chrome, keep map + layout overlays */
 @media print {
