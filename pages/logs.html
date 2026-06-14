@@ -14,15 +14,15 @@
 <div id="topbar">
   <div class="logo">💧 מי <span>הגליל</span> | יומן פעילות</div>
   <div class="topbar-right">
-    <span class="badge-admin">👑 מנהל מערכת</span>
-    <a href="../index.html" class="topbar-btn solid">🗺️ למפה</a>
-    <a href="admin.html" class="topbar-btn">⚙️ ניהול</a>
+    <span class="badge-admin">מנהל מערכת</span>
+    <a href="../index.html" class="topbar-btn solid">למפה</a>
+    <a href="admin.html" class="topbar-btn">ניהול</a>
     <button class="topbar-btn" onclick="logout()">התנתק</button>
   </div>
 </div>
 
 <div id="content">
-  <h1>📋 יומן פעילות</h1>
+  <h1>יומן פעילות</h1>
   <p class="page-sub">היסטוריה של כל הפעולות על תקלות — מי עשה מה ומתי</p>
 
   <!-- Stats -->
@@ -60,12 +60,12 @@
       <label>חיפוש</label>
       <input type="text" id="f-search" placeholder="כותרת תקלה, הערות..." oninput="applyFilters()"/>
     </div>
-    <button class="btn-clear" onclick="clearFilters()">🗑️ נקה סינון</button>
+    <button class="btn-clear" onclick="clearFilters()">נקה סינון</button>
   </div>
 
   <div class="card">
     <div class="card-header">
-      <div class="card-title">📑 יומן (<span id="filtered-count">0</span> רשומות)</div>
+      <div class="card-title">יומן (<span id="filtered-count">0</span> רשומות)</div>
     </div>
     <div id="logs-container"><div class="empty"><div class="empty-icon">⏳</div>טוען...</div></div>
     <div class="pagination" id="pagination" style="display:none">

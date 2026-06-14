@@ -13,21 +13,21 @@
 <div id="topbar">
   <div class="logo">💧 מי <span>הגליל</span> | חוקי מיפוי שכבות</div>
   <div class="topbar-right">
-    <span class="badge-admin">👑 מנהל מערכת</span>
-    <a href="../index.html" class="topbar-btn solid">🗺️ למפה</a>
-    <a href="upload.html" class="topbar-btn">📤 העלאה</a>
-    <a href="admin.html" class="topbar-btn">⚙️ ניהול</a>
-    <a href="logs.html" class="topbar-btn">📋 יומן</a>
+    <span class="badge-admin">מנהל מערכת</span>
+    <a href="../index.html" class="topbar-btn solid">למפה</a>
+    <a href="upload.html" class="topbar-btn">העלאה</a>
+    <a href="admin.html" class="topbar-btn">ניהול</a>
+    <a href="logs.html" class="topbar-btn">יומן</a>
     <button class="topbar-btn" onclick="logout()">התנתק</button>
   </div>
 </div>
 
 <div id="content">
-  <h1>🎯 חוקי מיפוי שכבות</h1>
+  <h1>חוקי מיפוי שכבות</h1>
   <p class="page-sub">הגדר חוקים שיתאימו אוטומטית בין שמות שכבות מ-AutoCAD לקטגוריות במערכת.</p>
 
   <div class="help">
-    💡 <strong>איך זה עובד:</strong> כשמעלים קובץ DWG/DXF/GeoJSON, המערכת בודקת כל אובייקט מול החוקים האלה.
+    <strong>איך זה עובד:</strong> כשמעלים קובץ DWG/DXF/GeoJSON, המערכת בודקת כל אובייקט מול החוקים האלה.
     אם שם השכבה (<code>Layer</code>) תואם לחוק — האובייקט מתויג אוטומטית בקטגוריה המתאימה.<br>
     <strong>סוגי התאמה:</strong>
     <code>contains</code> = הדפוס מופיע בשם (כמו <code>BIUV</code> ב-<code>BIUV-2024</code>) ·
@@ -46,16 +46,16 @@
 
   <div class="card">
     <div class="card-header">
-      <div class="card-title">📋 רשימת חוקים</div>
-      <button class="btn-add" onclick="openCreateModal()">➕ חוק חדש</button>
+      <div class="card-title">רשימת חוקים</div>
+      <button class="btn-add" onclick="openCreateModal()">חוק חדש</button>
     </div>
-    <div id="rules-list"><div class="empty">⏳ טוען...</div></div>
+    <div id="rules-list"><div class="empty">טוען...</div></div>
   </div>
 </div>
 
 <div class="modal-bg" id="rule-modal-bg" onclick="if(event.target.id==='rule-modal-bg')closeModal()">
   <div class="modal">
-    <div class="modal-title" id="modal-title">➕ חוק חדש</div>
+    <div class="modal-title" id="modal-title">חוק חדש</div>
     <div class="modal-sub">הגדר איך לזהות שכבת AutoCAD ולאיזו קטגוריה במערכת היא שייכת</div>
 
     <input type="hidden" id="edit-id"/>
@@ -77,37 +77,37 @@
       <div class="form-group full">
         <label>קטגוריה במערכת *</label>
         <select id="f-category">
-          <optgroup label="🚫 דילוג">
+          <optgroup label="דילוג">
             <option value="IGNORE">IGNORE — דלג (אל תעלה)</option>
           </optgroup>
           <optgroup label="💧 תשתית מים">
             <option value="water_pipes">💧 קווי מים</option>
-            <option value="water_meters">🔢 מדי מים</option>
-            <option value="hydrants">🚒 הידרנטים</option>
-            <option value="valves">🔧 מגופים</option>
-            <option value="control_valves">⚙️ מגופים שולטים</option>
-            <option value="connection_points">🔌 נקודות חיבור מקורות</option>
-            <option value="reservoirs">🏗️ מאגרי מים</option>
-            <option value="pump_stations">⛽ תחנות שאיבה</option>
-            <option value="sampling_points">🧪 נקודות דיגום</option>
+            <option value="water_meters">מדי מים</option>
+            <option value="hydrants">הידרנטים</option>
+            <option value="valves">מגופים</option>
+            <option value="control_valves">מגופים שולטים</option>
+            <option value="connection_points">נקודות חיבור מקורות</option>
+            <option value="reservoirs">מאגרי מים</option>
+            <option value="pump_stations">תחנות שאיבה</option>
+            <option value="sampling_points">נקודות דיגום</option>
           </optgroup>
-          <optgroup label="🟤 תשתית ביוב">
-            <option value="sewage_pipes">🟤 קווי ביוב</option>
-            <option value="sewage_manholes">⭕ שוחות ביוב</option>
+          <optgroup label="תשתית ביוב">
+            <option value="sewage_pipes">קווי ביוב</option>
+            <option value="sewage_manholes">שוחות ביוב</option>
           </optgroup>
-          <optgroup label="🏗️ מבנה">
-            <option value="buildings">🏢 בניינים</option>
-            <option value="parcels">📐 חלקות</option>
-            <option value="sleeve">🔧 שרוולים</option>
+          <optgroup label="מבנה">
+            <option value="buildings">בניינים</option>
+            <option value="parcels">חלקות</option>
+            <option value="sleeve">שרוולים</option>
           </optgroup>
-          <optgroup label="🏷️ תוויות">
-            <option value="pipe_label">🏷️ תוויות צנרת</option>
-            <option value="elevation_label">📏 גבהים TL/IL</option>
-            <option value="attribute_label">📊 תוויות נתונים</option>
-            <option value="distance_label">↔ מרחקים</option>
+          <optgroup label="תוויות">
+            <option value="pipe_label">תוויות צנרת</option>
+            <option value="elevation_label">גבהים TL/IL</option>
+            <option value="attribute_label">תוויות נתונים</option>
+            <option value="distance_label">מרחקים</option>
           </optgroup>
-          <optgroup label="❓ אחר">
-            <option value="other">❓ אחר</option>
+          <optgroup label="אחר">
+            <option value="other">אחר</option>
           </optgroup>
         </select>
       </div>
@@ -118,8 +118,8 @@
       <div class="form-group">
         <label>פעיל?</label>
         <select id="f-active">
-          <option value="true">✅ פעיל</option>
-          <option value="false">⏸️ מושבת</option>
+          <option value="true">פעיל</option>
+          <option value="false">מושבת</option>
         </select>
       </div>
       <div class="form-group full">
@@ -129,7 +129,7 @@
     </div>
 
     <div class="modal-btns">
-      <button class="btn btn-primary" id="save-btn" onclick="saveRule()">💾 שמור</button>
+      <button class="btn btn-primary" id="save-btn" onclick="saveRule()">שמור</button>
       <button class="btn btn-cancel" onclick="closeModal()">ביטול</button>
     </div>
   </div>

@@ -13,16 +13,16 @@
 <div id="topbar">
   <div class="logo">💧 מי <span>הגליל</span> | ניהול משתמשים</div>
   <div class="topbar-right">
-    <span class="badge-admin">👑 מנהל מערכת</span>
-    <a href="../index.html" class="topbar-btn solid">🗺️ למפה</a>
-    <a href="upload.html" class="topbar-btn">📤 העלאה</a>
-    <a href="logs.html" class="topbar-btn">📋 יומן</a>
+    <span class="badge-admin">מנהל מערכת</span>
+    <a href="../index.html" class="topbar-btn solid">למפה</a>
+    <a href="upload.html" class="topbar-btn">העלאה</a>
+    <a href="logs.html" class="topbar-btn">יומן</a>
     <button class="topbar-btn" onclick="logout()">התנתק</button>
   </div>
 </div>
 
 <div id="content">
-  <h1>👥 ניהול משתמשים</h1>
+  <h1>ניהול משתמשים</h1>
   <p class="page-sub">צור, ערוך, השהה ומחק משתמשים. אדמין יכול לעשות הכל; משתמש רגיל רואה רק את המפה.</p>
 
   <div class="stats-grid">
@@ -34,11 +34,11 @@
 
   <div class="card">
     <div class="card-header">
-      <div class="card-title">📋 רשימת משתמשים</div>
-      <button class="btn-add" onclick="openCreateModal()">➕ משתמש חדש</button>
+      <div class="card-title">רשימת משתמשים</div>
+      <button class="btn-add" onclick="openCreateModal()">משתמש חדש</button>
     </div>
     <div id="users-table-wrap">
-      <div class="empty">⏳ טוען...</div>
+      <div class="empty">טוען...</div>
     </div>
   </div>
 </div>
@@ -46,11 +46,11 @@
 <!-- Create / Edit Modal -->
 <div class="modal-bg" id="user-modal-bg" onclick="if(event.target.id==='user-modal-bg')closeModal()">
   <div class="modal">
-    <div class="modal-title" id="modal-title">➕ משתמש חדש</div>
+    <div class="modal-title" id="modal-title">משתמש חדש</div>
     <div class="modal-sub" id="modal-sub">צור חשבון משתמש חדש</div>
 
     <div class="alert-info" id="create-alert">
-      💡 לאחר יצירת המשתמש, יישלח אליו אימייל אישור (אם הופעל ב-Supabase). כדי לחסוך — בטל "Confirm email" ב-Auth → Providers.
+      לאחר יצירת המשתמש, יישלח אליו אימייל אישור (אם הופעל ב-Supabase). כדי לחסוך — בטל "Confirm email" ב-Auth → Providers.
     </div>
 
     <input type="hidden" id="edit-user-id"/>
@@ -93,7 +93,7 @@
     </div>
 
     <div class="modal-btns">
-      <button class="btn btn-primary" id="save-btn" onclick="saveUser()">💾 שמור</button>
+      <button class="btn btn-primary" id="save-btn" onclick="saveUser()">שמור</button>
       <button class="btn btn-cancel" onclick="closeModal()">ביטול</button>
     </div>
   </div>
@@ -102,14 +102,14 @@
 <!-- Password Reset Modal -->
 <div class="modal-bg" id="pwd-modal-bg" onclick="if(event.target.id==='pwd-modal-bg')closePwdModal()">
   <div class="modal" style="width:440px">
-    <div class="modal-title">🔑 איפוס סיסמה</div>
+    <div class="modal-title">איפוס סיסמה</div>
     <div class="modal-sub" id="pwd-target">—</div>
     <div class="alert-info">
-      📧 ילך קישור איפוס לסיסמה לאימייל של המשתמש.<br>
+      ילך קישור איפוס לסיסמה לאימייל של המשתמש.<br>
       המשתמש יפתח את הקישור ויבחר סיסמה חדשה בעצמו.
     </div>
     <div class="modal-btns">
-      <button class="btn btn-primary" onclick="sendPasswordReset()">✉️ שלח קישור איפוס</button>
+      <button class="btn btn-primary" onclick="sendPasswordReset()">שלח קישור איפוס</button>
       <button class="btn btn-cancel" onclick="closePwdModal()">ביטול</button>
     </div>
   </div>
@@ -118,14 +118,14 @@
 <!-- Delete Confirm Modal -->
 <div class="modal-bg" id="del-modal-bg" onclick="if(event.target.id==='del-modal-bg')closeDelModal()">
   <div class="modal" style="width:440px">
-    <div class="modal-title" style="color:var(--red)">🗑️ מחיקת משתמש</div>
+    <div class="modal-title" style="color:var(--red)">מחיקת משתמש</div>
     <div class="modal-sub" id="del-target">—</div>
     <div class="alert-warn">
-      ⚠️ פעולה זו תסיר את הפרופיל והגישה של המשתמש למערכת.<br>
+      פעולה זו תסיר את הפרופיל והגישה של המשתמש למערכת.<br>
       <strong>שים לב:</strong> מחיקה מלאה של חשבון האימייל מ-Supabase Auth דורשת גישה לדשבורד של Supabase.
     </div>
     <div class="modal-btns">
-      <button class="btn btn-primary" style="background:var(--red)" onclick="confirmDelete()">🗑️ מחק לצמיתות</button>
+      <button class="btn btn-primary" style="background:var(--red)" onclick="confirmDelete()">מחק לצמיתות</button>
       <button class="btn btn-cancel" onclick="closeDelModal()">ביטול</button>
     </div>
   </div>
