@@ -35,8 +35,7 @@ app = FastAPI(
 # Restrict which sites may call this service.
 # Set ALLOWED_ORIGINS in Render (comma-separated) to your real domain(s),
 # e.g. "https://mei-hagalil-gis.vercel.app,https://gis.mei-hagalil.co.il".
-# Defaults to "*" only so first-time testing works before you lock it down.
-_origins = os.getenv("ALLOWED_ORIGINS", "*")
+_origins = os.getenv("ALLOWED_ORIGINS", "https://mei-hagalil-gis.vercel.app")
 ALLOWED_ORIGINS: list[str] = (
     ["*"] if _origins.strip() == "*"
     else [o.strip() for o in _origins.split(",") if o.strip()]

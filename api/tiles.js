@@ -22,8 +22,18 @@
 //  If unset, returns 503 so the client transparently falls back to the direct
 //  RPC / GeoJSON tile loader.
 // ════════════════════════════════════════════════════════════════════════
+// Allowlist of origins permitted to call this endpoint (override via env
+// ALLOWED_ORIGINS, comma-separated). Same-origin app calls don't need this;
+// it stops other sites from proxying our data / burning Supabase quota.
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'https://mei-hagalil-gis.vercel.app')
+  .split(',').map(s => s.trim()).filter(Boolean);
+
 module.exports = async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  const origin = req.headers.origin;
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Vary', 'Origin');
+  }
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const { z, x, y, layer } = req.query;
