@@ -38,11 +38,12 @@ css.textContent = `
 #search-bar{position:absolute;top:14px;right:14px;background:#fff;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,0.18);z-index:450;display:flex;align-items:center;width:380px;max-width:calc(100vw - 360px);overflow:hidden;border:1px solid rgba(0,0,0,0.08);font-family:'Segoe UI',Tahoma,Arial,sans-serif}
 #search-input{flex:1;padding:11px 14px;border:none;outline:none;font-size:13px;direction:rtl;background:transparent;color:#1e293b;font-family:inherit}
 #search-input::placeholder{color:#94a3b8}
-#search-clear{padding:0 10px;background:none;border:none;cursor:pointer;color:#94a3b8;font-size:16px;display:none}
+#search-clear{padding:0 10px;background:none;border:none;cursor:pointer;color:#94a3b8;font-size:16px;display:none;align-items:center}
 #search-clear:hover{color:#dc2626}
-#search-clear.show{display:block}
-#search-help-btn{padding:0 12px;background:#0d3b5e;color:#fff;border:none;cursor:pointer;font-size:14px;height:42px;font-family:inherit}
-#search-help-btn:hover{background:#1a7fc1}
+#search-clear.show{display:flex}
+#search-help-btn{display:flex;align-items:center;justify-content:center;width:36px;padding:0;background:none;border:none;border-right:1px solid #e8edf2;cursor:pointer;color:#94a3b8;font-family:inherit}
+#search-help-btn:hover{color:#1a7fc1}
+#search-help-btn svg{width:17px;height:17px}
 #search-results{position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border-radius:10px;box-shadow:0 4px 18px rgba(0,0,0,0.15);max-height:340px;overflow-y:auto;display:none;direction:rtl;border:1px solid #e2e8f0}
 #search-results.show{display:block}
 .sr-item{padding:10px 14px;cursor:pointer;border-bottom:1px solid #f1f5f9;font-size:13px}
@@ -77,7 +78,7 @@ function injectUI() {
   bar.innerHTML =
     '<input id="search-input" type="text" placeholder="חיפוש: קואורדינטות, כתובת, או גוש/חלקה..." autocomplete="off"/>' +
     '<button id="search-clear" title="נקה">✖</button>' +
-    '<button id="search-help-btn" title="עזרה">?</button>' +
+    '<button id="search-help-btn" title="עזרה" aria-label="עזרה"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.3 1c0 1.9-2.6 2.5-2.6 2.5"/><path d="M12 17h.01"/></svg></button>' +
     '<div id="search-results"></div>';
   mw.appendChild(bar);
 
