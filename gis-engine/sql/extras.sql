@@ -34,6 +34,30 @@ RETURNS JSONB LANGUAGE sql STABLE AS $$
   ) s;
 $$;
 
+-- Viewport / per-village loading for water meters: only meters whose point is
+-- in the bbox, capped by p_limit. Uses the GIST index on meters.geometry (`&&`)
+-- → fast. Needed because meters_geojson over the whole 30k+ fleet hits the
+-- statement timeout ("canceling statement due to statement timeout").
+CREATE OR REPLACE FUNCTION public.meters_in_bbox(
+  p_minlng FLOAT, p_minlat FLOAT, p_maxlng FLOAT, p_maxlat FLOAT,
+  p_limit INT DEFAULT 8000)
+RETURNS JSONB LANGUAGE sql STABLE AS $$
+  SELECT jsonb_build_object('type','FeatureCollection','features',
+    COALESCE(jsonb_agg(jsonb_build_object(
+      'type','Feature','id',id,
+      'geometry', ST_AsGeoJSON(geometry)::jsonb,
+      'properties', jsonb_build_object(
+        'arad_meter_id',arad_meter_id,'customer_id',customer_id,'asset_code',asset_code,
+        'last_reading',last_reading,'consumption',consumption,'status',status,
+        'install_date',install_date,'__id',id) || raw_data)), '[]'::jsonb))
+  FROM (
+    SELECT * FROM public.meters
+    WHERE geometry IS NOT NULL
+      AND geometry && ST_MakeEnvelope(p_minlng, p_minlat, p_maxlng, p_maxlat, 4326)
+    LIMIT p_limit
+  ) s;
+$$;
+
 -- ── OPTIONAL: wipe ALL engine data (old seed/test layers) and start clean ──
 -- Uncomment and run ONCE to delete every layer + its features + fields.
 -- TRUNCATE public.features, public.fields, public.layers RESTART IDENTITY CASCADE;

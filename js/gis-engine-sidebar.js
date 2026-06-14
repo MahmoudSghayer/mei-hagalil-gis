@@ -58,11 +58,7 @@ document.head.appendChild(css);
 var loaded = {};        // layerId → L.layer (currently on the map)
 var active = {};        // layerId → layer (toggled on → reload on pan/zoom)
 var openVillages = {};  // villageName → bool (expanded)
-var metersFC = null;        // cached meters FeatureCollection (loaded once)
-var metersByVillage = null; // village → [meter features]
-var meterLayers = {};       // village → L.layer on the map
-var metersCount = null;     // { total, located } from countMeters()
-var metersOpen = false;
+var meterLayers = {};       // village name → meters L.layer on the map
 var moveendWired = false;
 var _mt;
 
@@ -153,10 +149,6 @@ async function render() {
   try {
     var layers = await GIS.layers.getLayers();
     document.getElementById('ge-count').textContent = layers.length;
-    if (!layers.length) {
-      body.innerHTML = '<div class="ge-empty">אין שכבות מנוע עדיין.<br>פתח כפר במפה, לחץ על פיצ\'ר ואז "⬆️ ייבא לעריכה".</div>';
-      return;
-    }
     // קבץ לפי כפר (שם השכבה: "<כפר> · <category>")
     var groups = {}, order = [];
     layers.forEach(function (l) {
@@ -169,8 +161,19 @@ async function render() {
     });
 
     body.innerHTML = '';
+    if (!layers.length) {
+      var note = document.createElement('div');
+      note.className = 'ge-empty';
+      note.innerHTML = 'אין שכבות תשתית עדיין — הכפרים מוצגים עבור מדי מים.';
+      body.appendChild(note);
+    }
     order.forEach(function (village) { body.appendChild(villageBlock(village, groups[village])); });
-    body.appendChild(metersBlock());
+    // Every known village is shown so its water meters are reachable even with no
+    // uploaded infrastructure layers. Meters attach to a village by coordinates
+    // (nearest centre) and load per-village via a bbox query (no fleet-wide load).
+    Object.keys(VILLAGE_CENTERS).forEach(function (v) {
+      if (order.indexOf(v) === -1) body.appendChild(villageBlock(v, []));
+    });
   } catch (e) {
     body.innerHTML = '<div class="ge-empty" style="color:#dc2626">' + esc(e.message) + '</div>';
   }
@@ -191,19 +194,26 @@ function villageBlock(village, layers) {
     wrap.classList.toggle('collapsed');
     head.querySelector('.ge-vchev').textContent = openVillages[village] ? '▾' : '▸';
   };
-  head.querySelector('.ge-fly').onclick = function (e) { e.stopPropagation(); flyToVillage(layers); };
+  head.querySelector('.ge-fly').onclick = function (e) { e.stopPropagation(); flyToVillage(layers, village); };
   wrap.appendChild(head);
 
   var bodyEl = document.createElement('div');
   bodyEl.className = 'ge-vbody';
   layers.sort(function (a, b) { return catLabel(a._cat).localeCompare(catLabel(b._cat), 'he'); });
   layers.forEach(function (l) { bodyEl.appendChild(row(l)); });
+  // Water meters for this village (own table, placed by coordinates).
+  if (VILLAGE_CENTERS[village]) bodyEl.appendChild(meterVillageRow(village));
   wrap.appendChild(bodyEl);
   return wrap;
 }
 
-function flyToVillage(layers) {
+function flyToVillage(layers, village) {
   if (!window.gMap) return;
+  if (!layers || !layers.length) {
+    var c = VILLAGE_CENTERS[village];
+    if (c) gMap.flyTo([c.lat, c.lng], 15, { duration: .8 });
+    return;
+  }
   GIS.layers.extent(layers.map(function (l) { return l.id; })).then(function (bb) {
     if (bb) gMap.flyToBounds([[bb[1], bb[0]], [bb[3], bb[2]]], { padding: [40, 40], duration: .8, maxZoom: 17 });
   }).catch(function (e) { console.warn('[GISEngineSidebar] flyTo', e); });
@@ -270,19 +280,43 @@ function row(layer) {
 }
 
 // ── Water meters (Arad) ──────────────────────────────────────────────────
-// Meters live in their own table (GIS.meters), NOT in the engine layers, so
-// they never appeared in the layer list. This block surfaces them: load once
-// via meters_geojson, group by raw_data village, and cluster each village's
-// meters on the map with its own toggle.
+// Meters live in their own table (GIS.meters), not in engine layers. They are
+// shown PER VILLAGE, placed by their coordinates: each village loads only the
+// meters inside its own bounding box (a GIST-indexed bbox RPC), so we never
+// load the whole 30k+ fleet at once (that hits the DB statement timeout). A
+// meter in an overlap zone is shown only under its NEAREST village centre.
 var METER_COLOR = '#0284c7';
 
-function meterVillageOf(f) {
-  var p = f.properties || {};
-  return p.village || (p.raw_data && p.raw_data.village) || 'ללא כפר';
+// The 7 villages (centre lat/lng) — mirrors upload.js VILLAGES.
+var VILLAGE_CENTERS = {
+  'מגד אל-כרום': { lat: 32.9189, lng: 35.2456 },
+  'בענה':        { lat: 32.9485, lng: 35.2617 },
+  'דיר אל-אסד':  { lat: 32.9356, lng: 35.2697 },
+  'נחף':         { lat: 32.9344, lng: 35.3025 },
+  'סחנין':       { lat: 32.8650, lng: 35.2978 },
+  'דיר חנא':     { lat: 32.8631, lng: 35.3589 },
+  'עראבה':       { lat: 32.8514, lng: 35.3339 }
+};
+var VILLAGE_HALF = 0.05;   // ~5 km half-box used to query a village's meters
+
+function villageBbox(name) {
+  var c = VILLAGE_CENTERS[name];
+  return { minLng: c.lng - VILLAGE_HALF, minLat: c.lat - VILLAGE_HALF,
+           maxLng: c.lng + VILLAGE_HALF, maxLat: c.lat + VILLAGE_HALF };
+}
+
+// Nearest of the 7 village centres to a point, or null if none within range.
+function nearestVillage(lng, lat) {
+  var best = null, bestD = Infinity;
+  Object.keys(VILLAGE_CENTERS).forEach(function (name) {
+    var c = VILLAGE_CENTERS[name];
+    var d = Math.sqrt(Math.pow(lng - c.lng, 2) + Math.pow(lat - c.lat, 2));
+    if (d < bestD) { bestD = d; best = name; }
+  });
+  return bestD <= 0.06 ? best : null;
 }
 
 function buildMeterLayer(feats) {
-  // No clustering — plain circle markers.
   return L.geoJSON({ type: 'FeatureCollection', features: feats }, {
     pointToLayer: function (f, ll) { return L.circleMarker(ll, { radius: 5, color: '#fff', weight: 1.2, fillColor: METER_COLOR, fillOpacity: .9 }); },
     onEachFeature: function (f, lf) { lf.bindPopup(meterPopup(f)); }
@@ -303,100 +337,42 @@ function meterPopup(f) {
   return html + '</div>';
 }
 
-async function loadMetersOnce() {
-  if (metersByVillage) return;
-  // Count first (cheap, head:true) so we can distinguish "no meters at all" from
-  // "meters imported but with NO location" (meters_geojson only returns rows
-  // whose geometry IS NOT NULL — i.e. lat/lng columns weren't recognised).
-  try { metersCount = await GIS.meters.countMeters(); } catch (e) { metersCount = null; }
-  metersFC = await GIS.meters.getMeters();
-  metersByVillage = {};
-  (metersFC.features || []).forEach(function (f) {
-    if (!f.geometry || !f.geometry.coordinates) return;
-    var v = meterVillageOf(f);
-    (metersByVillage[v] = metersByVillage[v] || []).push(f);
-  });
-}
-
-function metersBlock() {
-  var wrap = document.createElement('div');
-  wrap.className = 'ge-village' + (metersOpen ? '' : ' collapsed');
-  var head = document.createElement('div');
-  head.className = 'ge-vhead';
-  head.innerHTML =
-    '<span class="ge-vchev">' + (metersOpen ? '▾' : '▸') + '</span>' +
-    '<span class="ge-vname">🔢 מדי מים (Arad)</span>' +
-    '<span class="ge-vcount" id="ge-meters-count"></span>';
-  var bodyEl = document.createElement('div');
-  bodyEl.className = 'ge-vbody';
-  bodyEl.innerHTML = '<div class="ge-empty">טוען…</div>';
-  wrap.appendChild(head);
-  wrap.appendChild(bodyEl);
-
-  function renderMeterRows() {
-    var villages = Object.keys(metersByVillage).sort(function (a, b) { return a.localeCompare(b, 'he'); });
-    var located = (metersFC.features || []).length;
-    var totalInDb = metersCount ? metersCount.total : located;
-    var cntEl = document.getElementById('ge-meters-count');
-    if (cntEl) cntEl.textContent = located.toLocaleString('he-IL') + ' מדים';
-
-    // Imported but none have a location → the file's lat/lng columns weren't
-    // recognised, so they can't be placed on the map. Tell the admin exactly that.
-    if (!villages.length) {
-      if (totalInDb > 0) {
-        bodyEl.innerHTML = '<div class="ge-empty" style="color:#b45309;line-height:1.6">' +
-          '⚠️ ' + totalInDb.toLocaleString('he-IL') + ' מדים קיימים במערכת אך <b>ללא מיקום</b> ' +
-          '(0 עם קואורדינטות), ולכן לא ניתן להציגם במפה.<br>' +
-          'סביר שעמודות <b>קו אורך</b> / <b>קו רוחב</b> לא זוהו בקובץ הייבוא. ' +
-          'בדוק את כותרות הקובץ וייבא מחדש דרך "🔢 ייבוא מדים".</div>';
-      } else {
-        bodyEl.innerHTML = '<div class="ge-empty">אין מדי מים. ייבא דרך "🔢 ייבוא מדים".</div>';
-      }
-      return;
-    }
-    bodyEl.innerHTML = '';
-    if (totalInDb > located) {
-      var miss = document.createElement('div');
-      miss.className = 'ge-empty';
-      miss.style.cssText = 'color:#b45309;line-height:1.5';
-      miss.innerHTML = '⚠️ ' + (totalInDb - located).toLocaleString('he-IL') + ' מדים נוספים ללא מיקום (לא יוצגו).';
-      bodyEl.appendChild(miss);
-    }
-    villages.forEach(function (v) { bodyEl.appendChild(meterRow(v)); });
-  }
-
-  head.onclick = function () {
-    metersOpen = !metersOpen;
-    wrap.classList.toggle('collapsed');
-    head.querySelector('.ge-vchev').textContent = metersOpen ? '▾' : '▸';
-    if (metersOpen && !metersByVillage) {
-      loadMetersOnce().then(renderMeterRows).catch(function (e) {
-        bodyEl.innerHTML = '<div class="ge-empty" style="color:#dc2626">' + esc(e.message) + '</div>';
-      });
-    }
-  };
-  if (metersOpen && metersByVillage) renderMeterRows();
-  else if (!metersOpen) bodyEl.innerHTML = '<div class="ge-empty">לחץ להצגת מדי המים</div>';
-  return wrap;
-}
-
-function meterRow(village) {
-  var feats = metersByVillage[village] || [];
+// A "🔢 מדי מים" toggle inside a village block. Loads only that village's meters
+// (bbox RPC) and keeps the ones whose nearest village centre is this village,
+// so each meter sits under exactly one (its correct) village by coordinates.
+function meterVillageRow(village) {
   var el = document.createElement('div');
   el.className = 'ge-row';
   el.innerHTML =
     '<input type="checkbox">' +
     '<span class="ge-dot" style="background:' + METER_COLOR + '"></span>' +
-    '<span class="ge-name" title="' + esc(village) + '">' + esc(village) + '</span>' +
-    '<span class="ge-count">' + feats.length + '</span>';
+    '<span class="ge-name">🔢 מדי מים</span>' +
+    '<span class="ge-count"></span>';
   var cb = el.querySelector('input[type=checkbox]');
+  var cnt = el.querySelector('.ge-count');
   el.querySelector('.ge-name').onclick = function () { cb.checked = !cb.checked; cb.onchange(); };
-  cb.onchange = function () {
+  cb.onchange = async function () {
     if (cb.checked) {
-      if (!meterLayers[village]) meterLayers[village] = buildMeterLayer(feats);
-      meterLayers[village].addTo(window.gMap);
-    } else if (meterLayers[village]) {
-      window.gMap.removeLayer(meterLayers[village]);
+      cb.disabled = true; cnt.textContent = '…';
+      try {
+        if (!meterLayers[village]) {
+          var fc = await GIS.meters.getMetersInBBox(villageBbox(village));
+          var feats = (fc.features || []).filter(function (f) {
+            var c = f.geometry && f.geometry.coordinates;
+            return c && nearestVillage(c[0], c[1]) === village;
+          });
+          meterLayers[village] = buildMeterLayer(feats);
+          meterLayers[village]._count = feats.length;
+        }
+        meterLayers[village].addTo(window.gMap);
+        cnt.textContent = meterLayers[village]._count;
+      } catch (e) {
+        cb.checked = false; cnt.textContent = '✕';
+        alert('שגיאה בטעינת מדי מים: ' + e.message);
+      } finally { cb.disabled = false; }
+    } else {
+      if (meterLayers[village]) window.gMap.removeLayer(meterLayers[village]);
+      cnt.textContent = '';
     }
   };
   return el;

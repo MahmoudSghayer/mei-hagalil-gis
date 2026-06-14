@@ -125,6 +125,20 @@
       return fc || GIS.emptyFC();
     },
 
+    // Meters whose point falls inside a bbox, as GeoJSON (RPC, GIST-indexed).
+    // Used to load meters per-village instead of the whole fleet at once —
+    // meters_geojson over 30k+ meters hits the DB statement timeout.
+    // bbox = { minLng, minLat, maxLng, maxLat }.
+    getMetersInBBox: async function (bbox, limit) {
+      GIS._assert(bbox, 'getMetersInBBox requires a bbox');
+      var sb = GIS.sb();
+      var fc = GIS._unwrap(await sb.rpc('meters_in_bbox', {
+        p_minlng: bbox.minLng, p_minlat: bbox.minLat,
+        p_maxlng: bbox.maxLng, p_maxlat: bbox.maxLat, p_limit: limit || 8000
+      }), 'load meters in view');
+      return fc || GIS.emptyFC();
+    },
+
     // Diagnostic: how many meters exist vs how many carry a location. Lets the
     // UI explain "imported but not on the map" (no geometry) vs an empty table.
     countMeters: async function () {
