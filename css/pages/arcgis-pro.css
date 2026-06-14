@@ -409,12 +409,19 @@ body.dark-basemap .gis-sym-label { color: #fff; text-shadow: 1px 1px 0 #000, -1p
 .gis-lay-title { padding: 7px 20px; text-align: center; }
 .gis-lay-title .lt-t { font-size: 17px; font-weight: 800; color: #0d3b5e; }
 .gis-lay-title .lt-m { font-size: 10.5px; color: #475569; margin-top: 2px; }
-.gis-lay-legend { padding: 8px 11px; max-width: 210px; }
-.gis-lay-legend .ll-h { font-size: 12px; font-weight: 700; color: #0d3b5e; margin-bottom: 4px; }
-.gis-lay-legend .gsl-h { font-size: 10px; font-weight: 700; color: #64748b; margin: 6px 0 3px; }
-.gis-lay-legend .gsl-row { display: flex; align-items: center; gap: 8px; padding: 2px 0; font-size: 11.5px; color: #1e293b; }
-.gis-lay-legend .gsl-sw { width: 28px; display: inline-flex; justify-content: center; flex-shrink: 0; }
-.gis-lay-legend .gsl-t { flex: 1; }
+.gis-lay-legend { padding: 8px 11px; min-width: 150px; max-width: 230px; }
+.gis-lay-legend .ll-h { font-size: 12.5px; font-weight: 700; color: #0d3b5e; margin-bottom: 5px; border-bottom: 1px solid #e2e8f0; padding-bottom: 3px; outline: none; }
+.gis-lay-legend .ll-rows { display: flex; flex-direction: column; gap: 1px; }
+.gis-lay-legend .ll-row { display: flex; align-items: center; gap: 8px; padding: 3px 2px; border-radius: 5px; }
+.gis-lay-legend .ll-row:hover { background: #f1f5f9; }
+.gis-lay-legend .ll-sw { width: 24px; display: inline-flex; justify-content: center; flex-shrink: 0; }
+.gis-lay-legend .ll-name { flex: 1; font-size: 12px; color: #1e293b; outline: none; border-radius: 4px; padding: 1px 3px; }
+.gis-lay-legend .ll-name:focus { background: #eff6ff; box-shadow: 0 0 0 1.5px var(--ags-accent, #1a7fc1); }
+.gis-lay-legend .ll-del { background: none; border: none; color: #cbd5e1; font-size: 14px; cursor: pointer; line-height: 1; padding: 0 2px; }
+.gis-lay-legend .ll-del:hover { color: #dc2626; }
+.gis-lay-legend .ll-empty { font-size: 11px; color: #94a3b8; line-height: 1.5; }
+#gis-layout-bar .glb-area { background: #fff7ed; color: #b45309; border: 1px solid #fdba74; border-radius: 7px; padding: 6px 12px; cursor: pointer; font-family: inherit; font-weight: 600; }
+#gis-layout-bar .glb-area:hover { background: #ffedd5; }
 .gis-lay-north { padding: 6px 12px; text-align: center; }
 .gis-lay-north .ln-a { font-size: 24px; font-weight: 800; color: #0d3b5e; line-height: 1; }
 .gis-lay-north .ln-n { font-size: 10px; font-weight: 700; color: #0d3b5e; }

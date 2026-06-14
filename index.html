@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css"/>
   <link rel="stylesheet" href="css/shared.css"/>
   <link rel="stylesheet" href="css/pages/index.css"/>
-  <link rel="stylesheet" href="css/pages/arcgis-pro.css?v=9"/>
+  <link rel="stylesheet" href="css/pages/arcgis-pro.css?v=10"/>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script defer src="js/auth.js"></script>
 </head>
@@ -210,7 +210,7 @@
 <script defer src="gis-engine/fields.js"></script>
 <script defer src="gis-engine/calculator.js"></script>
 <script defer src="gis-engine/queries.js"></script>
-<script defer src="gis-engine/meters.js?v=4"></script>
+<script defer src="gis-engine/meters.js?v=5"></script>
 <script defer src="gis-engine/villages.js"></script>
 <script defer src="gis-engine/migrate.js"></script>
 <!-- Coded-value domains (Phase 4): integer codes → Hebrew labels + edit dropdowns -->
@@ -232,8 +232,10 @@
 <!-- Find/Locate asset: search features by attribute, zoom to result -->
 <script defer src="js/gis-find.js?v=1"></script>
 <!-- Print / map sheet (uses leaflet-easyprint, falls back to native print) -->
-<script defer src="js/gis-print.js?v=2"></script>
+<script defer src="js/gis-print.js?v=3"></script>
+<!-- Meter→pipeline connection: KNN auto-connect + show/edit connections -->
+<script defer src="js/gis-meter-connect.js?v=1"></script>
 <!-- ArcGIS Pro UI shell (Phase 1): ribbon + Contents pane + scale status bar -->
-<script defer src="js/arcgis-ribbon.js?v=9"></script>
+<script defer src="js/arcgis-ribbon.js?v=10"></script>
 </body>
 </html>
