@@ -131,6 +131,19 @@ def dxf_to_geojson(dxf_bytes: bytes, source_crs: str = "EPSG:2039") -> dict:
             kind = e.dxftype()
             layer = getattr(e.dxf, "layer", "0") or "0"
             props: dict[str, Any] = {"Layer": layer}
+            # Many drawings classify water vs sewage by COLOR/linetype, not layer.
+            # Capture the effective ACI colour (resolve BYLAYER/BYBLOCK) + linetype
+            # so the importer can split features the CAD only tags by colour.
+            col = getattr(e.dxf, "color", 256)
+            if col in (0, 256):
+                try:
+                    col = doc.layers.get(layer).dxf.color
+                except Exception:
+                    col = 7
+            props["Color"] = abs(int(col or 7))
+            lt = getattr(e.dxf, "linetype", "") or ""
+            if lt and lt.upper() not in ("BYLAYER", "BYBLOCK", "CONTINUOUS"):
+                props["LineType"] = lt
 
             if kind == "POINT":
                 loc = e.dxf.location
