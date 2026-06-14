@@ -356,3 +356,29 @@ CREATE INDEX IF NOT EXISTS meters_arad_trgm ON public.meters USING gin ((arad_me
 CREATE INDEX IF NOT EXISTS meters_cust_trgm ON public.meters USING gin ((customer_id::text) gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS meters_name_trgm ON public.meters USING gin ((raw_data->>'customer_name') gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS meters_addr_trgm ON public.meters USING gin ((raw_data->>'address') gin_trgm_ops);
+
+-- ── 8) Reset meter connections when their pipe is deleted ────────────────
+--  Without this, deleting a connected pipe leaves the meter showing AUTO/MANUAL
+--  (green/blue) even though its pipe is gone. The FK (ON DELETE SET NULL) only
+--  nulls connected_pipe_id. BEFORE DELETE so it runs before the FK nulls the
+--  link; SECURITY DEFINER so an engineer's delete (who can't edit meters) still
+--  resets them. Mirrors disconnect_meter.
+CREATE OR REPLACE FUNCTION public.reset_meters_on_pipe_delete()
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  UPDATE public.meters SET
+    connection_type       = 'NONE',
+    connected_pipe_id     = NULL,
+    connection_distance_m = NULL,
+    connection_point      = NULL,
+    connection_ambiguous  = false,
+    asset_code            = CASE WHEN connection_type IN ('AUTO','MANUAL') THEN NULL ELSE asset_code END,
+    connection_updated_at = NOW(),
+    updated_at            = NOW()
+  WHERE connected_pipe_id = OLD.id;
+  RETURN OLD;
+END; $$;
+DROP TRIGGER IF EXISTS trg_reset_meters_on_pipe_delete ON public.features;
+CREATE TRIGGER trg_reset_meters_on_pipe_delete
+  BEFORE DELETE ON public.features
+  FOR EACH ROW EXECUTE FUNCTION public.reset_meters_on_pipe_delete();

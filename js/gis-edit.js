@@ -487,6 +487,9 @@
       await GIS.features.deleteFeature(id);
       toast('הישות נמחקה ✓');
       refreshLayer(pick.layerId, false);
+      // a deleted pipe's meters are reset to NONE by a DB trigger — refresh the
+      // connector overlay (if shown) so they flip to yellow right away.
+      if (window.GISMeterConnect && GISMeterConnect.refreshIfShown) GISMeterConnect.refreshIfShown();
     } catch (e) { toast(cleanErr(e), 'error'); }
     disarm();
   }

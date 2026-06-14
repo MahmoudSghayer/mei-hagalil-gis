@@ -480,6 +480,10 @@
     run: run,
     toggleConnectors: toggleConnectors,
     showConnectors: renderConnectors,
+    // re-render the connector overlay ONLY if it is currently shown (never
+    // force-opens it) — used after a pipe delete so a now-orphaned meter flips
+    // to yellow (NONE) immediately instead of on the next redraw.
+    refreshIfShown: function () { if (state.connLayer) renderConnectors().catch(function () {}); },
     editArm: editArm,
     editMeter: openEditor,   // open the accept/change/remove editor for a meter feature
     resetMouse: resetMouse,  // disarm the mouse + drop highlights (used by נקה)
