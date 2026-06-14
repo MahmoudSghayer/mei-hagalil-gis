@@ -176,23 +176,77 @@
     });
   }
 
-  // Layer picker → resolves { id, label, village, geometry_type } or null.
-  async function pickLayer(title, geomFilter) {
-    var layers;
-    try { layers = await listLayers(); }
+  // Categories = layers grouped by name ACROSS villages. Data stays per-village
+  // (one layer per village·category); we only group the PICKER so you work by
+  // category. A category = { label, geometry_type, layers:[{id,village}] }.
+  async function listCategories() {
+    var ls = await listLayers();
+    var groups = {};
+    ls.forEach(function (l) {
+      var key = l.label + '||' + l.geometry_type;
+      if (!groups[key]) groups[key] = { label: l.label, geometry_type: l.geometry_type, layers: [] };
+      groups[key].layers.push({ id: l.id, village: l.village });
+    });
+    return Object.keys(groups).map(function (k) { return groups[k]; })
+      .sort(function (a, b) { return String(a.label).localeCompare(String(b.label), 'he'); });
+  }
+
+  // Category picker → resolves a category group (all villages together) or null.
+  async function pickCategory(title, geomFilter) {
+    var cats;
+    try { cats = await listCategories(); }
     catch (e) { toast('שגיאה בטעינת שכבות'); return null; }
-    if (geomFilter) layers = layers.filter(function (l) { return geomFilter.indexOf(l.geometry_type) >= 0; });
-    if (!layers.length) { toast('אין שכבות מתאימות במנוע'); return null; }
+    if (geomFilter) cats = cats.filter(function (c) { return geomFilter.indexOf(c.geometry_type) >= 0; });
+    if (!cats.length) { toast('אין קטגוריות מתאימות במנוע'); return null; }
     var typeHe = { Point: 'נקודה', LineString: 'קו', Polygon: 'מצולע' };
-    var opts = layers.map(function (l, i) {
-      var nm = (l.village ? l.village + ' · ' : '') + l.label + ' (' + (typeHe[l.geometry_type] || l.geometry_type) + ')';
+    var opts = cats.map(function (c, i) {
+      var nm = c.label + ' (' + (typeHe[c.geometry_type] || c.geometry_type) + ')' +
+        (c.layers.length > 1 ? ' · ' + c.layers.length + ' כפרים' : '');
       return '<option value="' + i + '">' + esc(nm) + '</option>';
     }).join('');
-    var res = await openDialog(title, gadRow('שכבת יעד', '<select id="ge-layer" class="gad-in">' + opts + '</select>'), {
+    var res = await openDialog(title, gadRow('קטגוריה', '<select id="ge-cat" class="gad-in">' + opts + '</select>'), {
       okLabel: 'המשך',
-      collect: function (bg) { return layers[+bg.querySelector('#ge-layer').value]; }
+      collect: function (bg) { return cats[+bg.querySelector('#ge-cat').value]; }
     });
     return res || null;
+  }
+
+  // representative [lng,lat] of a geometry (first coordinate) — used to route a
+  // new feature to the geographically-correct village layer.
+  function repPoint(geometry) {
+    if (!geometry || !geometry.coordinates) return null;
+    var c = geometry.coordinates;
+    while (c && typeof c[0] !== 'number') c = c[0];
+    return (c && typeof c[0] === 'number') ? c : null;
+  }
+  // extents (bbox + center) for every village layer in a category, keyed by id.
+  async function groupCenters(group) {
+    var out = {};
+    await Promise.all(group.layers.map(async function (l) {
+      try {
+        var ext = await GIS.layers.extent([l.id]);   // [minLng,minLat,maxLng,maxLat]
+        if (ext && ext.length === 4) {
+          out[l.id] = { bbox: ext, center: [(ext[0] + ext[2]) / 2, (ext[1] + ext[3]) / 2] };
+        }
+      } catch (e) {}
+    }));
+    return out;
+  }
+  // pick the village layer whose extent CONTAINS (else is nearest to) the point.
+  function resolveLayerForPoint(pt, group, centers) {
+    if (group.layers.length === 1 || !pt) return group.layers[0].id;
+    var contain = [], all = [];
+    group.layers.forEach(function (l) {
+      var c = centers[l.id];
+      if (!c) { all.push({ id: l.id, d: Infinity }); return; }
+      var inside = pt[0] >= c.bbox[0] && pt[0] <= c.bbox[2] && pt[1] >= c.bbox[1] && pt[1] <= c.bbox[3];
+      var d = distM(pt, c.center);
+      all.push({ id: l.id, d: d });
+      if (inside) contain.push({ id: l.id, d: d });
+    });
+    var pool = contain.length ? contain : all;
+    pool.sort(function (a, b) { return a.d - b.d; });
+    return pool.length ? pool[0].id : group.layers[0].id;
   }
 
   // ── banner + cursor + save bar ──────────────────────────────────────────────
@@ -220,27 +274,27 @@
   async function startAdd() {
     if (!ready() || !(await requireEditor())) return;
     disarm();
-    var layer = await pickLayer('➕ הוסף ישות — בחר שכבה', ['Point', 'LineString', 'Polygon']);
-    if (!layer) return;
-    var shape = DRAW_SHAPE[layer.geometry_type];
+    var group = await pickCategory('➕ הוסף ישות — בחר קטגוריה', ['Point', 'LineString', 'Polygon']);
+    if (!group) return;
+    var shape = DRAW_SHAPE[group.geometry_type];
     if (!shape) { toast('סוג גאומטריה לא נתמך'); return; }
 
     state.mode = 'add';
-    state.targetLayerId = layer.id;
-    await buildSnapGuide(layer.village);
+    var centers = await groupCenters(group);   // route the new feature to its village
+    await buildSnapGuide(null);                 // snap to whatever's in view (any village)
 
-    banner('➕ <b>' + esc(layer.label) + '</b> — ' +
+    banner('➕ <b>' + esc(group.label) + '</b> — ' +
       (shape === 'Marker' ? 'לחץ על המפה למיקום' : 'לחץ להוספת קודקודים, לחיצה כפולה לסיום') +
       ' · <span style="opacity:.8">Esc לביטול</span>');
 
-    state.createHandler = function (e) { onCreate(e, layer); };
+    state.createHandler = function (e) { onCreate(e, group, centers); };
     window.gMap.on('pm:create', state.createHandler);
     try {
       window.gMap.pm.enableDraw(shape, { snappable: state.snap, snapDistance: SNAP_DISTANCE, finishOn: null });
     } catch (err) { toast('שגיאה בהפעלת הציור: ' + cleanErr(err), 'error'); disarm(); }
   }
 
-  async function onCreate(e, layer) {
+  async function onCreate(e, group, centers) {
     // capture the drawn geometry, drop Geoman's temp layer, stop drawing.
     var gj = e.layer && e.layer.toGeoJSON ? e.layer.toGeoJSON() : null;
     try { window.gMap.removeLayer(e.layer); } catch (err) {}
@@ -248,7 +302,9 @@
     if (window.gMap && state.createHandler) { window.gMap.off('pm:create', state.createHandler); state.createHandler = null; }
     banner(false);
     if (!gj || !gj.geometry) { disarm(); return; }
-    await openAttrForm(layer, gj.geometry);
+    // route to the geographically-correct village's layer for this category.
+    var layerId = resolveLayerForPoint(repPoint(gj.geometry), group, centers);
+    await openAttrForm({ id: layerId, label: group.label }, gj.geometry);
   }
 
   // Attribute form built from the layer's field schema + a required asset_code.
@@ -334,18 +390,19 @@
   async function startEditGeom() {
     if (!ready() || !(await requireEditor())) return;
     disarm();
-    var layer = await pickLayer('✏️ עריכת גאומטריה — בחר שכבה', ['Point', 'LineString', 'Polygon']);
-    if (!layer) return;
+    var group = await pickCategory('✏️ עריכת גאומטריה — בחר קטגוריה', ['Point', 'LineString', 'Polygon']);
+    if (!group) return;
     state.mode = 'editgeom';
-    state.targetLayerId = layer.id;
     cursor(true);
-    banner('✏️ <b>' + esc(layer.label) + '</b> — לחץ על ישות לעריכה · <span style="opacity:.8">Esc לביטול</span>');
-    armPick(layer, function (pick) { beginVertexEdit(layer, pick.f); });
+    banner('✏️ <b>' + esc(group.label) + '</b> — לחץ על ישות לעריכה · <span style="opacity:.8">Esc לביטול</span>');
+    armPickGroup(group, function (pick) { beginVertexEdit(pick); });
   }
 
-  function beginVertexEdit(layer, feature) {
+  function beginVertexEdit(pick) {
     cursor(false); banner(false);
+    var feature = pick.f;
     var pane = ensurePane('gisEditTop', 700);
+    state.targetLayerId = pick.layerId;
     state.editId = feature.id || (feature.properties && feature.properties.__id);
     if (!state.editId) { toast('לא נמצא מזהה לישות'); disarm(); return; }
     state.editLayer = L.geoJSON(feature, {
@@ -358,7 +415,7 @@
     state.editLayer.eachLayer(function (lyr) {
       try { lyr.pm.enable({ allowSelfIntersection: false, snappable: state.snap, snapDistance: SNAP_DISTANCE }); } catch (e) {}
     });
-    buildSnapGuide(layer.village).catch(function () {});
+    buildSnapGuide(null).catch(function () {});
     showSaveBar(saveGeom);
   }
 
@@ -384,22 +441,22 @@
   async function startDelete() {
     if (!ready() || !(await requireEditor())) return;
     disarm();
-    var layer = await pickLayer('🗑 מחיקת ישות — בחר שכבה', ['Point', 'LineString', 'Polygon']);
-    if (!layer) return;
+    var group = await pickCategory('🗑 מחיקת ישות — בחר קטגוריה', ['Point', 'LineString', 'Polygon']);
+    if (!group) return;
     state.mode = 'delete';
-    state.targetLayerId = layer.id;
     cursor(true);
-    banner('🗑 <b>' + esc(layer.label) + '</b> — לחץ על ישות למחיקה · <span style="opacity:.8">Esc לביטול</span>');
-    armPick(layer, function (pick) { confirmDelete(layer, pick.f); });
+    banner('🗑 <b>' + esc(group.label) + '</b> — לחץ על ישות למחיקה · <span style="opacity:.8">Esc לביטול</span>');
+    armPickGroup(group, function (pick) { confirmDelete(group, pick); });
   }
 
-  async function confirmDelete(layer, feature) {
+  async function confirmDelete(group, pick) {
     cursor(false); banner(false);
+    var feature = pick.f;
     var p = feature.properties || {};
     var id = feature.id || p.__id;
     var code = p.asset_code || id;
     var res = await openDialog('🗑 מחיקת ישות', '<div class="gad-note">למחוק לצמיתות את הישות <b>' + esc(code) +
-      '</b> מהשכבה <b>' + esc(layer.label) + '</b>? פעולה זו נרשמת ביומן הביקורת.</div>', {
+      '</b> מהקטגוריה <b>' + esc(group.label) + '</b>? פעולה זו נרשמת ביומן הביקורת.</div>', {
       okLabel: 'מחק', collect: function () { return { ok: true }; }
     });
     if (!res) { disarm(); return; }
@@ -407,22 +464,27 @@
     try {
       await GIS.features.deleteFeature(id);
       toast('הישות נמחקה ✓');
-      refreshLayer(layer.id, false);
+      refreshLayer(pick.layerId, false);
     } catch (e) { toast(cleanErr(e), 'error'); }
     disarm();
   }
 
-  // ── shared one-shot feature pick (edit/delete) ──────────────────────────────
-  function armPick(layer, onPick) {
+  // ── shared one-shot feature pick ACROSS all village layers of a category ─────
+  function armPickGroup(group, onPick) {
     state.clickHandler = async function (e) {
       var click = [e.latlng.lng, e.latlng.lat];
-      var fc;
-      try { fc = await GIS.features.getInBBox(layer.id, bboxAround(e.latlng, CLICK_FIND_M + 15), 1000); }
-      catch (err) { toast('שגיאה בטעינת ישויות'); disarm(); return; }
-      var best = nearestInFC(click, fc);
+      var bbox = bboxAround(e.latlng, CLICK_FIND_M + 15);
+      var best = null;
+      for (var i = 0; i < group.layers.length; i++) {
+        var lid = group.layers[i].id, fc;
+        try { fc = await GIS.features.getInBBox(lid, bbox, 1000); }
+        catch (err) { continue; }
+        var b = nearestInFC(click, fc);
+        if (b && (best === null || b.d < best.d)) best = { d: b.d, f: b.f, layerId: lid };
+      }
       if (!best || best.d > CLICK_FIND_M) {
         toast('לא נמצאה ישות סמוכה — לחץ קרוב יותר');
-        // re-arm so the user can try again without re-picking the layer
+        // re-arm so the user can try again without re-picking the category
         window.gMap.once('click', state.clickHandler);
         return;
       }
