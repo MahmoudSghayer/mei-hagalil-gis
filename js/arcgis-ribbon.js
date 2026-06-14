@@ -162,7 +162,14 @@
   function anlyAttr() { if (window.GISAnalysis) { window.GISAnalysis.selectByAttribute(); } else { toast('מנוע הניתוח עדיין נטען…'); } }
   function anlyLoc() { if (window.GISAnalysis) { window.GISAnalysis.selectByLocation(); } else { toast('מנוע הניתוח עדיין נטען…'); } }
   function anlyBuffer() { if (window.GISAnalysis) { window.GISAnalysis.buffer(); } else { toast('מנוע הניתוח עדיין נטען…'); } }
-  function anlyClear() { if (window.GISAnalysis) { window.GISAnalysis.clear(); } }
+  function anlyClear() {
+    // Clear selection AND reset any armed map-click tools (meter-edit, trace) so
+    // the cursor is freed to click features (meters/pipes) again.
+    if (window.GISAnalysis) { window.GISAnalysis.clear(); }
+    if (window.GISMeterConnect && window.GISMeterConnect.resetMouse) { window.GISMeterConnect.resetMouse(); }
+    if (window.GISTrace && window.GISTrace.clear) { window.GISTrace.clear(); }
+    if (window.gMap) { window.gMap.getContainer().style.cursor = ''; }
+  }
   function toggleBookmarks() { if (window.GISBookmarks) { window.GISBookmarks.toggle(); } else { toast('הסימניות עדיין נטענות…'); } }
   function toggleFind() { if (window.GISFind) { window.GISFind.toggle(); } else { toast('כלי האיתור עדיין נטען…'); } }
   function printMap() { if (window.GISPrint) { window.GISPrint.open(); } else { toast('כלי ההדפסה עדיין נטען…'); } }

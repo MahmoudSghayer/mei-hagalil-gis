@@ -236,6 +236,39 @@
     else { renderConnectors().catch(function () {}); }
   }
 
+  // ── pipe highlighting (show the connected / candidate pipe on the map) ──────
+  var _pipeCache = {};
+  function ensureHiPane() {
+    if (!window.gMap.getPane('gisMeterHi')) window.gMap.createPane('gisMeterHi').style.zIndex = 655;
+  }
+  function clearHighlights() {
+    ['hiMeter', 'hiConnected', 'hiCandidate'].forEach(function (k) {
+      if (state[k]) { try { window.gMap.removeLayer(state[k]); } catch (e) {} state[k] = null; }
+    });
+  }
+  async function getPipeFeature(pipeId) {
+    if (_pipeCache[pipeId]) return _pipeCache[pipeId];
+    var f = await GIS.features.getFeatureById(pipeId);
+    _pipeCache[pipeId] = f; return f;
+  }
+  async function drawPipe(pipeId, style) {
+    ensureHiPane();
+    var f; try { f = await getPipeFeature(pipeId); } catch (e) { return null; }
+    if (!f || !f.geometry) return null;
+    return L.geoJSON(f, { pane: 'gisMeterHi', interactive: false, style: style }).addTo(window.gMap);
+  }
+  function ringMeter(meter) {
+    var mc = meter && meter.geometry && meter.geometry.coordinates;
+    if (!mc) return null;
+    ensureHiPane();
+    return L.circleMarker([mc[1], mc[0]], { pane: 'gisMeterHi', interactive: false, radius: 10, color: '#f59e0b', weight: 3, fill: false }).addTo(window.gMap);
+  }
+  function fitHighlights() {
+    var layers = ['hiMeter', 'hiConnected', 'hiCandidate'].map(function (k) { return state[k]; }).filter(Boolean);
+    if (!layers.length) return;
+    try { var b = L.featureGroup(layers).getBounds(); if (b.isValid()) window.gMap.fitBounds(b, { padding: [70, 70], maxZoom: 19 }); } catch (e) {}
+  }
+
   // ── 3) Edit a single meter's connection ─────────────────────────────────────
   function editArm() {
     if (!ready()) return;
@@ -303,7 +336,15 @@
       '</div>' +
       '<div id="mc-cands"></div>';
     document.body.appendChild(el);
-    el.querySelector('.gtc-x').onclick = function () { el.remove(); };
+    el.querySelector('.gtc-x').onclick = function () { el.remove(); clearHighlights(); };
+
+    // Highlight the meter + its currently-connected pipe on the map (bold).
+    clearHighlights();
+    state.hiMeter = ringMeter(meter);
+    if (connected && p.connected_pipe_id) {
+      drawPipe(p.connected_pipe_id, { color: '#2563eb', weight: 7, opacity: 0.95 })
+        .then(function (lyr) { state.hiConnected = lyr; fitHighlights(); });
+    } else { fitHighlights(); }
 
     var acc = el.querySelector('#mc-accept');
     if (acc) acc.onclick = async function () {
@@ -311,7 +352,7 @@
       try {
         await GIS.meters.connectMeter(meterId, p.connected_pipe_id, 'MANUAL');
         toast('החיבור אושר (ידני)');
-        el.remove(); renderConnectors().catch(function () {});
+        el.remove(); clearHighlights(); renderConnectors().catch(function () {});
       } catch (e) { toast(cleanErr(e), 'error'); }
     };
     el.querySelector('#mc-change').onclick = function () { showCandidates(el, meter); };
@@ -320,7 +361,7 @@
       try {
         await GIS.meters.disconnectMeter(meterId);
         toast('החיבור הוסר');
-        el.remove(); renderConnectors().catch(function () {});
+        el.remove(); clearHighlights(); renderConnectors().catch(function () {});
       } catch (e) { toast(cleanErr(e), 'error'); }
     };
   }
@@ -350,23 +391,40 @@
           '<span class="mc-cd">' + num(c.distance_m) + ' מ׳</span>' +
           '<span class="mc-cn">' + esc(nm) + '</span></div>';
       }).join('');
+    function previewCand(c) {
+      if (state.hiCandidate) { try { window.gMap.removeLayer(state.hiCandidate); } catch (e) {} state.hiCandidate = null; }
+      drawPipe(c.pipe_id, { color: '#f97316', weight: 7, opacity: 0.95, dashArray: '6 6' })
+        .then(function (lyr) { state.hiCandidate = lyr; });
+    }
     box.querySelectorAll('.mc-cand').forEach(function (rowEl) {
+      var c = cands[+rowEl.getAttribute('data-i')];
+      // Hover a candidate → show that pipe (dashed orange) alongside the
+      // currently-connected one (solid blue), so the choice is visible on the map.
+      rowEl.onmouseenter = function () { previewCand(c); };
       rowEl.onclick = async function () {
-        var c = cands[+rowEl.getAttribute('data-i')];
         try {
           await GIS.meters.connectMeter(meterId, c.pipe_id, 'MANUAL');
           toast('חובר ידנית · ' + num(c.distance_m) + ' מ׳');
-          el.remove(); renderConnectors().catch(function () {});
+          el.remove(); clearHighlights(); renderConnectors().catch(function () {});
         } catch (e) { toast(cleanErr(e), 'error'); }
       };
     });
+    // Preview the nearest candidate immediately so the map updates without a hover.
+    if (cands[0]) previewCand(cands[0]);
   }
 
   function cleanErr(e) { return (e && e.message) ? e.message.replace('[GIS] ', '') : 'שגיאה'; }
 
   function clearAll() {
-    clearConnectors(); disarmEdit();
+    clearConnectors(); disarmEdit(); clearHighlights();
     closeCard('gis-mc-card'); closeCard('gis-mc-edit');
+  }
+
+  // Reset only the mouse/interaction state (disarm the edit click, drop the
+  // edit card + map highlights) WITHOUT removing the persistent connector
+  // overlay — so a "clear" frees the cursor to click features again.
+  function resetMouse() {
+    disarmEdit(); clearHighlights(); closeCard('gis-mc-edit');
   }
 
   // ── styles (only what arcgis-pro.css doesn't already provide) ───────────────
@@ -410,6 +468,7 @@
     showConnectors: renderConnectors,
     editArm: editArm,
     editMeter: openEditor,   // open the accept/change/remove editor for a meter feature
+    resetMouse: resetMouse,  // disarm the mouse + drop highlights (used by נקה)
     clear: clearAll
   };
 })();
