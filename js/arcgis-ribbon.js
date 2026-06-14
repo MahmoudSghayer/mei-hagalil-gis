@@ -31,108 +31,108 @@
   var RIBBON = {
     map: [
       { label: 'ניווט', cmds: [
-        { ic: '🌍', lb: 'תצוגה מלאה', size: 'lg', act: fullExtent },
+        { ic: 'extent', lb: 'תצוגה מלאה', size: 'lg', act: fullExtent },
         { col: [
-          { ic: '➕', lb: 'התקרב',  act: function () { gmap(function (m) { m.zoomIn(); }); } },
-          { ic: '➖', lb: 'התרחק',  act: function () { gmap(function (m) { m.zoomOut(); }); } },
-          { ic: '📍', lb: 'מיקומי', act: function () { gmap(function (m) { m.locate({ setView: true, maxZoom: 17 }); }); } }
+          { ic: 'plus',   lb: 'התקרב',  act: function () { gmap(function (m) { m.zoomIn(); }); } },
+          { ic: 'minus',  lb: 'התרחק',  act: function () { gmap(function (m) { m.zoomOut(); }); } },
+          { ic: 'locate', lb: 'מיקומי', act: function () { gmap(function (m) { m.locate({ setView: true, maxZoom: 17 }); }); } }
         ] }
       ] },
       { label: 'מפת רקע', cmds: [
-        { ic: '🛰️', lb: 'Esri HD',  size: 'lg', act: function () { basemap('satellite'); } },
+        { ic: 'satellite', lb: 'Esri HD',  size: 'lg', act: function () { basemap('satellite'); } },
         { col: [
-          { ic: '🌍', lb: 'היברידי', act: function () { basemap('hybrid'); } },
-          { ic: '🛣️', lb: 'רחובות',  act: function () { basemap('streets'); } },
-          { ic: '🗺️', lb: 'בהיר',    act: function () { basemap('light'); } }
+          { ic: 'layers', lb: 'היברידי', act: function () { basemap('hybrid'); } },
+          { ic: 'street', lb: 'רחובות',  act: function () { basemap('streets'); } },
+          { ic: 'map',    lb: 'בהיר',    act: function () { basemap('light'); } }
         ] }
       ] },
       { label: 'שכבות', cmds: [
-        { ic: '📑', lb: 'תוכן', size: 'lg', act: function () { call('toggleSidebar'); } },
+        { ic: 'panel', lb: 'תוכן', size: 'lg', act: function () { call('toggleSidebar'); } },
         { col: [
-          { ic: '📐', lb: 'חלקות', act: function () { call('toggleCadastralLayer'); } },
-          { ic: '⊟', lb: 'כווץ הכל',  act: function () { call('collapseAll'); } },
-          { ic: '⊞', lb: 'הרחב הכל',  act: function () { call('expandAll'); } }
+          { ic: 'grid',     lb: 'חלקות', act: function () { call('toggleCadastralLayer'); } },
+          { ic: 'collapse', lb: 'כווץ הכל',  act: function () { call('collapseAll'); } },
+          { ic: 'expand',   lb: 'הרחב הכל',  act: function () { call('expandAll'); } }
         ] }
       ] },
       { label: 'איתור', cmds: [
-        { ic: '🧭', lb: 'אתר נכס', size: 'lg', act: toggleFind },
+        { ic: 'pin', lb: 'אתר נכס', size: 'lg', act: toggleFind },
         { col: [
-          { ic: '🔍', lb: 'חיפוש כתובת', act: focusSearch },
-          { ic: '🔖', lb: 'סימניות',     act: toggleBookmarks }
+          { ic: 'search',   lb: 'חיפוש כתובת', act: focusSearch },
+          { ic: 'bookmark', lb: 'סימניות',     act: toggleBookmarks }
         ] }
       ] },
       { label: 'מראה', cmds: [
-        { ic: '📖', lb: 'מקרא', size: 'lg', act: toggleLegend },
-        { ic: '🏷️', lb: 'תוויות קוטר', size: 'lg', act: toggleLabels }
+        { ic: 'legend', lb: 'מקרא', size: 'lg', act: toggleLegend },
+        { ic: 'tag',    lb: 'תוויות קוטר', size: 'lg', act: toggleLabels }
       ] }
     ],
 
     edit: [
       { label: 'תקלות', cmds: [
-        { ic: '🚨', lb: 'תקלה חדשה', size: 'lg', act: function () { call('openIncModal'); } }
+        { ic: 'alert', lb: 'תקלה חדשה', size: 'lg', act: function () { call('openIncModal'); } }
       ] },
       { label: 'עריכת ישויות', cmds: [
-        { ic: '✏️', lb: 'עריכה', size: 'lg', act: soon, disabled: true },
+        { ic: 'edit', lb: 'עריכה', size: 'lg', act: soon, disabled: true },
         { col: [
-          { ic: '➕', lb: 'הוסף ישות', act: soon, disabled: true },
-          { ic: '🧲', lb: 'הצמדה',     act: soon, disabled: true },
-          { ic: '🗑️', lb: 'מחק',       act: soon, disabled: true }
+          { ic: 'plus',  lb: 'הוסף ישות', act: soon, disabled: true },
+          { ic: 'snap',  lb: 'הצמדה',     act: soon, disabled: true },
+          { ic: 'trash', lb: 'מחק',       act: soon, disabled: true }
         ] }
       ] }
     ],
 
     analysis: [
       { label: 'מדידה', cmds: [
-        { ic: '📏', lb: 'מרחק', size: 'lg', group: 'measure', mode: 'distance', act: measure },
+        { ic: 'ruler', lb: 'מרחק', size: 'lg', group: 'measure', mode: 'distance', act: measure },
         { col: [
-          { ic: '📐', lb: 'שטח',  group: 'measure', mode: 'area',    act: measure },
-          { ic: '🧭', lb: 'כיוון', group: 'measure', mode: 'bearing', act: measure },
-          { ic: '⭕', lb: 'רדיוס', group: 'measure', mode: 'radius',  act: measure }
+          { ic: 'area',    lb: 'שטח',  group: 'measure', mode: 'area',    act: measure },
+          { ic: 'compass', lb: 'כיוון', group: 'measure', mode: 'bearing', act: measure },
+          { ic: 'radius',  lb: 'רדיוס', group: 'measure', mode: 'radius',  act: measure }
         ] },
-        { ic: '🗑', lb: 'נקה', size: 'lg', act: measureClear }
+        { ic: 'trash', lb: 'נקה', size: 'lg', act: measureClear }
       ] },
       { label: 'סטטיסטיקה', cmds: [
-        { ic: '📊', lb: 'לוח נתונים', size: 'lg', act: function () { clickFab('stats-fab'); } }
+        { ic: 'chart', lb: 'לוח נתונים', size: 'lg', act: function () { clickFab('stats-fab'); } }
       ] },
       { label: 'ניתוח מרחבי', cmds: [
-        { ic: '🔎', lb: 'בחירה לפי תכונה', size: 'lg', act: anlyAttr },
+        { ic: 'select', lb: 'בחירה לפי תכונה', size: 'lg', act: anlyAttr },
         { col: [
-          { ic: '🎯', lb: 'בחירה לפי מיקום', act: anlyLoc },
-          { ic: '⭕', lb: 'חיץ (Buffer)',   act: anlyBuffer },
-          { ic: '🧹', lb: 'נקה בחירה',       act: anlyClear }
+          { ic: 'target', lb: 'בחירה לפי מיקום', act: anlyLoc },
+          { ic: 'buffer', lb: 'חיץ (Buffer)',   act: anlyBuffer },
+          { ic: 'clear',  lb: 'נקה בחירה',       act: anlyClear }
         ] }
       ] }
     ],
 
     network: [
       { label: 'רשת מים', cmds: [
-        { ic: '🚰', lb: 'בידוד מגופים', size: 'lg', act: traceIsolation }
+        { ic: 'valve', lb: 'בידוד מגופים', size: 'lg', act: traceIsolation }
       ] },
       { label: 'מעקב זרימה', cmds: [
-        { ic: '🔗', lb: 'מחוברים',    size: 'lg', act: traceConnected },
+        { ic: 'link', lb: 'מחוברים',    size: 'lg', act: traceConnected },
         { col: [
-          { ic: '⬆️', lb: 'במעלה הזרם', act: soon, disabled: true },
-          { ic: '⬇️', lb: 'במורד הזרם', act: soon, disabled: true }
+          { ic: 'arrow-up',   lb: 'במעלה הזרם', act: soon, disabled: true },
+          { ic: 'arrow-down', lb: 'במורד הזרם', act: soon, disabled: true }
         ] }
       ] },
       { label: 'מונים', cmds: [
-        { ic: '🔗', lb: 'חיבור אוטומטי', size: 'lg', act: meterAutoConnect },
+        { ic: 'link', lb: 'חיבור אוטומטי', size: 'lg', act: meterAutoConnect },
         { col: [
-          { ic: '✏️', lb: 'ערוך חיבור',  act: meterEditConnect },
-          { ic: '🧷', lb: 'הצג חיבורים', act: meterShowConnectors }
+          { ic: 'edit', lb: 'ערוך חיבור',  act: meterEditConnect },
+          { ic: 'node', lb: 'הצג חיבורים', act: meterShowConnectors }
         ] }
       ] },
       { label: 'ניקוי', cmds: [
-        { ic: '🧹', lb: 'נקה תוצאה', size: 'lg', act: traceClearAll }
+        { ic: 'clear', lb: 'נקה תוצאה', size: 'lg', act: traceClearAll }
       ] }
     ],
 
     share: [
       { label: 'ייצוא', cmds: [
-        { ic: '📥', lb: 'ייצא מפה', size: 'lg', act: function () { clickFab('exp-fab'); } }
+        { ic: 'download', lb: 'ייצא מפה', size: 'lg', act: function () { clickFab('exp-fab'); } }
       ] },
       { label: 'פריסת הדפסה', cmds: [
-        { ic: '🖨️', lb: 'גיליון מפה', size: 'lg', act: printMap }
+        { ic: 'print', lb: 'גיליון מפה', size: 'lg', act: printMap }
       ] }
     ]
   };
@@ -202,11 +202,61 @@
     document.querySelectorAll('.ags-cmd[data-group="measure"]').forEach(function (b) { b.classList.remove('active'); });
   }
 
+  // ── icon set ──────────────────────────────────────────────────────────────
+  // Monochrome line icons (feather-style). Each value is the inner SVG markup;
+  // svgIcon() wraps it so every glyph inherits the ribbon text color and stays
+  // crisp at any size — no emoji, no color noise.
+  var ICONS = {
+    extent:       '<path d="M4 9V5a1 1 0 0 1 1-1h4"/><path d="M20 9V5a1 1 0 0 0-1-1h-4"/><path d="M4 15v4a1 1 0 0 0 1 1h4"/><path d="M20 15v4a1 1 0 0 1-1 1h-4"/>',
+    plus:         '<path d="M12 5v14M5 12h14"/>',
+    minus:        '<path d="M5 12h14"/>',
+    locate:       '<circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
+    satellite:    '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3c2.6 2.6 2.6 15.4 0 18M12 3c-2.6 2.6-2.6 15.4 0 18"/>',
+    layers:       '<path d="M12 3 2 8l10 5 10-5-10-5z"/><path d="M2 13l10 5 10-5"/>',
+    street:       '<path d="M5 20 9 4M19 20 15 4"/><path d="M12 6v2M12 11v2M12 16v2"/>',
+    map:          '<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/>',
+    panel:        '<rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M15 4v16"/>',
+    grid:         '<rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>',
+    collapse:     '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 12h8"/>',
+    expand:       '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M12 8v8M8 12h8"/>',
+    pin:          '<path d="M12 21s-6-5.7-6-10a6 6 0 0 1 12 0c0 4.3-6 10-6 10z"/><circle cx="12" cy="11" r="2.3"/>',
+    search:       '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
+    bookmark:     '<path d="M6 4h12v17l-6-4-6 4z"/>',
+    legend:       '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.6" cy="6" r="1.4" fill="currentColor" stroke="none"/><rect x="3.3" y="10.6" width="2.8" height="2.8" fill="currentColor" stroke="none"/><path d="M4.6 16.3 6 18.8H3.2z" fill="currentColor" stroke="none"/>',
+    tag:          '<path d="M3 5v6.5a2 2 0 0 0 .6 1.4l7 7a2 2 0 0 0 2.8 0l5.5-5.5a2 2 0 0 0 0-2.8l-7-7A2 2 0 0 0 11.5 3H5a2 2 0 0 0-2 2z"/><circle cx="7.5" cy="7.5" r="1.3" fill="currentColor" stroke="none"/>',
+    alert:        '<path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4"/><path d="M12 17h.01"/>',
+    edit:         '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/>',
+    snap:         '<path d="M6 3v7a6 6 0 0 0 12 0V3"/><path d="M6 3H3v7M18 3h3v7"/>',
+    trash:        '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M6 6l1 14h10l1-14"/>',
+    ruler:        '<path d="M4 18 20 6"/><circle cx="4" cy="18" r="1.7" fill="currentColor" stroke="none"/><circle cx="20" cy="6" r="1.7" fill="currentColor" stroke="none"/><path d="M8 11l2 2M12 9l2 2"/>',
+    area:         '<path d="M5 5h14v14H5z" stroke-dasharray="3 2.6"/><path d="M5 5v14h14"/>',
+    compass:      '<circle cx="12" cy="12" r="9"/><path d="M15.5 8.5 11 11l-2.5 4.5L13 13z" fill="currentColor" stroke="none"/>',
+    radius:       '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><path d="M12 12h8"/>',
+    chart:        '<path d="M3 21h18"/><rect x="5" y="11" width="3.2" height="8" fill="currentColor" stroke="none"/><rect x="10.4" y="6" width="3.2" height="13" fill="currentColor" stroke="none"/><rect x="15.8" y="14" width="3.2" height="5" fill="currentColor" stroke="none"/>',
+    select:       '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/><path d="M11 8v6M8 11h6"/>',
+    target:       '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/>',
+    buffer:       '<rect x="7" y="7" width="10" height="10" rx="1"/><rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="3 2.6"/>',
+    clear:        '<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9 9l6 6M15 9l-6 6"/>',
+    valve:        '<circle cx="12" cy="13" r="6"/><path d="M12 7V3M9 3h6"/>',
+    link:         '<path d="M9 15 15 9"/><path d="M10.5 6.5 12 5a4 4 0 0 1 6 6l-1.5 1.5"/><path d="M13.5 17.5 12 19a4 4 0 0 1-6-6l1.5-1.5"/>',
+    'arrow-up':   '<path d="M12 19V5M6 11l6-6 6 6"/>',
+    'arrow-down': '<path d="M12 5v14M6 13l6 6 6-6"/>',
+    node:         '<circle cx="6" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8 8l8 8"/>',
+    download:     '<path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/>',
+    print:        '<path d="M6 9V3h12v6"/><rect x="4" y="9" width="16" height="8" rx="1"/><path d="M8 15h8v6H8z"/>'
+  };
+  function svgIcon(name) {
+    var inner = ICONS[name];
+    if (!inner) { return ''; }
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" ' +
+      'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + inner + '</svg>';
+  }
+
   // ── render ────────────────────────────────────────────────────────────────
   function cmdButton(c) {
     var b = document.createElement('button');
     b.className = 'ags-cmd ags-cmd-' + (c.size === 'lg' ? 'lg' : 'sm');
-    b.innerHTML = '<span class="ags-ic">' + c.ic + '</span><span class="ags-lb">' + c.lb + '</span>';
+    b.innerHTML = '<span class="ags-ic">' + svgIcon(c.ic) + '</span><span class="ags-lb">' + c.lb + '</span>';
     if (c.disabled) { b.disabled = true; }
     if (c.group) { b.setAttribute('data-group', c.group); }
     b.addEventListener('click', function () { c.act(c, b); });
@@ -275,7 +325,7 @@
       if (!$('ags-contents-head')) {
         var h = document.createElement('div');
         h.id = 'ags-contents-head';
-        h.innerHTML = '<span class="ico">📑</span><span>תוכן · Contents</span>';
+        h.innerHTML = '<span class="ico">' + svgIcon('panel') + '</span><span>תוכן · Contents</span>';
         sb.insertBefore(h, sb.firstChild);
       }
     }
