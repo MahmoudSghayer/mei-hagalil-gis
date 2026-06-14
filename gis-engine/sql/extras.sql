@@ -35,13 +35,18 @@ RETURNS JSONB LANGUAGE sql STABLE AS $$
 $$;
 
 -- Viewport / per-village loading for water meters: only meters whose point is
--- in the bbox, capped by p_limit. Uses the GIST index on meters.geometry (`&&`)
--- → fast. Needed because meters_geojson over the whole 30k+ fleet hits the
--- statement timeout ("canceling statement due to statement timeout").
+-- in the bbox, capped by p_limit. Uses the GIST index on meters.geometry (`&&`).
+-- Needed because meters_geojson over the whole 30k+ fleet hits the statement
+-- timeout ("canceling statement due to statement timeout").
+--
+-- SECURITY DEFINER + a single `(SELECT auth.uid()) IS NOT NULL` guard: the
+-- meters table's RLS policy calls auth.uid() PER ROW, which is slow over
+-- thousands of meters and itself causes the timeout. Running as DEFINER skips
+-- per-row RLS; the guard (evaluated once) preserves "signed-in users only".
 CREATE OR REPLACE FUNCTION public.meters_in_bbox(
   p_minlng FLOAT, p_minlat FLOAT, p_maxlng FLOAT, p_maxlat FLOAT,
   p_limit INT DEFAULT 8000)
-RETURNS JSONB LANGUAGE sql STABLE AS $$
+RETURNS JSONB LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT jsonb_build_object('type','FeatureCollection','features',
     COALESCE(jsonb_agg(jsonb_build_object(
       'type','Feature','id',id,
@@ -52,7 +57,8 @@ RETURNS JSONB LANGUAGE sql STABLE AS $$
         'install_date',install_date,'__id',id) || raw_data)), '[]'::jsonb))
   FROM (
     SELECT * FROM public.meters
-    WHERE geometry IS NOT NULL
+    WHERE (SELECT auth.uid()) IS NOT NULL   -- one-time auth guard (was per-row RLS)
+      AND geometry IS NOT NULL
       AND geometry && ST_MakeEnvelope(p_minlng, p_minlat, p_maxlng, p_maxlat, 4326)
     LIMIT p_limit
   ) s;
