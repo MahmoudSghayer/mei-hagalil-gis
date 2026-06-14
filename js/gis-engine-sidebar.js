@@ -117,6 +117,59 @@ function createLoader(layer) {
   });
 }
 
+// ── Vector-tile path (preferred when features_mvt exists) ────────────────
+// Builds a VectorGrid controller with the same interface as the tile loader.
+// Style/click reuse GISSymbology + the shared attribute panel. The full
+// attribute jsonb rides in props.props (a JSON string) for symbology/labels.
+function parseMvtProps(p) {
+  if (p && typeof p.props === 'string') { try { return JSON.parse(p.props); } catch (e) {} }
+  return p || {};
+}
+function createMvtLayer(layer) {
+  var color = colorFor(layer);
+  return GISMvtLayer.create({
+    map: window.gMap,
+    layerId: layer.id,
+    getFeatureId: function (p) { return p.__id; },
+    style: function (p) {
+      var attrs = parseMvtProps(p);
+      var f = { properties: attrs };
+      var base = (window.GISSymbology && GISSymbology.lineStyle) ? GISSymbology.lineStyle(layer, f, color) : { color: color, weight: 3, opacity: .9 };
+      // One style object serves lines, polygons and points (points use radius/fill).
+      return Object.assign({ radius: 5, fill: true, fillColor: base.color || color, fillOpacity: .9,
+        weight: base.weight != null ? base.weight : 3, color: base.color || color,
+        opacity: base.opacity != null ? base.opacity : .9 }, base);
+    },
+    onClick: function (p) {
+      var f = { type: 'Feature', properties: Object.assign({ asset_code: p.asset_code, __id: p.__id, __layer_id: layer.id }, parseMvtProps(p)) };
+      openPanelFor(f, layer);
+    },
+    onStatus: function (s) {
+      if (!layer._statEl) return;
+      layer._statEl.innerHTML = s.loading ? '<span class="ge-spin" title="טוען אריחים…"></span>' : '';
+      if (!s.loading && layer._cntEl && !layer._cntEl.textContent) layer._cntEl.textContent = '🗺';
+    }
+  });
+}
+
+// Pick the renderer once per session: vector tiles when the features_mvt RPC
+// is live, else the GeoJSON tile loader (always works). Probe is cached.
+var _mvtMode = null; // null=unknown, true/false once probed
+function decideRenderer(layer) {
+  if (_mvtMode !== null) return Promise.resolve(_mvtMode);
+  if (!window.GISMvtLayer || !GISMvtLayer.supported()) { _mvtMode = false; return Promise.resolve(false); }
+  return GISMvtLayer.probe(layer.id).then(function (ok) {
+    _mvtMode = ok;
+    if (window.console) console.log('[GISEngineSidebar] renderer =', ok ? 'vector tiles (MVT)' : 'GeoJSON tile loader');
+    return ok;
+  }).catch(function () { _mvtMode = false; return false; });
+}
+function buildController(layer) {
+  return decideRenderer(layer).then(function (useMvt) {
+    return useMvt ? createMvtLayer(layer) : createLoader(layer);
+  });
+}
+
 // Single debounced map-movement handler → nudge every active loader to fetch
 // the new edge tiles (cached tiles are reused; nothing is re-requested).
 function wireMoveend() {
@@ -309,8 +362,11 @@ function row(layer) {
     if (cb.checked) {
       cnt.textContent = '…';
       active[layer.id] = layer; wireMoveend();
-      if (loaded[layer.id]) loaded[layer.id].destroy();
-      loaded[layer.id] = createLoader(layer);   // first viewport load kicks off now
+      if (loaded[layer.id]) { loaded[layer.id].destroy(); delete loaded[layer.id]; }
+      buildController(layer).then(function (ctrl) {
+        if (active[layer.id]) loaded[layer.id] = ctrl;   // still wanted → keep it
+        else ctrl.destroy();                              // toggled off mid-build → drop
+      }).catch(function (e) { cb.checked = false; delete active[layer.id]; cnt.textContent = '✕'; alert('שגיאה: ' + (e && e.message || e)); });
     } else {
       delete active[layer.id];
       if (loaded[layer.id]) { loaded[layer.id].destroy(); delete loaded[layer.id]; }
