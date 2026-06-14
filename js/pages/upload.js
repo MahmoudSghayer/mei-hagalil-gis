@@ -259,6 +259,20 @@ function processZipFile(file, onDone, onError) {
 
 // ── FILE HANDLING ─────────────────────────────────────────────────────────────
 
+// Reads the first `n` bytes of a file and resolves to a lowercase hex string.
+function readMagic(file, n) {
+  return new Promise(function(resolve) {
+    var r = new FileReader();
+    r.onload = function() {
+      var b = new Uint8Array(r.result), hex = '';
+      for (var i = 0; i < b.length; i++) hex += b[i].toString(16).padStart(2, '0');
+      resolve(hex);
+    };
+    r.onerror = function() { resolve(''); };
+    r.readAsArrayBuffer(file.slice(0, n || 8));
+  });
+}
+
 function handleFile(file) {
   var isZip     = /\.zip$/i.test(file.name);
   var isGeoJson = /\.(geojson|json)$/i.test(file.name);
@@ -266,6 +280,23 @@ function handleFile(file) {
   if (!isZip && !isGeoJson && !isDwg) { showToast('קבצי GeoJSON, JSON, ZIP או DWG בלבד', 'error'); return; }
   if (file.size > 100*1024*1024) { showToast('גודל מקסימלי 100MB', 'error'); return; }
 
+  // Verify the real file signature matches the extension — never trust the name
+  // alone before handing bytes to JSZip / shapefile / the DWG parser.
+  readMagic(file, 8).then(function(hex) {
+    var okZip  = hex.indexOf('504b0304') === 0 || hex.indexOf('504b0506') === 0 || hex.indexOf('504b0708') === 0; // PK..
+    var okDwg  = hex.indexOf('414331') === 0; // "AC1" DWG version stamp
+    var t      = hex.indexOf('efbbbf') === 0 ? hex.slice(6) : hex; // skip UTF-8 BOM
+    var fb     = parseInt(t.slice(0, 2), 16); // first byte
+    var okJson = fb === 0x7b || fb === 0x5b || fb === 0x20 || fb === 0x09 || fb === 0x0a || fb === 0x0d; // { [ or leading whitespace
+    if ((isZip && !okZip) || (isDwg && !okDwg) || (isGeoJson && !okJson)) {
+      showToast('תוכן הקובץ אינו תואם לסיומת — ייתכן שהקובץ פגום או אינו מהסוג הנכון', 'error');
+      return;
+    }
+    proceedWithFile(file, isZip, isGeoJson, isDwg);
+  });
+}
+
+function proceedWithFile(file, isZip, isGeoJson, isDwg) {
   gFile = file;
   document.getElementById('fp-name').textContent = file.name;
   document.getElementById('fp-size').textContent = formatSize(file.size);

@@ -277,6 +277,33 @@ CREATE POLICY "logs: authenticated can insert"
   ON incident_logs FOR INSERT
   WITH CHECK (auth.uid() IS NOT NULL);
 
+-- SECURITY: the client supplies the action/notes/snapshots, but it must NOT be
+-- able to attribute a log entry to another user. This BEFORE INSERT trigger pins
+-- the actor (user_id + user_name) to the authenticated caller, so an entry can
+-- never be forged as e.g. "admin closed this". Logs are already non-editable
+-- (no UPDATE/DELETE policy on incident_logs => RLS denies both).
+CREATE OR REPLACE FUNCTION public.stamp_incident_log_actor()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  NEW.user_id := auth.uid();
+  NEW.user_name := COALESCE(
+    (SELECT full_name FROM public.profiles WHERE id = auth.uid()),
+    (SELECT email     FROM public.profiles WHERE id = auth.uid()),
+    ''
+  );
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_stamp_incident_log_actor ON public.incident_logs;
+CREATE TRIGGER trg_stamp_incident_log_actor
+  BEFORE INSERT ON public.incident_logs
+  FOR EACH ROW EXECUTE FUNCTION public.stamp_incident_log_actor();
+
 
 -- ════════════════════════════════════════════════════════════════════════
 --  4. VILLAGE_LAYERS  (uploaded GeoJSON metadata)
