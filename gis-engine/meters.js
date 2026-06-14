@@ -139,6 +139,19 @@
       return fc || GIS.emptyFC();
     },
 
+    // Search meters by id / customer / name / address (locator tool). Returns a
+    // GeoJSON FeatureCollection (same shape as getMetersInBBox + raw_data). Any
+    // signed-in user (the search_meters RPC is SECURITY DEFINER with one auth
+    // check, so it skips per-row RLS and never times out).
+    search: async function (q, limit) {
+      GIS._assert(q != null && String(q).trim() !== '', 'search requires a query');
+      var sb = GIS.sb();
+      var fc = GIS._unwrap(await sb.rpc('search_meters', {
+        p_q: String(q).trim(), p_limit: limit || 50
+      }), 'search meters');
+      return fc || GIS.emptyFC();
+    },
+
     // Diagnostic: how many meters exist vs how many carry a location. Lets the
     // UI explain "imported but not on the map" (no geometry) vs an empty table.
     countMeters: async function () {

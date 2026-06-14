@@ -312,3 +312,38 @@ RETURNS JSONB LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $
     LIMIT p_limit
   ) s;
 $$;
+
+-- ── 7) Search meters by id / customer / name / address (locator tool) ─────
+--  Powers the unified "אתר נכס" search. Returns the SAME GeoJSON shape as
+--  meters_geojson (incl. raw_data — a search returns few rows so spreading the
+--  full Hebrew Arad row is cheap and gives the panel customer name/address).
+--  SECURITY DEFINER + one auth check skips per-row RLS (no timeout). Matches
+--  arad_meter_id, customer_id, and the customer_name / address kept in raw_data.
+--  Only located meters (geometry NOT NULL) so a result can be flown to.
+CREATE OR REPLACE FUNCTION public.search_meters(p_q TEXT, p_limit INT DEFAULT 50)
+RETURNS JSONB LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT jsonb_build_object('type','FeatureCollection','features',
+    COALESCE(jsonb_agg(jsonb_build_object(
+      'type','Feature','id',id,
+      'geometry', ST_AsGeoJSON(geometry)::jsonb,
+      'properties', jsonb_build_object(
+        'arad_meter_id',arad_meter_id,'customer_id',customer_id,'asset_code',asset_code,
+        'last_reading',last_reading,'consumption',consumption,'status',status,
+        'install_date',install_date,'__id',id,
+        'connection_type',connection_type,'connected_pipe_id',connected_pipe_id,
+        'connection_distance_m',connection_distance_m,'connection_ambiguous',connection_ambiguous,
+        'connection_point', CASE WHEN connection_point IS NULL THEN NULL
+                                 ELSE ST_AsGeoJSON(connection_point)::jsonb END
+      ) || COALESCE(raw_data,'{}'::jsonb)
+    )), '[]'::jsonb))
+  FROM (
+    SELECT * FROM public.meters
+    WHERE (SELECT auth.uid()) IS NOT NULL
+      AND geometry IS NOT NULL
+      AND ( arad_meter_id::text         ILIKE '%'||p_q||'%'
+         OR customer_id::text           ILIKE '%'||p_q||'%'
+         OR raw_data->>'customer_name'  ILIKE '%'||p_q||'%'
+         OR raw_data->>'address'        ILIKE '%'||p_q||'%' )
+    LIMIT p_limit
+  ) s;
+$$;
