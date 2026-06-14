@@ -290,7 +290,11 @@
       tab.className = 'ags-tab' + (i === 0 ? ' active' : '');
       tab.textContent = t.lb;
       tab.setAttribute('data-tab', t.id);
-      tab.addEventListener('click', function () { switchTab(t.id); });
+      tab.addEventListener('click', function () {
+        // clicking a tab while the ribbon is minimized re-opens it
+        if ($('ags-ribbon').classList.contains('collapsed')) { setRibbonCollapsed(false); }
+        switchTab(t.id);
+      });
       tabsEl.appendChild(tab);
 
       var panel = document.createElement('div');
@@ -311,6 +315,18 @@
       });
       panelsEl.appendChild(panel);
     });
+
+    // ribbon minimize/restore caret at the end of the tab strip
+    var rtoggle = document.createElement('button');
+    rtoggle.id = 'ags-ribbon-toggle';
+    rtoggle.type = 'button';
+    rtoggle.title = 'מזעור רצועת הכלים';
+    rtoggle.setAttribute('aria-label', 'מזעור או הצגת רצועת הכלים');
+    rtoggle.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>';
+    rtoggle.addEventListener('click', function () {
+      setRibbonCollapsed(!$('ags-ribbon').classList.contains('collapsed'));
+    });
+    tabsEl.appendChild(rtoggle);
 
     ribbon.appendChild(tabsEl);
     ribbon.appendChild(panelsEl);
@@ -410,6 +426,14 @@
     document.querySelectorAll('.ags-panel').forEach(function (p) {
       p.classList.toggle('active', p.getAttribute('data-panel') === id);
     });
+  }
+
+  // minimize/restore the ribbon command body (tab strip stays visible)
+  function setRibbonCollapsed(collapsed) {
+    var r = $('ags-ribbon'); if (!r) { return; }
+    r.classList.toggle('collapsed', collapsed);
+    var b = $('ags-ribbon-toggle');
+    if (b) { b.title = collapsed ? 'הצגת רצועת הכלים' : 'מזעור רצועת הכלים'; }
   }
 
   // ── status-bar scale (1:N) + projection ───────────────────────────────────

@@ -72,6 +72,20 @@
   border-radius: 2px;
 }
 
+/* Ribbon minimize/restore caret (sits at the end of the tab strip) */
+#ags-ribbon-toggle {
+  margin-inline-start: auto; align-self: center;
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 22px; padding: 0;
+  background: transparent; border: 1px solid transparent; border-radius: 5px;
+  color: var(--ags-cmd-muted); cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+#ags-ribbon-toggle:hover { background: rgba(26,127,193,0.12); color: var(--ags-accent-dark); }
+#ags-ribbon-toggle svg { width: 16px; height: 16px; transition: transform 0.18s var(--ease-out); }
+#ags-ribbon.collapsed #ags-ribbon-toggle svg { transform: rotate(180deg); }
+#ags-ribbon.collapsed #ags-panels { display: none; }
+
 /* Ribbon body — horizontal groups */
 #ags-panels { background: var(--ags-tab-active); height: 92px; }
 .ags-panel { display: none; height: 100%; align-items: stretch; padding: 0 6px; overflow-x: auto; }
