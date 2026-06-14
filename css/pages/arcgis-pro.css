@@ -201,13 +201,11 @@
 #statusbar { height: 24px; background: #0a2f4d; gap: 10px; }
 #statusbar > span:not(#coords):not(#ags-scale-wrap):not(#ags-proj):not(#ags-statusstats) { opacity: 0.45; }
 
-/* ── Relocated top-panel controls (old topbar dissolved into ribbon + footer) ── */
-/* app title → start of the ribbon tab strip */
-#ags-logo { align-self: center; font-size: 13px; font-weight: 700; color: var(--ags-accent-dark); white-space: nowrap; padding: 0 12px 0 6px; letter-spacing: -0.2px; }
+/* ── Relocated top-panel controls → ArcGIS title bar above the ribbon tabs ── */
+#ags-titlebar { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; background: var(--ags-ribbon-bg-2); border-bottom: 1px solid var(--ags-ribbon-border); }
+#ags-logo { font-size: 13px; font-weight: 700; color: var(--ags-accent-dark); white-space: nowrap; letter-spacing: -0.2px; }
 #ags-logo span { color: var(--ags-accent); }
-
-/* account cluster (admin links + user menu + realtime dot) → end of tab strip */
-#ags-account { align-self: center; margin-inline-start: auto; display: flex; align-items: center; gap: 7px; padding: 0 4px 0 6px; }
+#ags-account { margin-inline-start: auto; display: flex; align-items: center; gap: 7px; }
 #ags-account #realtime-dot { width: 8px; height: 8px; }
 #ags-account .admin-link {
   background: #e9ebee; border: 1px solid var(--ags-ribbon-border); color: var(--ags-accent-dark);

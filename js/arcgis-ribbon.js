@@ -264,24 +264,26 @@
   // then hide the now-empty bar.
   function relocateTopbar() {
     var topbar = $('topbar'); if (!topbar || topbar.dataset.relocated) return;
-    var tabs = $('ags-tabs'), statusbar = $('statusbar');
+    var ribbon = $('ags-ribbon'), statusbar = $('statusbar');
 
-    // app title → start of the tab strip
-    var logo = topbar.querySelector('.logo');
-    if (logo && tabs) { logo.id = 'ags-logo'; tabs.insertBefore(logo, tabs.firstChild); }
-
-    // account cluster (admin links + user menu + realtime dot) → end of tab strip
-    if (tabs) {
+    // thin ArcGIS title bar ABOVE the tabs: app title (start) + account (end)
+    if (ribbon) {
+      var title = document.createElement('div'); title.id = 'ags-titlebar';
+      var logo = topbar.querySelector('.logo'); if (logo) { logo.id = 'ags-logo'; title.appendChild(logo); }
       var cluster = document.createElement('div'); cluster.id = 'ags-account';
       ['realtime-dot', 'upload-link', 'admin-link', 'logs-link'].forEach(function (id) { var el = $(id); if (el) cluster.appendChild(el); });
       var ua = topbar.querySelector('.user-area'); if (ua) cluster.appendChild(ua);
-      tabs.appendChild(cluster);
+      title.appendChild(cluster);
+      ribbon.insertBefore(title, ribbon.firstChild);
     }
 
-    // incident stats + live coordinates → status bar (front)
+    // incident stats → status bar. SKIP the coords stat: #coords already shows
+    // the same live coordinates in the status bar → avoid the duplicate.
     if (statusbar) {
       var wrap = document.createElement('span'); wrap.id = 'ags-statusstats';
-      Array.prototype.slice.call(topbar.querySelectorAll('.stats .stat')).forEach(function (s) { wrap.appendChild(s); });
+      Array.prototype.slice.call(topbar.querySelectorAll('.stats .stat')).forEach(function (s) {
+        if (!s.classList.contains('coords')) wrap.appendChild(s);
+      });
       statusbar.insertBefore(wrap, statusbar.firstChild);
     }
 
