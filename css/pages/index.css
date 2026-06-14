@@ -180,6 +180,9 @@ html, body { height: 100%; font-family: 'Rubik', 'Segoe UI', Tahoma, Arial, sans
 .panel { padding: 12px 14px; }
 .panel-title { font-size: 10px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; background: #fff; padding: 6px 0; }
 .panel-title .count-pill { background: var(--blue-mid); color: #fff; border-radius: var(--r-full); padding: 1px 8px; font-size: 10px; font-weight: 700; letter-spacing: 0; }
+.panel-title .pt-label { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
+.pt-ic { width: 14px; height: 14px; flex-shrink: 0; opacity: 0.85; }
+.collapse-all-btn .cab-ic { width: 13px; height: 13px; display: block; }
 
 /* Village groups */
 .village-group { margin-bottom: 8px; border: 1px solid var(--border); border-radius: var(--r-md); overflow: hidden; }

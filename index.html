@@ -101,17 +101,17 @@
 
     <div id="sidebar">
       <div class="panel panel-sticky my-incidents-panel" id="my-panel" style="display:none">
-        <div class="panel-title">🛠️ תקלות בטיפול שלי <span class="count-pill" id="my-count">0</span></div>
+        <div class="panel-title"><span class="pt-label"><svg class="pt-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4h6v3H9z"/><path d="M9 13l2 2 4-4"/></svg>תקלות בטיפול שלי</span><span class="count-pill" id="my-count">0</span></div>
         <div id="my-list"></div>
       </div>
 
       <div id="layers-scroll-area">
         <div class="panel">
           <div class="panel-title">
-            🗺️ שכבות תשתית
+            <span class="pt-label"><svg class="pt-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 8l10 5 10-5-10-5z"/><path d="M2 13l10 5 10-5"/></svg>שכבות תשתית</span>
             <span style="display:flex;align-items:center;gap:6px">
-              <button class="collapse-all-btn" onclick="collapseAll()">⊟ הכל</button>
-              <button class="collapse-all-btn" onclick="expandAll()">⊞ הכל</button>
+              <button class="collapse-all-btn" onclick="collapseAll()" title="כווץ הכל"><svg class="cab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 12h8"/></svg></button>
+              <button class="collapse-all-btn" onclick="expandAll()" title="הרחב הכל"><svg class="cab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M12 8v8M8 12h8"/></svg></button>
               <span class="count-pill" id="layer-count">0</span>
             </span>
           </div>
@@ -131,7 +131,7 @@
       </div>
 
       <div class="panel-sticky" style="padding:10px 14px 4px">
-        <div class="panel-title" style="margin-bottom:0">🚨 תקלות פתוחות <span class="count-pill" id="open-count">0</span></div>
+        <div class="panel-title" style="margin-bottom:0"><span class="pt-label"><svg class="pt-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3z"/><path d="M12 10v4"/><path d="M12 17h.01"/></svg>תקלות פתוחות</span><span class="count-pill" id="open-count">0</span></div>
       </div>
 
       <div id="incidents-scroll">

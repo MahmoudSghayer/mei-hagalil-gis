@@ -33,7 +33,9 @@ css.textContent = `
 #gis-eng-panel .ge-village{border:1px solid #eef2f6;border-radius:9px;margin-bottom:6px;overflow:hidden;}
 #gis-eng-panel .ge-vhead{display:flex;align-items:center;gap:7px;padding:8px 10px;cursor:pointer;background:#f8fafc;font-size:12.5px;font-weight:700;color:#0d3b5e;}
 #gis-eng-panel .ge-vhead:hover{background:#eef4fb;}
-#gis-eng-panel .ge-vname{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#gis-eng-panel .ge-vname{flex:1;min-width:0;display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;}
+#gis-eng-panel .ge-ic{width:14px;height:14px;flex-shrink:0;}
+#gis-eng-panel .ge-pin{color:#1a7fc1;}
 #gis-eng-panel .ge-vchev{font-size:10px;opacity:.7;}
 #gis-eng-panel .ge-vcount{font-size:10.5px;color:#94a3b8;font-weight:600;}
 #gis-eng-panel .ge-vbody{padding:4px 8px 6px;}
@@ -45,8 +47,8 @@ css.textContent = `
 #gis-eng-panel .ge-color{width:16px;height:16px;flex-shrink:0;padding:0;border:1px solid #cbd5e1;border-radius:4px;cursor:pointer;background:none;}
 #gis-eng-panel .ge-color::-webkit-color-swatch{border:none;border-radius:3px;}
 #gis-eng-panel .ge-color::-webkit-color-swatch-wrapper{padding:0;}
-#gis-eng-panel .ge-fly,#gis-eng-panel .ge-del{background:none;border:none;cursor:pointer;font-size:12px;padding:0 2px;opacity:.7;}
-#gis-eng-panel .ge-fly:hover{opacity:1;}
+#gis-eng-panel .ge-fly,#gis-eng-panel .ge-del{display:inline-flex;align-items:center;background:none;border:none;cursor:pointer;color:#64748b;font-size:12px;padding:0 2px;opacity:.75;}
+#gis-eng-panel .ge-fly:hover{opacity:1;color:#1a7fc1;}
 #gis-eng-panel .ge-del:hover{opacity:1;filter:saturate(1.5);}
 #gis-eng-panel .ge-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 #gis-eng-panel .ge-count{font-size:10px;color:#94a3b8;}
@@ -219,8 +221,9 @@ async function build() {
   var panel = document.createElement('div');
   panel.className = 'panel'; panel.id = 'gis-eng-panel';
   panel.innerHTML =
-    '<div class="panel-title" style="cursor:pointer" id="ge-head">' +
-      '🧠 שכבות מנוע GIS' +
+    '<div class="panel-title" style="cursor:pointer;display:flex;align-items:center;gap:7px" id="ge-head">' +
+      '<svg class="ge-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 2 8l10 5 10-5-10-5z"/><path d="M2 13l10 5 10-5"/><path d="M2 18l10 5 10-5"/></svg>' +
+      '<span style="flex:1">שכבות מנוע GIS</span>' +
       '<span style="display:flex;align-items:center;gap:6px">' +
         '<button class="ge-refresh" id="ge-refresh" title="רענן">↻</button>' +
         '<span class="count-pill" id="ge-count">0</span>' +
@@ -282,8 +285,8 @@ function villageBlock(village, layers) {
   head.className = 'ge-vhead';
   head.innerHTML =
     '<span class="ge-vchev">' + (openVillages[village] ? '▾' : '▸') + '</span>' +
-    '<span class="ge-vname">📍 ' + esc(village) + '</span>' +
-    '<button class="ge-fly" title="התמקד בכפר">🎯</button>' +
+    '<span class="ge-vname"><svg class="ge-ic ge-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6-5.7-6-10a6 6 0 0 1 12 0c0 4.3-6 10-6 10z"/><circle cx="12" cy="11" r="2.2"/></svg>' + esc(village) + '</span>' +
+    '<button class="ge-fly" title="התמקד בכפר"><svg class="ge-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7.5"/><circle cx="12" cy="12" r="2.6"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/></svg></button>' +
     '<span class="ge-vcount">' + layers.length + ' שכבות</span>';
   head.onclick = function () {
     openVillages[village] = !openVillages[village];
@@ -473,7 +476,7 @@ function meterVillageRow(village) {
   el.innerHTML =
     '<input type="checkbox">' +
     '<span class="ge-dot" style="background:' + METER_COLOR + '"></span>' +
-    '<span class="ge-name" title="מדי מים מתוך מערכת Arad (עם קריאות), ממוקמים לפי קואורדינטות">🔢 מדי מים (Arad)</span>' +
+    '<span class="ge-name" title="מדי מים מתוך מערכת Arad (עם קריאות), ממוקמים לפי קואורדינטות"><svg class="ge-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></svg> מדי מים (Arad)</span>' +
     '<span class="ge-count"></span>';
   var cb = el.querySelector('input[type=checkbox]');
   var cnt = el.querySelector('.ge-count');

@@ -121,9 +121,11 @@
   flex-direction: column;
   justify-content: flex-start;
   gap: 6px;
-  width: 72px;
+  width: auto;
+  min-width: 66px;
+  max-width: 96px;
   height: 100%;
-  padding: 6px 4px 4px;
+  padding: 6px 8px 4px;
 }
 .ags-cmd-lg .ags-ic, .ags-cmd-sm .ags-ic {
   display: flex; align-items: center; justify-content: center; height: 26px;
@@ -131,7 +133,7 @@
 .ags-cmd-lg .ags-ic svg, .ags-cmd-sm .ags-ic svg { width: 25px; height: 25px; }
 .ags-cmd-lg .ags-lb, .ags-cmd-sm .ags-lb {
   font-size: 10.5px; font-weight: 500; line-height: 1.2; text-align: center;
-  max-width: 66px; white-space: normal; word-break: break-word; color: var(--ags-cmd-muted);
+  max-width: 84px; white-space: normal; word-break: break-word; color: var(--ags-cmd-muted);
 }
 .ags-cmd .ags-ic { color: var(--ags-cmd-text); opacity: 0.9; }
 .ags-cmd:hover .ags-ic { opacity: 1; }
