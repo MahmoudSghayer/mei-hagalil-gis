@@ -40,15 +40,17 @@ var URL_XLSX    = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.j
 var ITM_WKT = 'PROJCS["Israel 1993 / Israeli TM Grid",GEOGCS["Israel 1993",DATUM["Israel_1993",SPHEROID["GRS 1980",6378137,298.257222101,AUTHORITY["EPSG","7019"]],TOWGS84[-24.0024,-17.1032,-17.8444,-0.33077,-1.85269,1.66969,5.4262],AUTHORITY["EPSG","6141"]],PRIMEM["Greenwich",0,AUTHORITY["EPSG","8901"]],UNIT["degree",0.0174532925199433,AUTHORITY["EPSG","9122"]],AUTHORITY["EPSG","4141"]],PROJECTION["Transverse_Mercator"],PARAMETER["latitude_of_origin",31.73439361111111],PARAMETER["central_meridian",35.20451694444445],PARAMETER["scale_factor",1.0000067],PARAMETER["false_easting",219529.584],PARAMETER["false_northing",626907.39],UNIT["metre",1,AUTHORITY["EPSG","9001"]],AXIS["Easting",EAST],AXIS["Northing",NORTH],AUTHORITY["EPSG","2039"]]';
 
 // ── DEDICATED EXPORT STATE (separate from map visibility) ─────────────────────
+// The data lives in the GIS engine now (layers/features tables via GIS.*), NOT the old
+// flat-file village system (gVillages is empty — loadAllVillages is disabled in index.js).
 var gExp = {
   step: 1,            // 1..4 wizard step
   format: 'dxf',
   scope: 'all',       // 'all' | 'draw'
   busy: false,
-  loading: false,     // fetching the full dataset for the layer list
-  loaded: false,      // gExp.all has been populated this session
-  all: [],            // ALL exportable features (every village), the export source of truth
-  layers: {}          // catId -> { label, count, visible, selected }
+  loading: false,     // building the layer list (engine layers + head counts)
+  loaded: false,      // layer model built this session
+  loadError: null,
+  layers: {}          // catId -> { label, count, visible, selected, layerIds:[{id,village}] }
 };
 
 var gRect = null, gDrawing = false, gDrawStart = null, gDrawTemp = null;
@@ -160,7 +162,7 @@ function injectUI() {
     '<div class="exp-bg" id="exp-modal">' +
       '<div class="exp-mod">' +
         '<div class="exp-head">' +
-          '<div class="exp-title">📥 יצוא נתונים <span style="font-size:10px;font-weight:400;opacity:0.45;font-family:monospace">v12</span></div>' +
+          '<div class="exp-title">📥 יצוא נתונים <span style="font-size:10px;font-weight:400;opacity:0.45;font-family:monospace">v13</span></div>' +
           '<button class="exp-close-btn" onclick="closeExportModal()">✕</button>' +
         '</div>' +
         '<div class="exp-body" id="exp-body"></div>' +
@@ -173,97 +175,112 @@ function injectUI() {
 // ── MODAL CONTROLS ───────────────────────────────────────────────────────────
 function openExportModal() {
   if (!window.gMap) { alert('המפה עדיין לא נטענה'); return; }
+  if (!window.GIS || !window.GIS.layers) { alert('מנוע ה-GIS עדיין נטען — נסה שוב בעוד רגע'); return; }
   gExp.step = 1;
   gExp.busy = false;
+  gExp.loadError = null;
   document.getElementById('exp-modal').classList.add('open');
 
-  if (gExp.loaded) {
-    buildLayerModel();
-    renderWizard();
-  } else {
-    // Fetch the FULL exportable dataset (every village from storage) so the layer list
-    // reflects what export actually produces — independent of map zoom / visibility.
-    gExp.loading = true;
-    renderWizard();                       // shows a loading state in step 1
-    fetchAllForExport(function () {
-      gExp.loading = false;
-      gExp.loaded = true;
-      buildLayerModel();
+  if (gExp.loaded) { renderWizard(); return; }
+
+  // Build the layer list from the engine (every layer + a cheap head count). The actual
+  // features are fetched only for the SELECTED categories, at export time.
+  gExp.loading = true;
+  renderWizard();                       // shows a loading state in step 1
+  buildLayerModel()
+    .then(function () { gExp.loading = false; gExp.loaded = true; })
+    .catch(function (e) { gExp.loading = false; gExp.loadError = (e && e.message) ? e.message : String(e); })
+    .then(function () {
       if (document.getElementById('exp-modal').classList.contains('open') && gExp.step === 1) renderWizard();
     });
-  }
 }
 function closeExportModal() { document.getElementById('exp-modal').classList.remove('open'); }
 window.closeExportModal = closeExportModal;
 
-// Load every village's features (IndexedDB-cached via the map's fetchVillageGeoJSON when
-// available) into gExp.all — the single source of truth for both the layer list and export.
-function fetchAllForExport(cb) {
-  var villages = (window.gVillages || []).slice();
-  if (!villages.length) { gExp.all = []; cb(); return; }
-  // Deduplicate: most recent upload per village slug (matches the map + collectFeatures logic)
-  var latest = {};
-  villages.forEach(function (v) {
-    var slug = v.village_id.replace(/_\d+(_\d+)?$/, '');
-    if (!latest[slug] || (v.uploaded_at || '') > (latest[slug].uploaded_at || '')) latest[slug] = v;
-  });
-  villages = Object.keys(latest).map(function (k) { return latest[k]; });
-
-  var all = [], remaining = villages.length;
-  function done() { if (--remaining === 0) { gExp.all = all; cb(); } }
-  villages.forEach(function (v) {
-    var pr = (typeof window.fetchVillageGeoJSON === 'function')
-      ? window.fetchVillageGeoJSON(v)
-      : fetch(window.gSb.storage.from('village-layers').getPublicUrl(v.file_path).data.publicUrl).then(function (r) { return r.json(); });
-    Promise.resolve(pr).then(function (data) {
-      ((data && data.features) || []).forEach(function (f) {
-        if (!f.geometry) return;
-        if (!f.properties) f.properties = {};
-        f.properties._village = v.village_name;
-        all.push(f);
-      });
-      done();
-    }).catch(done);
+// Simple bounded-concurrency pool over `items`, running `fn(item)` (returns a Promise).
+function runPool(items, concurrency, fn) {
+  return new Promise(function (resolve) {
+    var i = 0, active = 0, n = items.length;
+    if (!n) return resolve();
+    function next() {
+      while (active < concurrency && i < n) {
+        var item = items[i++]; active++;
+        Promise.resolve(fn(item)).catch(function () {}).then(function () {
+          active--;
+          if (i >= n && active === 0) resolve();
+          else next();
+        });
+      }
+    }
+    next();
   });
 }
 
-// Filter the cached dataset by selected categories (and optional draw bounds).
-function filterByCats(cats, bounds) {
-  return (gExp.all || []).filter(function (f) {
-    var cat = (f.properties && f.properties._category) || 'other';
-    if (cats.indexOf(cat) === -1) return false;
-    if (bounds && !isInBounds(f.geometry, bounds)) return false;
-    return true;
-  });
-}
-
-// Build the export layer model from gExp.all (the real exportable data). Selection is OWNED by
+// Build the export layer model from the GIS engine. One row per CATEGORY (engine layers are
+// named "<village> · <category>"), aggregating counts across villages. Selection is OWNED by
 // gExp and never derived from visibility — visibility is read only for an informational badge.
 function buildLayerModel() {
-  var counts = {};
-  (gExp.all || []).forEach(function (f) {
-    var c = (f.properties && f.properties._category) || 'other';
-    counts[c] = (counts[c] || 0) + 1;
-  });
-  // Visibility badge (best-effort, informational): on for any currently-loaded village
-  var vis = {}, st = window.gVillageState || {};
-  Object.keys(st).forEach(function (vid) {
-    var v = st[vid];
-    Object.keys(v.cats || {}).forEach(function (c) {
-      if (v.masterOn !== false && v.cats[c]) vis[c] = true;
+  var GIS = window.GIS;
+  return GIS.layers.getLayers().then(function (layers) {
+    var cats = {}, prev = gExp.layers || {};
+    (layers || []).forEach(function (l) {
+      var idx = l.name.indexOf(' · ');
+      var cat = idx >= 0 ? l.name.slice(idx + 3) : l.name;
+      var village = idx >= 0 ? l.name.slice(0, idx) : '';
+      if (!cats[cat]) cats[cat] = {
+        label: (window.GISLayerLabel ? window.GISLayerLabel(cat) : (LABELS[cat] || cat)),
+        count: 0, visible: false, selected: prev[cat] ? prev[cat].selected : true, layerIds: []
+      };
+      cats[cat].layerIds.push({ id: l.id, village: village });
     });
+    // Visibility badge (informational): a category is "visible" if any of its engine layers
+    // is currently toggled on in the sidebar.
+    try {
+      var act = (window.GISEngineSidebar && window.GISEngineSidebar.activeLayers) ? window.GISEngineSidebar.activeLayers() : [];
+      act.forEach(function (l) {
+        var idx = l.name.indexOf(' · ');
+        var c = idx >= 0 ? l.name.slice(idx + 3) : l.name;
+        if (cats[c]) cats[c].visible = true;
+      });
+    } catch (e) { /* visibility is optional */ }
+
+    // Cheap exact head counts per layer (COUNT uses idx_features_layer; "features read" RLS
+    // allows any authenticated user to SELECT).
+    var sb = GIS.sb();
+    var jobs = [];
+    Object.keys(cats).forEach(function (cat) {
+      cats[cat].layerIds.forEach(function (lyr) { jobs.push({ cat: cat, id: lyr.id }); });
+    });
+    return runPool(jobs, 6, function (job) {
+      return sb.from('features').select('*', { count: 'exact', head: true }).eq('layer_id', job.id)
+        .then(function (r) { cats[job.cat].count += (r.count || 0); });
+    }).then(function () { gExp.layers = cats; });
   });
-  var prev = gExp.layers;
-  var layers = {};
-  Object.keys(counts).sort().forEach(function (c) {
-    layers[c] = {
-      label:    LABELS[c] || c,
-      count:    counts[c],
-      visible:  !!vis[c],
-      selected: prev[c] ? prev[c].selected : true   // default: everything selected
-    };
+}
+
+// Fetch features for the selected categories from the engine (only what's needed for export).
+// Optionally filter to draw `bounds`. Calls cb(features) with WGS84 GeoJSON features.
+function fetchFeaturesForCats(cats, bounds, cb) {
+  var GIS = window.GIS;
+  var jobs = [];
+  cats.forEach(function (cat) {
+    var L = gExp.layers[cat];
+    if (!L) return;
+    L.layerIds.forEach(function (lyr) { jobs.push({ cat: cat, id: lyr.id, village: lyr.village }); });
   });
-  gExp.layers = layers;
+  var all = [];
+  runPool(jobs, 4, function (job) {
+    return GIS.features.getFeatures(job.id, 1000000).then(function (fc) {
+      ((fc && fc.features) || []).forEach(function (f) {
+        if (!f.geometry) return;
+        if (bounds && !isInBounds(f.geometry, bounds)) return;
+        if (!f.properties) f.properties = {};
+        f.properties._category = job.cat;       // authoritative (from layer name)
+        if (job.village) f.properties._village = job.village;
+        all.push(f);
+      });
+    });
+  }).then(function () { cb(all); });
 }
 
 function selectedCats() {
@@ -301,6 +318,8 @@ function step1HTML() {
   var rows;
   if (gExp.loading) {
     rows = '<div class="exp-gen" style="padding:24px 10px"><div class="exp-gen-spin"></div><div class="exp-gen-msg">טוען שכבות…</div></div>';
+  } else if (gExp.loadError) {
+    rows = '<div style="padding:16px;text-align:center;color:#dc2626;font-size:13px">שגיאה בטעינת שכבות: ' + gExp.loadError + '</div>';
   } else if (!keys.length) {
     rows = '<div style="padding:16px;text-align:center;color:#94a3b8;font-size:13px">לא נמצאו שכבות לייצוא</div>';
   } else {
@@ -413,23 +432,26 @@ window.expRun = function () {
   // Draw scope keeps the existing on-map flow (modal closes, user drags a box)
   if (gExp.scope === 'draw') { closeExportModal(); startDrawMode(cats); return; }
 
-  var features = filterByCats(cats, null);
-
-  // DWG keeps its dedicated wait modal exactly as before
+  // DWG keeps its dedicated wait modal exactly as before — fetch first, then hand off.
   if (gExp.format === 'dwg') {
     closeExportModal();
-    if (!features.length) { alert('לא נמצאו אובייקטים'); return; }
-    generateAndDownload(features);
+    fetchFeaturesForCats(cats, null, function (features) {
+      if (!features.length) { alert('לא נמצאו אובייקטים'); return; }
+      generateAndDownload(features);
+    });
     return;
   }
 
   // Everything else generates inside the wizard step-4 pane
-  if (!features.length) { gExp.step = 4; renderWizard(); finishGen(false, 'לא נמצאו אובייקטים'); return; }
   gExp.step = 4; gExp.busy = true;
   renderWizard();
-  setGenMsg('מייצא…');
-  // defer so the spinner paints before a potentially heavy synchronous build (DXF/CSV)
-  setTimeout(function () { generateAndDownload(features); }, 30);
+  setGenMsg('אוסף נתונים…');
+  fetchFeaturesForCats(cats, null, function (features) {
+    if (!features.length) { finishGen(false, 'לא נמצאו אובייקטים'); return; }
+    setGenMsg('מייצא…');
+    // defer so the spinner paints before a potentially heavy synchronous build (DXF/CSV)
+    setTimeout(function () { generateAndDownload(features); }, 30);
+  });
 };
 
 function setGenMsg(m) { var el = document.getElementById('exp-gen-msg'); if (el && m) el.textContent = m; }
@@ -485,10 +507,11 @@ function finishDraw(endLatLng, selectedCatsArg) {
   gRect = L.rectangle([gDrawStart, endLatLng], { color: '#16a34a', weight: 2, fillOpacity: 0.08 }).addTo(window.gMap);
   var bounds = gRect.getBounds();
   gDrawStart = null;
-  var features = filterByCats(selectedCatsArg, bounds);
-  if (gRect) { window.gMap.removeLayer(gRect); gRect = null; }
-  if (!features.length) { alert('לא נמצאו אובייקטים באזור שנבחר'); return; }
-  generateAndDownload(features);
+  fetchFeaturesForCats(selectedCatsArg, bounds, function (features) {
+    if (gRect) { window.gMap.removeLayer(gRect); gRect = null; }
+    if (!features.length) { alert('לא נמצאו אובייקטים באזור שנבחר'); return; }
+    generateAndDownload(features);
+  });
 }
 
 function cancelDrawing() {
