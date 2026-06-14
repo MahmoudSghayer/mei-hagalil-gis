@@ -7,12 +7,15 @@
 ALTER TABLE public.layers ADD COLUMN IF NOT EXISTS color TEXT;
 
 -- Bounding box over a set of layers → [minLng, minLat, maxLng, maxLat] (or null).
+-- ST_XMin/ST_YMin/ST_XMax/ST_YMax are overloaded for box2d, so we read the
+-- ST_Extent (box2d) directly — no box2d→geometry cast (that cast 500'd on some
+-- PostGIS builds). Empty set → no row → PostgREST returns null.
 CREATE OR REPLACE FUNCTION public.layers_extent(p_layer_ids UUID[])
 RETURNS JSONB LANGUAGE sql STABLE AS $$
-  SELECT CASE WHEN ext IS NULL THEN NULL
-    ELSE jsonb_build_array(ST_XMin(ext), ST_YMin(ext), ST_XMax(ext), ST_YMax(ext)) END
-  FROM (SELECT ST_Extent(geometry)::geometry AS ext
-        FROM public.features WHERE layer_id = ANY(p_layer_ids)) s;
+  SELECT jsonb_build_array(ST_XMin(e), ST_YMin(e), ST_XMax(e), ST_YMax(e))
+  FROM (SELECT ST_Extent(geometry) AS e
+        FROM public.features WHERE layer_id = ANY(p_layer_ids)) s
+  WHERE e IS NOT NULL;
 $$;
 
 -- Viewport loading: only features whose geometry intersects the map bbox,
