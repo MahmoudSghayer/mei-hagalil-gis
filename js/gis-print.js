@@ -193,27 +193,42 @@
   }
 
   // ── print ───────────────────────────────────────────────────────────────────────
+  // Render the map at the PAPER aspect ratio (A-series = 1:√2) before printing,
+  // so it fills any A-size page (A4/A3/A2) instead of being scaled from a fixed
+  // on-screen size. Fits the chosen area into that canvas, waits for tiles, prints.
   function doPrint() {
-    var m = document.getElementById('map'); if (!m) { window.print(); return; }
-    if (printBounds && window.gMap) {
-      if (printRectLayer) { window.gMap.removeLayer(printRectLayer); printRectLayer = null; }
-      var snap = window.gMap.options.zoomSnap;
-      window.gMap.options.zoomSnap = 0;                          // fit the drawn rect TIGHTLY (fractional zoom)
-      window.gMap.fitBounds(printBounds, { padding: [0, 0], animate: false });
-      toast('מכין הדפסה…');
-      setTimeout(function () { lockAndPrint(m, function () { if (window.gMap) window.gMap.options.zoomSnap = snap; }); }, 1200);
-    } else {
-      lockAndPrint(m, null);
-    }
-  }
-  function lockAndPrint(m, after) {
-    var w = m.offsetWidth, h = m.offsetHeight;
-    m.style.width = w + 'px'; m.style.height = h + 'px';
+    var m = document.getElementById('map'); if (!m || !window.gMap) { window.print(); return; }
+    var orient = (document.getElementById('glb-orient') || {}).value || 'landscape';
+    var base = 1120, ratio = 1.41421;
+    var W = orient === 'landscape' ? Math.round(base * ratio) : base;
+    var H = orient === 'landscape' ? base : Math.round(base * ratio);
+
+    var target = printBounds || window.gMap.getBounds();   // drawn area, else current view
+    if (printRectLayer) { window.gMap.removeLayer(printRectLayer); printRectLayer = null; }
+
+    var center = window.gMap.getCenter(), zoom = window.gMap.getZoom(), snap = window.gMap.options.zoomSnap;
+    var saved = { position: m.style.position, top: m.style.top, left: m.style.left, width: m.style.width, height: m.style.height, zIndex: m.style.zIndex };
+
     document.body.classList.add('gis-printing');
-    function restore() { m.style.width = ''; m.style.height = ''; document.body.classList.remove('gis-printing'); if (after) after(); }
+    m.style.position = 'fixed'; m.style.top = '0'; m.style.left = '0';
+    m.style.width = W + 'px'; m.style.height = H + 'px'; m.style.zIndex = '99990';
+    window.gMap.invalidateSize(true);
+    window.gMap.options.zoomSnap = 0;                       // fit the area tightly into the paper canvas
+    window.gMap.fitBounds(target, { padding: [0, 0], animate: false });
+    toast('מכין הדפסה — בחר "התאם לעמוד" (Fit to page) בתיבת ההדפסה');
+
+    var done = false;
+    function restore() {
+      if (done) return; done = true;
+      m.style.position = saved.position; m.style.top = saved.top; m.style.left = saved.left;
+      m.style.width = saved.width; m.style.height = saved.height; m.style.zIndex = saved.zIndex;
+      document.body.classList.remove('gis-printing');
+      window.gMap.options.zoomSnap = snap; window.gMap.invalidateSize(true);
+      window.gMap.setView(center, zoom, { animate: false });
+    }
     window.addEventListener('afterprint', restore, { once: true });
-    setTimeout(function () { window.print(); }, 150);
-    setTimeout(restore, 6000);
+    setTimeout(function () { window.print(); }, 1800);      // let the resized canvas load tiles
+    setTimeout(restore, 9000);                              // safety net
   }
 
   window.GISPrint = { open: enter, exit: exit };
