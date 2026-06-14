@@ -99,6 +99,7 @@ var GISPanel = {
     return geoJsonLayer;
   },
   open: open,
+  openMeter: function (feature) { return open(feature, { kind: 'meter' }); },
   close: close
 };
 window.GISPanel = GISPanel;
@@ -111,19 +112,26 @@ async function open(feature, opts) {
   if (!feature) return;
   state.feature = feature;
   state.tableCtx = opts || null;
+  state.kind = (opts && opts.kind) ? opts.kind : null;
   state.editing = false;
   state.filter = '';
-  var code = (feature.properties && feature.properties.asset_code) || feature.id || '—';
+  var props = feature.properties || {};
+  var code = state.kind === 'meter'
+    ? (props.arad_meter_id || feature.id || '—')
+    : (props.asset_code || feature.id || '—');
   document.getElementById('gp-code').textContent = code;
-  document.getElementById('gp-sub').textContent = (feature.geometry && feature.geometry.type) || '';
+  document.getElementById('gp-sub').textContent = state.kind === 'meter'
+    ? '🔢 מד מים' : ((feature.geometry && feature.geometry.type) || '');
   panel.classList.add('open');
   document.getElementById('gp-body').innerHTML = '<div class="gp-empty">טוען…</div>';
   document.getElementById('gp-foot').innerHTML = '';
 
   try {
     state.role = await GIS.currentRole();
-    var layerId = feature.properties && feature.properties.__layer_id;
-    state.fields = layerId ? await GIS.fields.getFields(layerId) : [];
+    if (state.kind !== 'meter') {
+      var layerId = props.__layer_id;
+      state.fields = layerId ? await GIS.fields.getFields(layerId) : [];
+    } else { state.fields = []; }
   } catch (e) { state.fields = []; }
 
   render();
@@ -131,6 +139,7 @@ async function open(feature, opts) {
 
 // ── רינדור ────────────────────────────────────────────────────────────────────
 function render() {
+  if (state.kind === 'meter') { renderMeter(); return; }
   var f = state.feature;
   var body = document.getElementById('gp-body');
   var fieldDefs = {}; state.fields.forEach(function (d) { fieldDefs[d.name] = d; });
@@ -208,7 +217,7 @@ function render() {
   });
 
   renderFooter();
-  loadMeters(f.properties && f.properties.asset_code);
+  loadMeters(f);
 }
 
 function geometryInfo(g) {
@@ -230,27 +239,103 @@ function geometryInfo(g) {
   return html;
 }
 
-async function loadMeters(assetCode) {
+async function loadMeters(feature) {
   var box = document.getElementById('gp-meters');
   if (!box) return;
-  if (!assetCode) { box.innerHTML = '<div class="gp-empty">אין asset_code — לא ניתן לקשר מדים</div>'; return; }
+  var props = (feature && feature.properties) || {};
+  var pipeId = props.__id || (feature && feature.id);
+  var assetCode = props.asset_code;
   try {
-    var meters = await GIS.meters.getForAsset(assetCode);
+    var meters = [];
+    // Authoritative link: meters whose connected_pipe_id is this pipe.
+    if (pipeId && GIS.meters.getForPipe) meters = await GIS.meters.getForPipe(pipeId);
+    // Fallback: legacy asset_code link.
+    if ((!meters || !meters.length) && assetCode) meters = await GIS.meters.getForAsset(assetCode);
     if (!meters.length) { box.innerHTML = '<div class="gp-empty">אין מדים מקושרים</div>'; return; }
     var anomalies = await GIS.meters.getAnomalies();
     var anomSet = {}; anomalies.forEach(function (a) { anomSet[a.arad_meter_id] = a.ratio; });
-    box.innerHTML = meters.map(function (m) {
+    box.innerHTML = '<div class="gp-note" style="margin:0 0 6px">' + meters.length.toLocaleString('he-IL') + ' מדים מקושרים</div>' +
+      meters.map(function (m) {
       var isAnom = anomSet[m.arad_meter_id];
+      var tLbl = m.connection_type === 'MANUAL' ? 'ידני' : (m.connection_type === 'AUTO' ? 'אוטומטי' : '');
       return '<div class="gp-meter' + (isAnom ? ' anom' : '') + '">' +
-        '<div class="mid">' + esc(m.arad_meter_id) + (isAnom ? ' <span class="gp-badge warn">חריגה ×' + isAnom + '</span>' : '') + '</div>' +
+        '<div class="mid">' + esc(m.arad_meter_id) +
+          (isAnom ? ' <span class="gp-badge warn">חריגה ×' + isAnom + '</span>' : '') +
+          (tLbl ? ' <span class="gp-badge" style="background:#dbeafe;color:#1e40af">' + tLbl + '</span>' : '') + '</div>' +
         '<div class="row"><span>צריכה</span><span>' + fmt(m.consumption) + '</span></div>' +
         '<div class="row"><span>קריאה אחרונה</span><span>' + fmt(m.last_reading) + '</span></div>' +
         '<div class="row"><span>לקוח</span><span>' + esc(m.customer_id || '—') + '</span></div>' +
-        '<div class="row"><span>סטטוס</span><span>' + esc(m.status || '—') + '</span></div>' +
+        (m.connection_distance_m != null ? '<div class="row"><span>מרחק לצינור</span><span>' + fmt(m.connection_distance_m) + ' מ׳</span></div>' : '') +
       '</div>';
     }).join('');
   } catch (e) {
     box.innerHTML = '<div class="gp-err">שגיאה בטעינת מדים: ' + esc(e.message) + '</div>';
+  }
+}
+
+// ── תצוגת מד מים (Point מטבלת meters) ─────────────────────────────────────────
+var METER_HIDE = {
+  __id: 1, __layer_id: 1, asset_code: 1, connected_pipe_id: 1, connection_point: 1,
+  connection_type: 1, connection_distance_m: 1, connection_ambiguous: 1,
+  connection_updated_at: 1, connection_updated_by: 1
+};
+
+function renderMeter() {
+  var f = state.feature, p = f.properties || {};
+  var body = document.getElementById('gp-body');
+  var rows = Object.keys(p)
+    .filter(function (k) { return !METER_HIDE[k] && typeof p[k] !== 'object'; })
+    .map(function (k) { return { k: k, v: p[k] }; });
+
+  var html = '';
+  html += '<div class="gp-sec">חיבור לצינור</div>' + connectionSection(p);
+  html += '<div class="gp-sec">מאפיינים</div>';
+  html += '<table class="gp-tbl"><tbody>';
+  if (!rows.length) html += '<tr><td colspan="2" class="gp-empty">אין שדות</td></tr>';
+  rows.forEach(function (r) { html += row(r.k, (r.v == null || r.v === '') ? '—' : r.v); });
+  html += '</tbody></table>';
+  html += '<div class="gp-sec">גאומטריה</div>' + geometryInfo(f.geometry);
+
+  body.innerHTML = html;
+  var ob = document.getElementById('gp-open-pipe');
+  if (ob) ob.onclick = openConnectedPipe;
+  renderMeterFooter();
+}
+
+function connectionSection(p) {
+  var t = p.connection_type || 'NONE';
+  var label = ({ AUTO: '🟢 אוטומטי', MANUAL: '🔵 ידני', NONE: '🟡 לא מחובר' })[t] || t;
+  var html = '<table class="gp-tbl"><tbody>';
+  html += row('סטטוס חיבור', label);
+  if (t !== 'NONE') {
+    html += row('מרחק לצינור (מ׳)', p.connection_distance_m == null ? '—' : p.connection_distance_m);
+    html += row('קוד צינור (asset)', p.asset_code || '—');
+    if (p.connection_ambiguous) html += row('שים לב', '⚠ צינור שני קרוב כמעט באותו מרחק');
+  }
+  html += '</tbody></table>';
+  if (t !== 'NONE' && p.connected_pipe_id) {
+    html += '<button class="gp-btn ghost" id="gp-open-pipe" style="margin-top:8px;width:100%">🚰 פתח צינור מחובר</button>';
+  }
+  return html;
+}
+
+async function openConnectedPipe() {
+  var p = state.feature.properties || {};
+  if (!p.connected_pipe_id) return;
+  try {
+    var pipe = await GIS.features.getFeatureById(p.connected_pipe_id);
+    open(pipe, { layerId: pipe.properties && pipe.properties.__layer_id });
+  } catch (e) { alert('שגיאה בפתיחת הצינור: ' + (e && e.message ? e.message : e)); }
+}
+
+function renderMeterFooter() {
+  var foot = document.getElementById('gp-foot');
+  var canEdit = GIS.permissions.canEditMeters(state.role);
+  if (canEdit && window.GISMeterConnect && window.GISMeterConnect.editMeter) {
+    foot.innerHTML = '<button class="gp-btn primary" id="gp-medit">🔗 ערוך חיבור</button>';
+    document.getElementById('gp-medit').onclick = function () { window.GISMeterConnect.editMeter(state.feature); };
+  } else {
+    foot.innerHTML = '<div class="gp-note" style="text-align:center;width:100%">תצוגה בלבד (תפקיד: ' + esc(state.role || 'אורח') + ')</div>';
   }
 }
 

@@ -158,6 +158,18 @@
         await sb.from('meters').select('*').eq('asset_code', assetCode), 'load meters') || [];
     },
 
+    // Meters connected to a given pipe feature (by connected_pipe_id — the
+    // authoritative link set by auto/manual connection). Used by the attribute
+    // panel to list "which meters does this pipe have".
+    getForPipe: async function (pipeId) {
+      if (!pipeId) return [];
+      var sb = GIS.sb();
+      return GIS._unwrap(
+        await sb.from('meters')
+          .select('id, arad_meter_id, customer_id, consumption, last_reading, status, asset_code, connection_type, connection_distance_m, connection_ambiguous')
+          .eq('connected_pipe_id', pipeId), 'load pipe meters') || [];
+    },
+
     // Import / upsert meters. `data` = array of raw records (CSV/JSON parsed).
     // Admin only (RLS). Returns { inserted, updated, total, skipped }.
     // Rows with no מספר מונה (arad_meter_id) are skipped rather than failing the

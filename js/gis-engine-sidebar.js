@@ -413,11 +413,40 @@ function nearestVillage(lng, lat) {
   return bestD <= 0.06 ? best : null;
 }
 
+// Fill colour by connection status — so a meter's connection is VISIBLE the
+// moment its layer is shown, and persists across refresh (read from the DB).
+function meterFill(p) {
+  if (p && p.connection_type === 'MANUAL') return '#2563eb'; // blue  = manual
+  if (p && p.connection_type === 'AUTO')   return '#16a34a'; // green = auto
+  if (p && p.connection_type === 'NONE')   return '#f59e0b'; // amber = unconnected (flagged)
+  return METER_COLOR;                                        // unknown (pre-connect)
+}
+
+// A meter layer = the meter markers (click → full attribute panel) PLUS, for
+// connected meters, a thin line to the pipe (the connection). Lines are
+// non-interactive so they never block clicks on pipes/meters underneath.
 function buildMeterLayer(feats) {
-  return L.geoJSON({ type: 'FeatureCollection', features: feats }, {
-    pointToLayer: function (f, ll) { return L.circleMarker(ll, { radius: 5, color: '#fff', weight: 1.2, fillColor: METER_COLOR, fillOpacity: .9 }); },
-    onEachFeature: function (f, lf) { lf.bindPopup(meterPopup(f)); }
+  var grp = L.layerGroup();
+  (feats || []).forEach(function (f) {
+    var c = f.geometry && f.geometry.coordinates; if (!c) return;
+    var p = f.properties || {};
+    var fill = meterFill(p);
+    if ((p.connection_type === 'AUTO' || p.connection_type === 'MANUAL') &&
+        p.connection_point && p.connection_point.coordinates) {
+      var sc = p.connection_point.coordinates;
+      L.polyline([[c[1], c[0]], [sc[1], sc[0]]], {
+        color: fill, weight: 2, opacity: 0.7, interactive: false,
+        dashArray: p.connection_ambiguous ? '4 4' : null
+      }).addTo(grp);
+    }
+    var mk = L.circleMarker([c[1], c[0]], { radius: 5, color: '#fff', weight: 1.2, fillColor: fill, fillOpacity: .95 });
+    mk.on('click', function () {
+      if (window.GISPanel && GISPanel.openMeter) GISPanel.openMeter(f);
+      else mk.bindPopup(meterPopup(f)).openPopup();
+    });
+    mk.addTo(grp);
   });
+  return grp;
 }
 
 function meterPopup(f) {

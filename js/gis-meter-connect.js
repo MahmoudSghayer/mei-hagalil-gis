@@ -216,13 +216,13 @@
         var sc = p.connection_point.coordinates;
         var color = type === 'MANUAL' ? '#2563eb' : '#16a34a';
         L.polyline([[mc[1], mc[0]], [sc[1], sc[0]]], {
-          pane: 'gisMeterConn', color: color, weight: 2.5, opacity: 0.9,
+          pane: 'gisMeterConn', color: color, weight: 2.5, opacity: 0.9, interactive: false,
           dashArray: p.connection_ambiguous ? '4 4' : null
         }).addTo(grp);
-        L.circleMarker([sc[1], sc[0]], { pane: 'gisMeterConn', radius: 3, color: color, weight: 2, fillColor: '#fff', fillOpacity: 1 }).addTo(grp);
+        L.circleMarker([sc[1], sc[0]], { pane: 'gisMeterConn', radius: 3, color: color, weight: 2, fillColor: '#fff', fillOpacity: 1, interactive: false }).addTo(grp);
         nConn++;
       } else {
-        L.circleMarker([mc[1], mc[0]], { pane: 'gisMeterConn', radius: 6, color: '#b45309', weight: 2, fillColor: '#fbbf24', fillOpacity: 0.95 })
+        L.circleMarker([mc[1], mc[0]], { pane: 'gisMeterConn', radius: 6, color: '#b45309', weight: 2, fillColor: '#fbbf24', fillOpacity: 0.95, interactive: false })
           .bindTooltip('מונה ללא חיבור', { direction: 'top' }).addTo(grp);
         nNone++;
       }
@@ -409,6 +409,7 @@
     toggleConnectors: toggleConnectors,
     showConnectors: renderConnectors,
     editArm: editArm,
+    editMeter: openEditor,   // open the accept/change/remove editor for a meter feature
     clear: clearAll
   };
 })();
