@@ -102,24 +102,28 @@
     host.appendChild(el);
     if (window.L && L.DomEvent) { L.DomEvent.disableClickPropagation(el); L.DomEvent.disableScrollPropagation(el); }
     makeDraggable(el);
+    els[key] = { el: el, on: true, scale: 1 };
+    makeResizable(el, key);
     if (key === 'legend') wireLegend(el);
-    els[key] = { el: el, on: true };
-    observeResize(el, key);
     if (key === 'scale') updateScale();
   }
-  // Free drag-resize (CSS resize:both): scale the content to fill the box, so
-  // the legend / arrow / scale / title grow as the corner is dragged.
-  function observeResize(el, key) {
-    if (!window.ResizeObserver) return;
-    requestAnimationFrame(function () {
-      var baseW = el.offsetWidth || 1, baseH = el.offsetHeight || 1;
-      var ro = new ResizeObserver(function () {
-        var s = Math.min((el.offsetWidth || baseW) / baseW, (el.offsetHeight || baseH) / baseH);
-        s = Math.max(0.6, Math.min(5, s));
+  // Corner grip → drag to scale uniformly. The box hugs its content (width:
+  // max-content) so there is never empty space. Down/outward = bigger.
+  function makeResizable(el, key) {
+    var g = document.createElement('div'); g.className = 'ov-grip'; g.title = 'גרור לשינוי גודל';
+    el.appendChild(g);
+    g.addEventListener('mousedown', function (ev) {
+      ev.preventDefault(); ev.stopPropagation();
+      var sx = ev.clientX, sy = ev.clientY, s0 = (els[key] && els[key].scale) || 1;
+      function mv(e) {
+        var grow = (e.clientY - sy) + (sx - e.clientX);     // drag down + left (RTL outward) = larger
+        var s = Math.max(0.5, Math.min(6, s0 + grow / 170));
+        if (els[key]) els[key].scale = s;
         el.style.setProperty('--ov-scale', s);
         if (key === 'scale') updateScale();
-      });
-      ro.observe(el); el._ro = ro;
+      }
+      function up() { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); }
+      document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
     });
   }
   function toggleEl(key, on) {
@@ -164,10 +168,7 @@
 
   function makeDraggable(el) {
     el.addEventListener('mousedown', function (ev) {
-      if (ev.target.closest('input,select,button,[contenteditable="true"]')) return;
-      // leave the bottom corners free for the native resize handle
-      var rr = el.getBoundingClientRect();
-      if ((rr.bottom - ev.clientY) < 22 && ((ev.clientX - rr.left) < 22 || (rr.right - ev.clientX) < 22)) return;
+      if (ev.target.closest('input,select,button,[contenteditable="true"],.ov-grip')) return;
       ev.preventDefault(); ev.stopPropagation();
       var host = mapHost().getBoundingClientRect(), r = el.getBoundingClientRect();
       var baseLeft = r.left - host.left, baseTop = r.top - host.top, sx = ev.clientX, sy = ev.clientY;

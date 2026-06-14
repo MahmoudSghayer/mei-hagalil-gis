@@ -408,9 +408,10 @@ body.dark-basemap .gis-sym-label { color: #fff; text-shadow: 1px 1px 0 #000, -1p
 
 /* overlays sized in em off a per-element --ov-scale so the − / + control grows
    everything (icon, text, swatches) uniformly to fit larger map sheets */
-.gis-lay-ov { position: absolute; z-index: 800; background: rgba(255,255,255,0.96); border: 1px solid #0d3b5e; border-radius: 7px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); font-family: 'Rubik', sans-serif; direction: rtl; cursor: move; user-select: none; font-size: calc(13px * var(--ov-scale, 1)); resize: both; overflow: hidden; min-width: 60px; min-height: 28px; box-sizing: border-box; }
-/* resize-corner affordance (bottom-left for RTL) */
-.gis-lay-ov::after { content: ''; position: absolute; bottom: 3px; left: 3px; width: 9px; height: 9px; border-left: 2px solid #0d3b5e; border-bottom: 2px solid #0d3b5e; opacity: 0.45; pointer-events: none; }
+.gis-lay-ov { position: absolute; z-index: 800; background: rgba(255,255,255,0.96); border: 1px solid #0d3b5e; border-radius: 7px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); font-family: 'Rubik', sans-serif; direction: rtl; cursor: move; user-select: none; font-size: calc(13px * var(--ov-scale, 1)); white-space: nowrap; width: max-content; }
+/* corner grip → drag to scale (box hugs content, no empty space) */
+.gis-lay-ov .ov-grip { position: absolute; bottom: -3px; left: -3px; width: 16px; height: 16px; cursor: nesw-resize; z-index: 3; background: linear-gradient(45deg, #0d3b5e 42%, transparent 42%); border-radius: 0 0 0 6px; opacity: 0.55; }
+.gis-lay-ov .ov-grip:hover { opacity: 0.95; }
 .gis-lay-title { padding: 0.4em 1.2em; text-align: center; }
 .gis-lay-title .lt-t { font-size: 1.18em; font-weight: 800; color: #0d3b5e; line-height: 1.15; }
 .gis-lay-title .lt-m { font-size: 0.72em; color: #475569; margin-top: 1px; }
@@ -433,7 +434,7 @@ body.dark-basemap .gis-sym-label { color: #fff; text-shadow: 1px 1px 0 #000, -1p
 .gis-lay-scale { padding: 0.4em 0.7em; text-align: center; }
 .gis-lay-scale .ls-line { display: block; height: 0.55em; border: 2px solid #0d3b5e; border-top: none; margin: 0 auto; }
 .gis-lay-scale .ls-lbl { font-size: 0.82em; color: #0d3b5e; font-weight: 600; display: block; margin-top: 2px; }
-@media print { .gis-lay-ov { resize: none !important; overflow: visible !important; } .gis-lay-ov::after { display: none !important; } }
+@media print { .gis-lay-ov .ov-grip { display: none !important; } }
 
 /* native print: lock map size (JS), hide app chrome, keep map + layout overlays */
 @media print {
