@@ -87,6 +87,7 @@
     var queue    = [];          // pending jobs { key, bbox, z, prio }
     var running  = 0;
     var errors   = 0;           // tiles that failed (not counting aborts)
+    var truncCount = 0;         // cached tiles that hit the per-tile cap
     var dead     = false;
     var lastDesired = new Set();
 
@@ -97,6 +98,7 @@
         loading: running > 0 || queue.length > 0,
         pending: queue.length + running,
         errors: errors,
+        truncated: truncCount > 0,   // some tile returned == cap → data is clipped
         count: refs.size
       });
     }
@@ -130,7 +132,11 @@
           refs.set(id, { layers: ls, count: 1 });
         }
       }
-      tiles.set(key, { ids: ids, z: z, ts: Date.now() });
+      // A full tile means PostGIS hit the LIMIT and clipped — flag it so the UI
+      // can prompt "zoom in" instead of silently showing partial data.
+      var trunc = feats.length >= TILE_LIMIT;
+      tiles.set(key, { ids: ids, z: z, ts: Date.now(), trunc: trunc });
+      if (trunc) truncCount++;
     }
 
     // ── Feature cache: drop a tile, removing only features no live tile needs ──
@@ -145,6 +151,7 @@
           refs.delete(id);
         }
       });
+      if (t.trunc) truncCount--;
       tiles.delete(key);
     }
 
@@ -226,7 +233,7 @@
     // user actions, never on pan/zoom.
     function invalidate() {
       inflight.forEach(function (v) { v.ctrl.abort(); });
-      inflight.clear(); queue = []; errors = 0;
+      inflight.clear(); queue = []; errors = 0; truncCount = 0;
       group.clearLayers(); refs.clear(); tiles.clear();
       if (opts.onInvalidate) try { opts.onInvalidate(); } catch (e) {}
       update();

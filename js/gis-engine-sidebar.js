@@ -53,6 +53,7 @@ css.textContent = `
 #gis-eng-panel .ge-stat{display:inline-flex;align-items:center;min-width:12px;}
 #gis-eng-panel .ge-spin{width:11px;height:11px;border:2px solid #cbd5e1;border-top-color:#0d3b5e;border-radius:50%;animation:ge-spin .7s linear infinite;}
 #gis-eng-panel .ge-warn{color:#d97706;font-size:12px;cursor:help;}
+#gis-eng-panel .ge-more{color:#2563eb;font-size:12px;cursor:help;}
 @keyframes ge-spin{to{transform:rotate(360deg);}}
 #gis-eng-panel .ge-empty{font-size:11px;color:#94a3b8;padding:8px 2px;line-height:1.5;}
 #gis-eng-panel .ge-refresh{background:none;border:none;cursor:pointer;color:#64748b;font-size:13px;}
@@ -109,6 +110,7 @@ function createLoader(layer) {
       var html = '';
       if (s.loading) html += '<span class="ge-spin" title="טוען אריחים…"></span>';
       else if (s.errors) html += '<span class="ge-warn" title="חלק מהאריחים נכשלו בטעינה — הזז מעט את המפה כדי לנסות שוב">⚠</span>';
+      else if (s.truncated) html += '<span class="ge-more" title="יש יותר פיצ\'רים מהמוצג באזור זה — התקרב כדי לראות את כולם">⊕</span>';
       layer._statEl.innerHTML = html;
     },
     prefetchRing: 1

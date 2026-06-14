@@ -1,109 +1,132 @@
 /* ══════════════════════════════════════════════════════════════════════════
-   Print / Map Layout — ArcGIS-style map sheet.
-   Produces a printable map sheet of the current extent with a title block,
-   legend, scale and north arrow. Uses leaflet-easyPrint when available (it
-   pre-loads tiles so the print is not blank); falls back to native window.print.
-
-   NOTE: in the browser print dialog, enable "Background graphics" so tiles &
-   fills render. Self-contained IIFE; opens from the ribbon Share tab.
+   Print / Layout composer — ArcGIS-style map sheet.
+   Enter layout mode → a toolbar lets you toggle Title / Legend / North arrow /
+   Scale bar; each element is DRAGGABLE on the map. Prints exactly the current
+   extent (zoom/pan to frame it first). No external lib — native print with the
+   map size LOCKED so tiles never reflow/blank. Self-contained IIFE.
    ══════════════════════════════════════════════════════════════════════════ */
 (function () {
   'use strict';
 
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
-  function toast(m) { var t = document.getElementById('toast'); if (!t) return; t.textContent = m; t.className = 'show'; setTimeout(function () { t.className = ''; }, 2400); }
+  function toast(m) { var t = document.getElementById('toast'); if (!t) return; t.textContent = m; t.className = 'show'; setTimeout(function () { t.className = ''; }, 2600); }
+  function mapHost() { return window.gMap && window.gMap.getContainer(); }
 
-  var printer = null;
-  function ensurePrinter() {
-    if (printer) return printer;
-    if (!window.L || !L.easyPrint || !window.gMap) return null;
-    try {
-      printer = L.easyPrint({
-        hidden: true, hideControlContainer: true, exportOnly: false,
-        sizeModes: ['Current', 'A4Landscape', 'A4Portrait'], tileLayer: null, tileWait: 1500
-      }).addTo(window.gMap);
-    } catch (e) { printer = null; }
-    return printer;
+  var active = false, els = {}, moveHandler = null, orientStyle = null;
+
+  function enter() {
+    if (!window.gMap) { toast('המפה עדיין נטענת…'); return; }
+    if (active) { exit(); return; }
+    active = true;
+    buildBar();
+    ['title', 'legend', 'north', 'scale'].forEach(addEl);
+    moveHandler = function () { updateScale(); };
+    window.gMap.on('moveend zoomend', moveHandler);
+    toast('מצב פריסה: גרור רכיבים למיקום, מסגר את האזור, ואז הדפס');
   }
-
-  // ── on-map sheet overlays (captured in the print) ───────────────────────────
-  function injectOverlays(title, subtitle) {
-    cleanup();
-    var host = window.gMap.getContainer();
-    var date = new Date().toLocaleDateString('he-IL');
-    var scale = (document.getElementById('ags-scale') || {}).textContent || '';
-    var legend = (window.GISSymbology && window.GISSymbology.legendHTML) ? window.GISSymbology.legendHTML() : '';
-
-    var titleEl = document.createElement('div');
-    titleEl.className = 'gis-print-ov gis-print-title';
-    titleEl.innerHTML = '<div class="gpt-t">' + esc(title || 'מפת תשתית') + '</div>' +
-      '<div class="gpt-m">' + esc(subtitle || '') + (subtitle ? ' · ' : '') + date + ' · 💧 מי הגליל GIS</div>';
-    host.appendChild(titleEl);
-
-    if (legend) {
-      var leg = document.createElement('div');
-      leg.className = 'gis-print-ov gis-print-legend';
-      leg.innerHTML = '<div class="gpl-h">מקרא</div>' + legend;
-      host.appendChild(leg);
-    }
-
-    var ns = document.createElement('div');
-    ns.className = 'gis-print-ov gis-print-ns';
-    ns.innerHTML = '<div class="gpn-arrow">⬆</div><div class="gpn-n">צפון</div>' + (scale ? '<div class="gpn-scale">קנ״מ ' + esc(scale) + '</div>' : '');
-    host.appendChild(ns);
-  }
-  function cleanup() {
-    Array.prototype.slice.call(document.querySelectorAll('.gis-print-ov')).forEach(function (el) { el.remove(); });
+  function exit() {
+    active = false;
+    Object.keys(els).forEach(function (k) { if (els[k] && els[k].el) els[k].el.remove(); });
+    els = {};
+    var bar = document.getElementById('gis-layout-bar'); if (bar) bar.remove();
+    if (moveHandler && window.gMap) { window.gMap.off('moveend zoomend', moveHandler); moveHandler = null; }
     document.body.classList.remove('gis-printing');
   }
 
-  function doPrint(title, subtitle, sizeKey) {
-    if (!window.gMap) { toast('המפה עדיין נטענת…'); return; }
-    injectOverlays(title, subtitle);
-    var p = ensurePrinter();
-    if (p) {
-      // easyPrint restores the map itself; remove overlays shortly after.
-      try { p.printMap(sizeKey || 'CurrentSize', title || 'map'); }
-      catch (e) { fallback(); return; }
-      setTimeout(cleanup, 3000);
-    } else {
-      fallback();
-    }
-  }
-  function fallback() {
-    document.body.classList.add('gis-printing');
-    window.addEventListener('afterprint', cleanup, { once: true });
-    setTimeout(function () { window.print(); }, 200);
-    setTimeout(cleanup, 4000); // safety net if afterprint never fires
-  }
-
-  // ── dialog ──────────────────────────────────────────────────────────────────
-  function open() {
-    if (!window.gMap) { toast('המפה עדיין נטענת…'); return; }
-    if (document.getElementById('gis-print-dlg')) return;
-    var bg = document.createElement('div'); bg.className = 'gis-anly-bg'; bg.id = 'gis-print-dlg';
-    bg.innerHTML =
-      '<div class="gis-anly-dlg"><div class="gad-head">🖨️ גיליון מפה להדפסה<button class="gad-x">✕</button></div>' +
-      '<div class="gad-body">' +
-        '<div class="gad-row"><label>כותרת</label><input id="gp-title" class="gad-in" value="מפת תשתית מים"></div>' +
-        '<div class="gad-row"><label>כותרת משנה (אזור/כפר)</label><input id="gp-sub" class="gad-in" placeholder="לא חובה"></div>' +
-        '<div class="gad-row"><label>גודל</label><select id="gp-size" class="gad-in">' +
-          '<option value="A4Landscape">A4 לרוחב</option><option value="A4Portrait">A4 לאורך</option><option value="CurrentSize">תצוגה נוכחית</option>' +
-        '</select></div>' +
-        '<div style="font-size:11px;color:#94a3b8;line-height:1.5">💡 בתיבת ההדפסה של הדפדפן הפעל "גרפיקת רקע" כדי שהמפה תודפס. לשמירה כ-PDF בחר יעד "שמור כ-PDF".</div>' +
-      '</div>' +
-      '<div class="gad-foot"><button class="gad-ok">🖨️ הדפס</button><button class="gad-cancel">ביטול</button></div></div>';
-    document.body.appendChild(bg);
-    function close() { bg.remove(); }
-    bg.querySelector('.gad-x').onclick = close;
-    bg.querySelector('.gad-cancel').onclick = close;
-    bg.onclick = function (e) { if (e.target === bg) close(); };
-    bg.querySelector('.gad-ok').onclick = function () {
-      var title = bg.querySelector('#gp-title').value, sub = bg.querySelector('#gp-sub').value, size = bg.querySelector('#gp-size').value;
-      close();
-      setTimeout(function () { doPrint(title, sub, size); }, 150);
+  function buildBar() {
+    if (document.getElementById('gis-layout-bar')) return;
+    var bar = document.createElement('div'); bar.id = 'gis-layout-bar';
+    bar.innerHTML =
+      '<span class="glb-title">🖨️ פריסת הדפסה</span>' +
+      '<input id="glb-titletext" class="glb-in" value="מפת תשתית מים" title="כותרת">' +
+      '<label class="glb-tg"><input type="checkbox" data-el="title" checked> כותרת</label>' +
+      '<label class="glb-tg"><input type="checkbox" data-el="legend" checked> מקרא</label>' +
+      '<label class="glb-tg"><input type="checkbox" data-el="north" checked> חץ צפון</label>' +
+      '<label class="glb-tg"><input type="checkbox" data-el="scale" checked> קנה מידה</label>' +
+      '<select id="glb-orient" class="glb-in"><option value="landscape">לרוחב</option><option value="portrait">לאורך</option></select>' +
+      '<button class="glb-print">🖨️ הדפס</button>' +
+      '<button class="glb-exit">יציאה</button>';
+    document.body.appendChild(bar);
+    Array.prototype.forEach.call(bar.querySelectorAll('input[data-el]'), function (cb) {
+      cb.onchange = function () { toggleEl(cb.getAttribute('data-el'), cb.checked); };
+    });
+    bar.querySelector('#glb-titletext').oninput = function (e) {
+      if (els.title && els.title.el) { var t = els.title.el.querySelector('.lt-t'); if (t) t.textContent = e.target.value; }
     };
+    bar.querySelector('#glb-orient').onchange = function (e) { setOrient(e.target.value); };
+    bar.querySelector('.glb-print').onclick = doPrint;
+    bar.querySelector('.glb-exit').onclick = exit;
+    setOrient('landscape');
+  }
+  function setOrient(o) {
+    if (!orientStyle) { orientStyle = document.createElement('style'); document.head.appendChild(orientStyle); }
+    orientStyle.textContent = '@media print{@page{size:' + o + ';margin:8mm}}';
   }
 
-  window.GISPrint = { open: open };
+  function addEl(key) {
+    var host = mapHost(); if (!host) return;
+    var el = document.createElement('div'); el.className = 'gis-lay-ov gis-lay-' + key;
+    if (key === 'title') {
+      var tt = (document.getElementById('glb-titletext') || {}).value || 'מפת תשתית מים';
+      el.innerHTML = '<div class="lt-t">' + esc(tt) + '</div><div class="lt-m">💧 מי הגליל GIS · ' + new Date().toLocaleDateString('he-IL') + '</div>';
+      el.style.top = '10px'; el.style.left = '50%'; el.style.transform = 'translateX(-50%)';
+    } else if (key === 'legend') {
+      var lg = (window.GISSymbology && window.GISSymbology.legendHTML) ? window.GISSymbology.legendHTML() : '<div style="font-size:11px;color:#94a3b8">הדלק שכבות למקרא</div>';
+      el.innerHTML = '<div class="ll-h">מקרא</div>' + lg;
+      el.style.bottom = '28px'; el.style.left = '14px';
+    } else if (key === 'north') {
+      el.innerHTML = '<div class="ln-a">⬆</div><div class="ln-n">צפון</div>';
+      el.style.top = '70px'; el.style.right = '14px';
+    } else if (key === 'scale') {
+      el.innerHTML = '<span class="ls-line"></span><span class="ls-lbl">—</span>';
+      el.style.bottom = '28px'; el.style.right = '14px';
+    }
+    host.appendChild(el);
+    if (window.L && L.DomEvent) { L.DomEvent.disableClickPropagation(el); L.DomEvent.disableScrollPropagation(el); }
+    makeDraggable(el);
+    els[key] = { el: el, on: true };
+    if (key === 'scale') updateScale();
+  }
+  function toggleEl(key, on) {
+    if (on) { if (!els[key] || !els[key].el) addEl(key); else els[key].el.style.display = ''; }
+    else if (els[key] && els[key].el) els[key].el.style.display = 'none';
+  }
+
+  function updateScale() {
+    if (!els.scale || !els.scale.el || !window.gMap) return;
+    var c = window.gMap.getCenter();
+    var mpp = 40075016.686 * Math.abs(Math.cos(c.lat * Math.PI / 180)) / Math.pow(2, window.gMap.getZoom() + 8);
+    var target = 110 * mpp, pows = [1, 2, 5], d = 1;
+    outer: for (var e = 0; e < 8; e++) { for (var i = 0; i < 3; i++) { d = pows[i] * Math.pow(10, e); if (d >= target) break outer; } }
+    var px = Math.round(d / mpp), lbl = d >= 1000 ? (d / 1000) + ' ק"מ' : d + ' מ׳';
+    var line = els.scale.el.querySelector('.ls-line'), lab = els.scale.el.querySelector('.ls-lbl');
+    if (line) line.style.width = px + 'px'; if (lab) lab.textContent = lbl;
+  }
+
+  function makeDraggable(el) {
+    el.addEventListener('mousedown', function (ev) {
+      if (ev.target.closest('input,select,button')) return;
+      ev.preventDefault(); ev.stopPropagation();
+      var host = mapHost().getBoundingClientRect(), r = el.getBoundingClientRect();
+      var baseLeft = r.left - host.left, baseTop = r.top - host.top, sx = ev.clientX, sy = ev.clientY;
+      el.style.left = baseLeft + 'px'; el.style.top = baseTop + 'px'; el.style.right = 'auto'; el.style.bottom = 'auto'; el.style.transform = 'none';
+      function mv(e) { el.style.left = (baseLeft + e.clientX - sx) + 'px'; el.style.top = (baseTop + e.clientY - sy) + 'px'; }
+      function up() { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); }
+      document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
+    });
+  }
+
+  // Lock the map's pixel size so hiding the chrome doesn't reflow/blank the tiles.
+  function doPrint() {
+    var m = document.getElementById('map'); if (!m) { window.print(); return; }
+    var w = m.offsetWidth, h = m.offsetHeight;
+    m.style.width = w + 'px'; m.style.height = h + 'px';
+    document.body.classList.add('gis-printing');
+    function restore() { m.style.width = ''; m.style.height = ''; document.body.classList.remove('gis-printing'); }
+    window.addEventListener('afterprint', restore, { once: true });
+    setTimeout(function () { window.print(); }, 150);
+    setTimeout(restore, 6000); // safety net if afterprint never fires
+  }
+
+  window.GISPrint = { open: enter, exit: exit };
 })();
