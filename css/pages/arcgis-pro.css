@@ -201,10 +201,25 @@
 #statusbar > span:not(#coords):not(#ags-scale-wrap):not(#ags-proj):not(#ags-statusstats) { opacity: 0.45; }
 
 /* ── Relocated top-panel controls → ArcGIS title bar above the ribbon tabs ── */
-#ags-titlebar { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px; background: var(--ags-ribbon-bg-2); border-bottom: 1px solid var(--ags-ribbon-border); }
-#ags-logo { font-size: 13px; font-weight: 700; color: var(--ags-accent-dark); white-space: nowrap; letter-spacing: -0.2px; }
+#ags-titlebar { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 12px; background: var(--ags-ribbon-bg-2); border-bottom: 1px solid var(--ags-ribbon-border); }
+#ags-logo { flex: 1 1 0; min-width: 0; font-size: 13px; font-weight: 700; color: var(--ags-accent-dark); white-space: nowrap; letter-spacing: -0.2px; }
 #ags-logo span { color: var(--ags-accent); }
-#ags-account { margin-inline-start: auto; display: flex; align-items: center; gap: 7px; }
+#ags-account { flex: 1 1 0; justify-content: flex-end; display: flex; align-items: center; gap: 7px; }
+
+/* search box docked into the title bar (no longer floating over the map) */
+#ags-titlebar #search-bar {
+  position: relative; top: auto; right: auto; left: auto; transform: none;
+  flex: 0 1 460px; width: 460px; max-width: 44vw; min-width: 220px;
+  height: 30px; overflow: visible;
+  background: #fff; border: 1px solid var(--ags-ribbon-border);
+  border-radius: 8px; box-shadow: none;
+}
+#ags-titlebar #search-input { padding: 6px 12px; font-size: 12.5px; }
+#ags-titlebar #search-results { top: calc(100% + 5px); }
+#ags-titlebar #search-help {
+  position: absolute; top: calc(100% + 6px); right: 0; left: auto; transform: none;
+  width: 440px; max-width: 80vw;
+}
 #ags-account #realtime-dot { width: 8px; height: 8px; }
 #ags-account .admin-link {
   background: #e9ebee; border: 1px solid var(--ags-ribbon-border); color: var(--ags-accent-dark);

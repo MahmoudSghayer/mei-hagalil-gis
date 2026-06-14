@@ -354,6 +354,25 @@
   // Dissolve the old top panel: move its controls into the ribbon strip + status
   // bar (moving the NODES keeps every id, so index.js/auth.js wiring is intact),
   // then hide the now-empty bar.
+  // Move the floating #search-bar (injected on #map-wrap by search-feature.js)
+  // into the title bar, centered between the logo and the account cluster, so it
+  // no longer hovers over the map. The bar injects asynchronously → retry briefly.
+  function dockSearch(tries) {
+    var title = $('ags-titlebar');
+    if (!title) { return; }
+    var bar = $('search-bar');
+    if (!bar) {
+      if ((tries || 0) < 30) { setTimeout(function () { dockSearch((tries || 0) + 1); }, 200); }
+      return;
+    }
+    if (bar.dataset.docked) { return; }
+    var account = $('ags-account');
+    title.insertBefore(bar, account || null);
+    var help = $('search-help');
+    if (help) { bar.appendChild(help); }   // keep the help popover anchored to the bar
+    bar.dataset.docked = '1';
+  }
+
   function relocateTopbar() {
     var topbar = $('topbar'); if (!topbar || topbar.dataset.relocated) return;
     var ribbon = $('ags-ribbon'), statusbar = $('statusbar');
@@ -367,6 +386,7 @@
       var ua = topbar.querySelector('.user-area'); if (ua) cluster.appendChild(ua);
       title.appendChild(cluster);
       ribbon.insertBefore(title, ribbon.firstChild);
+      dockSearch(0);   // pull the floating map search box up into the title bar
     }
 
     // incident stats → status bar. SKIP the coords stat: #coords already shows
