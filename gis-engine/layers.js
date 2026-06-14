@@ -9,6 +9,15 @@
 
   GIS.layers = {
 
+    // Lightweight layer list — id, name, geometry_type, color only (NO fields
+    // join). Use for the Contents pane / pickers that never read layer.fields,
+    // so first paint doesn't pull every field of every layer.
+    list: async function () {
+      var sb = GIS.sb();
+      return GIS._unwrap(
+        await sb.from('layers').select('id, name, geometry_type, color').order('name'), 'load layers') || [];
+    },
+
     // List all layers (each enriched with its field definitions).
     getLayers: async function () {
       var sb = GIS.sb();

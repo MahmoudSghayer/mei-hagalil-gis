@@ -247,7 +247,7 @@ async function render() {
   var body = document.getElementById('ge-body');
   body.innerHTML = '<div class="ge-empty">טוען…</div>';
   try {
-    var layers = await GIS.layers.getLayers();
+    var layers = await GIS.layers.list();   // lightweight: no per-layer fields join
     document.getElementById('ge-count').textContent = layers.length;
     // קבץ לפי כפר (שם השכבה: "<כפר> · <category>")
     var groups = {}, order = [];
