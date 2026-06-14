@@ -209,12 +209,32 @@
     var center = window.gMap.getCenter(), zoom = window.gMap.getZoom(), snap = window.gMap.options.zoomSnap;
     var saved = { position: m.style.position, top: m.style.top, left: m.style.left, width: m.style.width, height: m.style.height, zIndex: m.style.zIndex };
 
+    // capture each overlay's position as a fraction of the map, and its inline
+    // styles, so we can keep WYSIWYG placement across the resize then restore.
+    var hostRect = m.getBoundingClientRect(), ovSaved = {};
+    Object.keys(els).forEach(function (k) {
+      var e = els[k] && els[k].el; if (!e) return;
+      ovSaved[k] = { left: e.style.left, top: e.style.top, right: e.style.right, bottom: e.style.bottom, transform: e.style.transform };
+      els[k]._fx = els[k]._fy = null;
+      if (e.style.display === 'none') return;
+      var r = e.getBoundingClientRect();
+      els[k]._fx = (r.left - hostRect.left) / hostRect.width;
+      els[k]._fy = (r.top - hostRect.top) / hostRect.height;
+    });
+
     document.body.classList.add('gis-printing');
     m.style.position = 'fixed'; m.style.top = '0'; m.style.left = '0';
     m.style.width = W + 'px'; m.style.height = H + 'px'; m.style.zIndex = '99990';
     window.gMap.invalidateSize(true);
     window.gMap.options.zoomSnap = 0;                       // fit the area tightly into the paper canvas
     window.gMap.fitBounds(target, { padding: [0, 0], animate: false });
+
+    // re-place overlays at the same relative spot on the paper canvas
+    Object.keys(els).forEach(function (k) {
+      var e = els[k] && els[k].el; if (!e || els[k]._fx == null) return;
+      e.style.left = Math.round(els[k]._fx * W) + 'px'; e.style.top = Math.round(els[k]._fy * H) + 'px';
+      e.style.right = 'auto'; e.style.bottom = 'auto'; e.style.transform = 'none';
+    });
     toast('מכין הדפסה — בחר "התאם לעמוד" (Fit to page) בתיבת ההדפסה');
 
     var done = false;
@@ -222,6 +242,10 @@
       if (done) return; done = true;
       m.style.position = saved.position; m.style.top = saved.top; m.style.left = saved.left;
       m.style.width = saved.width; m.style.height = saved.height; m.style.zIndex = saved.zIndex;
+      Object.keys(ovSaved).forEach(function (k) {
+        var e = els[k] && els[k].el; if (!e) return; var s = ovSaved[k];
+        e.style.left = s.left; e.style.top = s.top; e.style.right = s.right; e.style.bottom = s.bottom; e.style.transform = s.transform;
+      });
       document.body.classList.remove('gis-printing');
       window.gMap.options.zoomSnap = snap; window.gMap.invalidateSize(true);
       window.gMap.setView(center, zoom, { animate: false });
