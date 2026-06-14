@@ -99,11 +99,24 @@
       el.innerHTML = '<span class="ls-line"></span><span class="ls-lbl">—</span>';
       el.style.bottom = '24px'; el.style.right = '12px';
     }
+    // size control (− / +) — scales the whole element via --ov-scale
+    var sz = document.createElement('div'); sz.className = 'ov-size';
+    sz.innerHTML = '<button class="ov-b ov-minus" title="הקטן">−</button><button class="ov-b ov-plus" title="הגדל">+</button>';
+    el.appendChild(sz);
+
     host.appendChild(el);
     if (window.L && L.DomEvent) { L.DomEvent.disableClickPropagation(el); L.DomEvent.disableScrollPropagation(el); }
     makeDraggable(el);
     if (key === 'legend') wireLegend(el);
-    els[key] = { el: el, on: true };
+    els[key] = { el: el, on: true, scale: 1 };
+    sz.querySelector('.ov-minus').onclick = function (e) { e.stopPropagation(); setScale(key, -0.2); };
+    sz.querySelector('.ov-plus').onclick = function (e) { e.stopPropagation(); setScale(key, 0.2); };
+    if (key === 'scale') updateScale();
+  }
+  function setScale(key, d) {
+    var o = els[key]; if (!o || !o.el) return;
+    o.scale = Math.max(0.6, Math.min(3.2, (o.scale || 1) + d));
+    o.el.style.setProperty('--ov-scale', o.scale);
     if (key === 'scale') updateScale();
   }
   function toggleEl(key, on) {
@@ -114,9 +127,9 @@
   // ── dynamic, editable legend ───────────────────────────────────────────────────
   function swatch(l) {
     var color = l.color || (l.geometry_type === 'Point' ? '#0d3b5e' : l.geometry_type === 'Polygon' ? '#0e7490' : '#1a7fc1');
-    if (l.geometry_type === 'Point') return '<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:' + color + ';border:1.5px solid #fff;box-shadow:0 0 0 1px ' + color + '"></span>';
-    if (l.geometry_type === 'Polygon') return '<span style="display:inline-block;width:15px;height:10px;background:' + color + '33;border:1.5px solid ' + color + '"></span>';
-    return '<span style="display:inline-block;width:20px;height:0;border-top:3px solid ' + color + ';vertical-align:middle"></span>';
+    if (l.geometry_type === 'Point') return '<span style="display:inline-block;width:0.95em;height:0.95em;border-radius:50%;background:' + color + ';border:1.5px solid #fff;box-shadow:0 0 0 1px ' + color + '"></span>';
+    if (l.geometry_type === 'Polygon') return '<span style="display:inline-block;width:1.2em;height:0.8em;background:' + color + '33;border:1.5px solid ' + color + '"></span>';
+    return '<span style="display:inline-block;width:1.6em;height:0;border-top:0.22em solid ' + color + ';vertical-align:middle"></span>';
   }
   function legendInner() {
     var layers = (window.GISEngineSidebar && window.GISEngineSidebar.activeLayers) ? window.GISEngineSidebar.activeLayers() : [];
