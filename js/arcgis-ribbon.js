@@ -90,9 +90,13 @@
       { label: 'סטטיסטיקה', cmds: [
         { ic: '📊', lb: 'לוח נתונים', size: 'lg', act: function () { clickFab('stats-fab'); } }
       ] },
-      { label: 'גאו-עיבוד', cmds: [
-        { ic: '⭕', lb: 'חיץ', size: 'lg', act: soon, disabled: true },
-        { ic: '🎯', lb: 'בחירה מרחבית', size: 'lg', act: soon, disabled: true }
+      { label: 'ניתוח מרחבי', cmds: [
+        { ic: '🔎', lb: 'בחירה לפי תכונה', size: 'lg', act: anlyAttr },
+        { col: [
+          { ic: '🎯', lb: 'בחירה לפי מיקום', act: anlyLoc },
+          { ic: '⭕', lb: 'חיץ (Buffer)',   act: anlyBuffer },
+          { ic: '🧹', lb: 'נקה בחירה',       act: anlyClear }
+        ] }
       ] }
     ],
 
@@ -140,6 +144,10 @@
   function traceClear() { if (window.GISTrace) { window.GISTrace.clear(); } }
   function toggleLegend() { if (window.GISSymbology) { window.GISSymbology.toggleLegend(); } else { toast('מנוע הסימבולוגיה עדיין נטען…'); } }
   function toggleLabels() { if (window.GISSymbology) { window.GISSymbology.toggleLabels(); } else { toast('מנוע הסימבולוגיה עדיין נטען…'); } }
+  function anlyAttr() { if (window.GISAnalysis) { window.GISAnalysis.selectByAttribute(); } else { toast('מנוע הניתוח עדיין נטען…'); } }
+  function anlyLoc() { if (window.GISAnalysis) { window.GISAnalysis.selectByLocation(); } else { toast('מנוע הניתוח עדיין נטען…'); } }
+  function anlyBuffer() { if (window.GISAnalysis) { window.GISAnalysis.buffer(); } else { toast('מנוע הניתוח עדיין נטען…'); } }
+  function anlyClear() { if (window.GISAnalysis) { window.GISAnalysis.clear(); } }
   function focusSearch() {
     var inp = document.querySelector('#search-bar input');
     if (inp) { inp.focus(); inp.select && inp.select(); }

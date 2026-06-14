@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css"/>
   <link rel="stylesheet" href="css/shared.css"/>
   <link rel="stylesheet" href="css/pages/index.css"/>
-  <link rel="stylesheet" href="css/pages/arcgis-pro.css?v=3"/>
+  <link rel="stylesheet" href="css/pages/arcgis-pro.css?v=4"/>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
   <script defer src="js/auth.js"></script>
 </head>
@@ -194,6 +194,7 @@
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
 <script defer src="js/motion-utils.js"></script>
 <script defer src="js/measure-tools.js"></script>
 <script defer src="js/pages/index.js?v=9"></script>
@@ -221,7 +222,9 @@
 <script defer src="js/gis-engine-sidebar.js?v=4"></script>
 <!-- Network trace (Phase 2): client-side connectivity graph + valve isolation -->
 <script defer src="js/gis-network-trace.js?v=1"></script>
+<!-- Analysis tools: buffer + select by attribute/location (needs Turf) -->
+<script defer src="js/gis-analysis.js?v=1"></script>
 <!-- ArcGIS Pro UI shell (Phase 1): ribbon + Contents pane + scale status bar -->
-<script defer src="js/arcgis-ribbon.js?v=4"></script>
+<script defer src="js/arcgis-ribbon.js?v=5"></script>
 </body>
 </html>
