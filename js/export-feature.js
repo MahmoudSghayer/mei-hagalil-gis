@@ -50,7 +50,8 @@ var gExp = {
   loading: false,     // building the layer list (engine layers + head counts)
   loaded: false,      // layer model built this session
   loadError: null,
-  layers: {}          // catId -> { label, count, visible, selected, layerIds:[{id,village}] }
+  layers: {},         // catId -> { label, count, visible, selected, layerIds:[{id,village}] }
+  seed: null          // when set (features[]), export this fixed set from the FORMAT step
 };
 
 var gRect = null, gDrawing = false, gDrawStart = null, gDrawTemp = null;
@@ -185,6 +186,7 @@ function openExportModal() {
   gExp.step = 1;
   gExp.busy = false;
   gExp.loadError = null;
+  gExp.seed = null;                 // normal flow (FAB) — category selection, not a seeded set
   document.getElementById('exp-modal').classList.add('open');
 
   if (gExp.loaded) { renderWizard(); return; }
@@ -202,6 +204,20 @@ function openExportModal() {
 }
 function closeExportModal() { document.getElementById('exp-modal').classList.remove('open'); }
 window.closeExportModal = closeExportModal;
+
+// Seed the wizard with a fixed feature set (e.g. the current selection) and open
+// at the FORMAT step — skips category selection; expRun exports gExp.seed directly.
+function openForFeatures(features) {
+  if (!window.gMap) { alert('המפה עדיין לא נטענה'); return; }
+  gExp.seed = (features || []).slice();
+  if (!gExp.seed.length) { alert('אין אובייקטים בבחירה'); return; }
+  gExp.scope = 'all';
+  gExp.busy = false; gExp.loadError = null;
+  gExp.step = 2;                    // start at format selection
+  document.getElementById('exp-modal').classList.add('open');
+  renderWizard();
+}
+window.GISExport = { openForFeatures: openForFeatures };
 
 // Simple bounded-concurrency pool over `items`, running `fn(item)` (returns a Promise).
 function runPool(items, concurrency, fn) {
@@ -371,6 +387,15 @@ function step2HTML() {
 
 // Step 3 — review summary (rendered from gExp only)
 function step3HTML() {
+  if (gExp.seed) {
+    var Fs = FORMATS[gExp.format] || { label: gExp.format };
+    return '<div class="exp-sec">סיכום ייצוא</div>' +
+      '<div class="exp-sum">' +
+        '<div class="exp-sum-row"><span>מקור</span><span class="v">בחירה</span></div>' +
+        '<div class="exp-sum-row exp-sum-total"><span>סה"כ אובייקטים</span><span class="v">' + fmtNum(gExp.seed.length) + '</span></div>' +
+        '<div class="exp-sum-row"><span>פורמט</span><span class="v">' + Fs.label + '</span></div>' +
+      '</div>';
+  }
   var cats = selectedCats(), total = 0;
   var detail = cats.map(function (c) {
     var L = gExp.layers[c];
@@ -400,7 +425,8 @@ function step4HTML() {
 function footHTML() {
   if (gExp.step === 4) return '';  // footer for step 4 is managed by finishGen()
   var s2 = gExp.step;
-  var left = s2 === 1
+  var atFloor = (s2 === 1) || (gExp.seed && s2 === 2);   // seeded mode has no step-1 to go back to
+  var left = atFloor
     ? '<button class="exp-btn exp-btn-secondary" onclick="closeExportModal()">ביטול</button>'
     : '<button class="exp-btn exp-btn-secondary" onclick="expBack()">→ הקודם</button>';
   var right;
@@ -432,6 +458,16 @@ window.expBackTo3 = function () { gExp.step = 3; renderWizard(); };
 
 // ── EXPORT RUN ────────────────────────────────────────────────────────────────
 window.expRun = function () {
+  // Seeded mode (export a fixed selection): use gExp.seed, no category fetch.
+  if (gExp.seed) {
+    var seedF = gExp.seed;
+    if (!seedF.length) { alert('אין אובייקטים בבחירה'); return; }
+    if (gExp.format === 'dwg') { closeExportModal(); generateAndDownload(seedF); return; }
+    gExp.step = 4; gExp.busy = true; renderWizard();
+    setGenMsg('מייצא…');
+    setTimeout(function () { generateAndDownload(seedF); }, 30);
+    return;
+  }
   var cats = selectedCats();
   if (!cats.length) { alert('בחר לפחות שכבה אחת'); return; }
 

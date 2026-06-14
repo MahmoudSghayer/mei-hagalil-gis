@@ -83,7 +83,7 @@ document.addEventListener('keydown', function (e) {
 // ── מצב ───────────────────────────────────────────────────────────────────────
 var state = { feature: null, fields: [], role: null, editing: false, sortKey: 'k', sortDir: 1, filter: '' };
 
-function close() { panel.classList.remove('open'); state.editing = false; }
+function close() { panel.classList.remove('open'); state.editing = false; if (window.GISIdentify) GISIdentify.clear(); }
 
 // ── API ציבורי ───────────────────────────────────────────────────────────────
 var GISPanel = {

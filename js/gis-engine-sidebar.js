@@ -197,6 +197,7 @@ function hideOldPanel() {
 }
 
 function openPanelFor(f, layer) {
+  if (window.GISIdentify) GISIdentify.highlight(f);
   if (window.GISPanel) window.GISPanel.open(f, { layerId: layer.id, sub: layer.name.split(' · ')[0] });
   else if (window.GISTable) GISTable.openLayer(layer.id, f.properties && f.properties.asset_code, { title: '📋 ' + catLabel(layer._cat), sub: layer.name.split(' · ')[0] });
 }

@@ -82,6 +82,9 @@
       '<div class="gac-sub">ישויות נבחרו' + (state.selection && state.selection.name ? ' · ' + esc(state.selection.name) : '') + '</div>' +
       '<div class="gac-acts">' +
         '<button class="gac-btn" id="gac-table">📋 טבלה</button>' +
+        '<button class="gac-btn" id="gac-stats">📊 סטטיסטיקה</button>' +
+        '<button class="gac-btn" id="gac-export">⬇ ייצוא בחירה</button>' +
+        '<button class="gac-btn" id="gac-calc">ƒ חשב שדה</button>' +
         '<button class="gac-btn ghost" id="gac-clear">נקה</button>' +
       '</div>';
     document.body.appendChild(c);
@@ -92,6 +95,9 @@
         window.GISTable.openLayer(state.selection.layerId, null, { title: '📋 ' + (state.selection.name || ''), sub: 'בחירה' });
       } else { toast('אין טבלה זמינה לשכבה זו'); }
     };
+    c.querySelector('#gac-stats').onclick = statsDialog;
+    c.querySelector('#gac-export').onclick = exportSelection;
+    c.querySelector('#gac-calc').onclick = calcFieldDialog;
   }
 
   // ── dialog framework ─────────────────────────────────────────────────────────
@@ -245,6 +251,127 @@
     setSelection(res.target, res.targetName, matches);
     toast(matches.length.toLocaleString('he-IL') + ' ישויות נבחרו');
   }
+
+  // ── 4) Statistics on the selection (count/sum/avg/min/max of a field) ─────────
+  // numeric fields: prefer the layer schema (int/float), else derive from values.
+  function deriveNumeric(features) {
+    var num = {}, seen = {};
+    (features || []).slice(0, 300).forEach(function (f) {
+      var p = f.properties || {};
+      Object.keys(p).forEach(function (k) {
+        if (/^_/.test(k)) return;
+        var v = p[k]; if (v === '' || v == null) return;
+        seen[k] = (seen[k] || 0) + 1;
+        if (!isNaN(parseFloat(v)) && isFinite(v)) num[k] = (num[k] || 0) + 1;
+      });
+    });
+    return Object.keys(num).filter(function (k) { return num[k] >= (seen[k] || 1) * 0.6; });
+  }
+  async function numericFields(sel) {
+    var names = [];
+    try {
+      var defs = await GIS.fields.getFields(sel.layerId);
+      names = (defs || []).filter(function (d) { return d.type === 'int' || d.type === 'float'; }).map(function (d) { return d.name; });
+    } catch (e) {}
+    if (!names.length) names = deriveNumeric(sel.features);
+    return names;
+  }
+
+  async function statsDialog() {
+    var sel = state.selection;
+    if (!sel || !sel.features.length) { toast('אין בחירה'); return; }
+    var nums = await numericFields(sel);
+    if (!nums.length) { toast('אין שדות מספריים בבחירה'); return; }
+    var body = row('שדה', '<select id="gst-field" class="gad-in">' + nums.map(function (n) { return '<option>' + esc(n) + '</option>'; }).join('') + '</select>');
+    var res = await openDialog('📊 סטטיסטיקה', body, { collect: function (bg) { return { field: bg.querySelector('#gst-field').value }; } });
+    if (!res || !res.field) return;
+    var vals = sel.features.map(function (f) { return parseFloat((f.properties || {})[res.field]); }).filter(function (v) { return !isNaN(v); });
+    if (!vals.length) { toast('אין ערכים מספריים לשדה זה'); return; }
+    var sum = 0, min = Infinity, max = -Infinity;
+    vals.forEach(function (v) { sum += v; if (v < min) min = v; if (v > max) max = v; });
+    statsCard(res.field, { count: vals.length, total: sel.features.length, sum: sum, avg: sum / vals.length, min: min, max: max });
+  }
+  function fmtN(n) { return Number(n).toLocaleString('he-IL', { maximumFractionDigits: 2 }); }
+  function statCell(label, val) { return '<div class="gst-cell"><div class="gst-v">' + val + '</div><div class="gst-l">' + label + '</div></div>'; }
+  function statsCard(field, s) {
+    var ex = document.getElementById('gis-stats-card'); if (ex) ex.remove();
+    var c = document.createElement('div'); c.id = 'gis-stats-card';
+    c.innerHTML =
+      '<div class="gac-head"><span>📊 ' + esc(field) + '</span><button class="gac-x" title="סגור">✕</button></div>' +
+      '<div class="gst-grid">' +
+        statCell('כמות', fmtN(s.count)) + statCell('סכום', fmtN(s.sum)) + statCell('ממוצע', fmtN(s.avg)) +
+        statCell('מינ׳', fmtN(s.min)) + statCell('מקס׳', fmtN(s.max)) +
+      '</div>' +
+      (s.count < s.total ? '<div class="gst-note">' + fmtN(s.total - s.count) + ' ישויות ללא ערך מספרי לא נכללו</div>' : '');
+    document.body.appendChild(c);
+    c.querySelector('.gac-x').onclick = function () { c.remove(); };
+  }
+
+  // ── 5) Export the selection (hands the features to the export wizard) ─────────
+  function exportSelection() {
+    var sel = state.selection;
+    if (!sel || !sel.features.length) { toast('אין בחירה לייצוא'); return; }
+    // tag with the layer name so the export groups/labels them (non-destructive).
+    sel.features.forEach(function (f) { if (f.properties && f.properties._category == null) f.properties._category = sel.name || 'בחירה'; });
+    if (window.GISExport && window.GISExport.openForFeatures) window.GISExport.openForFeatures(sel.features);
+    else toast('מנוע הייצוא עדיין נטען…');
+  }
+
+  // ── 6) Calculate field across the selection (admin|engineer) ──────────────────
+  async function calcFieldDialog() {
+    var sel = state.selection;
+    if (!sel || !sel.features.length) { toast('אין בחירה'); return; }
+    var role = null; try { role = await GIS.currentRole(); } catch (e) {}
+    if (role !== 'admin' && role !== 'engineer') { toast('אין הרשאת עריכה', 'error'); return; }
+    var body =
+      row('שם שדה', '<input id="gcf-field" class="gad-in" placeholder="לדוגמה: age">') +
+      row('ביטוי', '<input id="gcf-expr" class="gad-in" placeholder="לדוגמה: 2026 - install_year">') +
+      '<div class="gad-note">הביטוי מחושב לכל ישות נבחרת ונשמר בשדה. אופרטורים: + − × ÷ % · פונקציות: length(geometry), round(), abs(), min(), max()…</div>';
+    var res = await openDialog('ƒ חשב שדה', body, {
+      collect: function (bg) { return { field: bg.querySelector('#gcf-field').value.trim(), expr: bg.querySelector('#gcf-expr').value.trim() }; }
+    });
+    if (!res || !res.field || !res.expr) return;
+    if (/^_/.test(res.field) || !/^[A-Za-z_][A-Za-z0-9_ ]*$/.test(res.field)) { toast('שם שדה לא תקין'); return; }
+    if (sel.features.length > 5000) { toast('בחירה גדולה מדי לחישוב (' + sel.features.length + ') — צמצם תחילה'); return; }
+    var vals;
+    try { vals = GIS.calculator.calculateField(sel.features, res.expr); }
+    catch (e) { toast('שגיאה בביטוי: ' + ((e && e.message) ? e.message.replace('[GIS] ', '') : e), 'error'); return; }
+    await applyCalc(sel, res.field.trim(), vals);
+  }
+  async function applyCalc(sel, field, vals) {
+    var feats = sel.features, CHUNK = 25, ok = 0, fail = 0;
+    toast('מעדכן ' + feats.length + ' ישויות…');
+    for (var i = 0; i < feats.length; i += CHUNK) {
+      var batch = feats.slice(i, i + CHUNK), base = i;
+      await Promise.all(batch.map(function (f, j) {
+        var id = f.id || (f.properties && f.properties.__id);
+        if (!id) { fail++; return Promise.resolve(); }
+        var props = Object.assign({}, f.properties);
+        ['__id', '__layer_id', '__edited_by', '__edited_at'].forEach(function (k) { delete props[k]; });
+        props[field] = vals[base + j];
+        return GIS.features.updateFeature(id, props).then(function () { ok++; f.properties[field] = vals[base + j]; }).catch(function () { fail++; });
+      }));
+    }
+    toast(ok.toLocaleString('he-IL') + ' עודכנו' + (fail ? ' · ' + fail + ' נכשלו' : ''));
+    if (window.GISEngineSidebar && GISEngineSidebar.reload) GISEngineSidebar.reload(sel.layerId);
+  }
+
+  (function injectCSS() {
+    if (document.getElementById('gis-anly-extra-style')) return;
+    var s = document.createElement('style'); s.id = 'gis-anly-extra-style';
+    s.textContent =
+      '#gis-anly-card .gac-acts{flex-wrap:wrap}' +
+      '#gis-stats-card{position:absolute;bottom:210px;left:14px;z-index:1200;background:#fff;border:1px solid #d6dbe2;' +
+      'border-radius:10px;box-shadow:0 6px 22px rgba(0,0,0,.18);padding:10px 12px;min-width:240px;max-width:300px;direction:rtl;text-align:right;font-family:inherit}' +
+      '#gis-stats-card .gac-head{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:13px;margin-bottom:6px}' +
+      '#gis-stats-card .gac-x{border:0;background:none;cursor:pointer;font-size:14px;color:#64748b}' +
+      '#gis-stats-card .gst-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}' +
+      '#gis-stats-card .gst-cell{background:#f1f5f9;border-radius:8px;padding:6px 4px;text-align:center}' +
+      '#gis-stats-card .gst-v{font-size:14px;font-weight:800;color:#0f172a;word-break:break-all}' +
+      '#gis-stats-card .gst-l{font-size:10px;color:#64748b}' +
+      '#gis-stats-card .gst-note{font-size:10.5px;color:#92400e;background:#fef3c7;border-radius:6px;padding:5px 7px;margin-top:7px}';
+    document.head.appendChild(s);
+  })();
 
   window.GISAnalysis = {
     selectByAttribute: selectByAttribute,

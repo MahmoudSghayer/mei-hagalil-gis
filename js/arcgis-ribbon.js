@@ -173,6 +173,7 @@
     if (window.GISMeterConnect && window.GISMeterConnect.resetMouse) { window.GISMeterConnect.resetMouse(); }
     if (window.GISTrace && window.GISTrace.clear) { window.GISTrace.clear(); }
     if (window.GISEdit && window.GISEdit.disarm) { window.GISEdit.disarm(); }
+    if (window.GISIdentify && window.GISIdentify.clear) { window.GISIdentify.clear(); }
     if (window.gMap) { window.gMap.getContainer().style.cursor = ''; }
   }
   function toggleBookmarks() { if (window.GISBookmarks) { window.GISBookmarks.toggle(); } else { toast('הסימניות עדיין נטענות…'); } }
