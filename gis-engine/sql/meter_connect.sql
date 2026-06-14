@@ -300,7 +300,10 @@ RETURNS JSONB LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $
         'connection_distance_m',connection_distance_m,'connection_ambiguous',connection_ambiguous,
         'connection_point', CASE WHEN connection_point IS NULL THEN NULL
                                  ELSE ST_AsGeoJSON(connection_point)::jsonb END
-      ) || raw_data)), '[]'::jsonb))
+      ))), '[]'::jsonb))  -- raw_data deliberately NOT spread: it is the full Hebrew
+                          -- Arad CSV row per meter, and aggregating ~8000 of them for
+                          -- a dense village (עראבה) blows the statement timeout. The
+                          -- map popup never reads it — fetch full row on demand.
   FROM (
     SELECT * FROM public.meters
     WHERE (SELECT auth.uid()) IS NOT NULL

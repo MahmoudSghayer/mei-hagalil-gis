@@ -57,7 +57,7 @@ RETURNS JSONB LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $
       'properties', jsonb_build_object(
         'arad_meter_id',arad_meter_id,'customer_id',customer_id,'asset_code',asset_code,
         'last_reading',last_reading,'consumption',consumption,'status',status,
-        'install_date',install_date,'__id',id) || raw_data)), '[]'::jsonb))
+        'install_date',install_date,'__id',id))), '[]'::jsonb))  -- raw_data NOT spread (statement timeout on dense villages)
   FROM (
     SELECT * FROM public.meters
     WHERE (SELECT auth.uid()) IS NOT NULL   -- one-time auth guard (was per-row RLS)
