@@ -1,31 +1,45 @@
 // ════════════════════════════════════════════════════════════════
-//  Mei HaGalil GIS — Backend Client
-//  קורא ל-Backend (Render.com) להמרת DWG → GeoJSON
+//  Mei HaGalil GIS — Backend Client (DWG export microservice)
+//  קורא לשירות ה-DWG (Render.com) להמרת DWG ↔ GeoJSON.
 //
-//  הוראות התקנה:
-//   1. Deploy את ה-backend ל-Render.com (ראה backend/DEPLOY.md)
-//   2. הדבק כאן את ה-URL וה-Token שקיבלת מ-Render
-//   3. כלול ב-upload.html ו-index.html
-//
-//  אבטחה: ה-Token לא מאפשר שום פעולה רגישה — רק המרת קבצים דרך
-//  ה-backend שלך. אם הוא נחשף, מקסימום מישהו ינצל את quota של
-//  ה-Aspose שלך. ה-quota מוגבל כברירת מחדל ב-Aspose dashboard.
+//  אבטחה: אין יותר token סטטי בקליינט. ההזדהות מול השירות מתבצעת דרך
+//  ה-Supabase JWT של המשתמש המחובר (השרת מאמת מולו SUPABASE_JWT_SECRET).
+//  לכן רק משתמש מחובר יכול להמיר/לייצא קבצים, ואין סוד שדולף בדפדפן.
 // ════════════════════════════════════════════════════════════════
 (function() {
 'use strict';
 
-var BACKEND_URL = 'https://mei-hagalil-gis-backend.onrender.com';      // ← e.g. https://mei-hagalil-gis-backend.onrender.com
-var BACKEND_TOKEN = '7bnNTN5T70qMRGp75AnrWe5NwaQFawG6tUmi35mz'; // ← Render auto-generated this for you
+var DWG_EXPORT_URL = 'https://mei-hagalil-gis-dwg-export.onrender.com'; // DWG export microservice
 
-var DWG_EXPORT_URL   = 'https://mei-hagalil-gis-dwg-export.onrender.com'; // ← DWG export microservice
-var DWG_EXPORT_TOKEN = '2y/jBAb6PXwVdKoSq0hYpLTuFcWWk11BbSMXxHNyeZY=';   // ← matches Render API_TOKEN
+// Builds the auth header from the logged-in user's Supabase session.
+// Throws (in Hebrew) if there is no session, so callers fail with a clear
+// message instead of sending an unauthenticated request.
+async function authHeaders(extra) {
+  var h = extra || {};
+  var token = null;
+  try {
+    if (window.gSb) {
+      var s = await window.gSb.auth.getSession();
+      token = s && s.data && s.data.session && s.data.session.access_token;
+    }
+  } catch (e) { /* no session */ }
+  if (!token) throw new Error('עליך להתחבר כדי להשתמש בשירות ההמרה/הייצוא.');
+  h['Authorization'] = 'Bearer ' + token;
+  return h;
+}
+
+function requireDwgUrl() {
+  if (!DWG_EXPORT_URL || DWG_EXPORT_URL === 'YOUR_DWG_EXPORT_URL') {
+    throw new Error('DWG Export URL לא הוגדר. ערוך את backend-client.js');
+  }
+}
 
 // ════════════════════════════════════════════════════════════════
 //  PUBLIC API
 // ════════════════════════════════════════════════════════════════
 
 /**
- * המרת DWG ל-GeoJSON (דרך ה-backend)
+ * המרת DWG ל-GeoJSON (דרך שירות ה-DWG)
  * @param {File} dwgFile
  * @param {Object} options - { sourceCrs: 'EPSG:2039', targetCrs: 'EPSG:4326' }
  * @param {Function} onProgress - callback(stage, percent, message)
@@ -40,7 +54,7 @@ window.dwgToGeoJSON = async function(dwgFile, options, onProgress) {
   var sourceCrs = options.sourceCrs || 'EPSG:2039';
   var targetCrs = options.targetCrs || 'EPSG:4326';
 
-  validateConfig();
+  requireDwgUrl();
 
   if (onProgress) onProgress('init', 5, 'מתחיל המרה דרך השרת...');
 
@@ -51,31 +65,21 @@ window.dwgToGeoJSON = async function(dwgFile, options, onProgress) {
 
   if (onProgress) onProgress('upload', 15, 'מעלה DWG לשרת...');
 
-  // The backend handles: Aspose conversion + GDAL processing + reprojection
-  // Could take 30-90 seconds, especially after Render free tier wakes up
+  // The service handles: ODA conversion + GDAL processing + reprojection.
+  // Could take 30-90 seconds, especially after a Render free-tier wake.
   var startedAt = Date.now();
   var pollProgress = setInterval(function() {
     if (!onProgress) return;
     var elapsed = (Date.now() - startedAt) / 1000;
     if (elapsed < 5) onProgress('process', 20, 'השרת מעבד...');
-    else if (elapsed < 15) onProgress('process', 35, 'Aspose ממיר DWG → DXF...');
+    else if (elapsed < 15) onProgress('process', 35, 'ממיר DWG → DXF...');
     else if (elapsed < 30) onProgress('process', 60, 'GDAL ממיר ומבצע reprojection...');
     else if (elapsed < 60) onProgress('process', 80, 'מסיים עיבוד... (' + Math.round(elapsed) + 'ש)');
     else onProgress('process', 90, 'עוד רגע... (' + Math.round(elapsed) + 'ש)');
   }, 2000);
 
-  // Routed through the live DWG-export service (the old converter backend is gone).
-  // Auth: prefer the logged-in user's Supabase JWT; static token as fallback.
-  var convHeaders = { 'X-Api-Token': DWG_EXPORT_TOKEN };
   try {
-    if (window.gSb) {
-      var _s = await window.gSb.auth.getSession();
-      var _t = _s && _s.data && _s.data.session && _s.data.session.access_token;
-      if (_t) convHeaders['Authorization'] = 'Bearer ' + _t;
-    }
-  } catch (e) { /* fall back to static token */ }
-
-  try {
+    var convHeaders = await authHeaders();
     var res = await fetch(DWG_EXPORT_URL + '/api/convert/dwg-to-geojson', {
       method: 'POST',
       headers: convHeaders,
@@ -126,85 +130,11 @@ window.dwgToGeoJSON = async function(dwgFile, options, onProgress) {
 };
 
 /**
- * המרת DXF ל-GeoJSON (יותר מהיר, לא דורש Aspose)
- */
-window.dxfToGeoJSON = async function(dxfFile, options, onProgress) {
-  if (typeof options === 'function') { onProgress = options; options = {}; }
-  options = options || {};
-  validateConfig();
-
-  if (onProgress) onProgress('upload', 30, 'מעלה DXF...');
-  var formData = new FormData();
-  formData.append('file', dxfFile, dxfFile.name || 'input.dxf');
-  formData.append('source_crs', options.sourceCrs || 'EPSG:2039');
-  formData.append('target_crs', options.targetCrs || 'EPSG:4326');
-
-  var res = await fetch(BACKEND_URL + '/api/convert/dxf', {
-    method: 'POST',
-    headers: { 'X-API-Token': BACKEND_TOKEN },
-    body: formData,
-  });
-  if (!res.ok) {
-    var errText = await res.text();
-    throw new Error('Backend error: ' + errText.substring(0, 200));
-  }
-  if (onProgress) onProgress('done', 100, '✅ הומר');
-  return await res.json();
-};
-
-/**
- * בדיקת מצב backend
- */
-window.backendStatus = async function() {
-  if (BACKEND_URL === 'YOUR_RENDER_URL') {
-    return { ok: false, error: 'Backend URL not configured' };
-  }
-  try {
-    var res = await fetch(BACKEND_URL + '/api/health', {
-      headers: { 'X-API-Token': BACKEND_TOKEN }
-    });
-    if (!res.ok) return { ok: false, error: 'HTTP ' + res.status };
-    var data = await res.json();
-    return {
-      ok: true,
-      gdal_version: data.gdal_version,
-      aspose_configured: data.aspose_configured,
-      crs_count: (data.supported_crs || []).length,
-    };
-  } catch(e) {
-    return { ok: false, error: e.message };
-  }
-};
-
-/**
- * קבלת רשימת מערכות קואורדינטות נתמכות
- */
-window.backendListCRS = async function() {
-  validateConfig();
-  var res = await fetch(BACKEND_URL + '/api/crs/list', {
-    headers: { 'X-API-Token': BACKEND_TOKEN }
-  });
-  if (!res.ok) throw new Error('Could not fetch CRS list');
-  var data = await res.json();
-  return data.systems || [];
-};
-
-
-function validateConfig() {
-  if (BACKEND_URL === 'YOUR_RENDER_URL' || !BACKEND_URL) {
-    throw new Error('Backend URL לא הוגדר. ערוך את backend-client.js');
-  }
-  if (BACKEND_TOKEN === 'YOUR_BACKEND_TOKEN' || !BACKEND_TOKEN) {
-    throw new Error('Backend Token לא הוגדר. ערוך את backend-client.js');
-  }
-}
-
-/**
  * Export GeoJSON features → DWG (or DXF fallback) download.
  * Calls the DWG export microservice and triggers a browser download.
  *
  * @param {Array}    features   GeoJSON Feature array (with _category property)
- * @param {Object}   options    { filename: string }
+ * @param {Object}   options    { filename: string, signal?: AbortSignal }
  * @param {Function} onProgress callback(stage, percent, message)
  */
 window.geoJSONtoDWG = async function(features, options, onProgress) {
@@ -212,9 +142,7 @@ window.geoJSONtoDWG = async function(features, options, onProgress) {
   options = options || {};
   var filename = options.filename || 'mei-hagalil-export';
 
-  if (!DWG_EXPORT_URL || DWG_EXPORT_URL === 'YOUR_DWG_EXPORT_URL') {
-    throw new Error('DWG Export URL לא הוגדר. ערוך את backend-client.js');
-  }
+  requireDwgUrl();
 
   if (onProgress) onProgress('upload', 10, 'שולח נתונים לשרת...');
 
@@ -228,17 +156,8 @@ window.geoJSONtoDWG = async function(features, options, onProgress) {
     else                   onProgress('process', 90, 'עוד רגע... (' + Math.round(elapsed) + 'ש)');
   }, 2000);
 
-  // Prefer the logged-in user's Supabase JWT; keep the static token as a fallback.
-  var dwgHeaders = { 'X-Api-Token': DWG_EXPORT_TOKEN, 'Content-Type': 'application/json' };
   try {
-    if (window.gSb) {
-      var _sess = await window.gSb.auth.getSession();
-      var _at = _sess && _sess.data && _sess.data.session && _sess.data.session.access_token;
-      if (_at) dwgHeaders['Authorization'] = 'Bearer ' + _at;
-    }
-  } catch (e) { /* fall back to static token */ }
-
-  try {
+    var dwgHeaders = await authHeaders({ 'Content-Type': 'application/json' });
     var res = await fetch(DWG_EXPORT_URL + '/api/export/dwg', {
       method: 'POST',
       headers: dwgHeaders,
@@ -256,7 +175,6 @@ window.geoJSONtoDWG = async function(features, options, onProgress) {
     var isFallback = res.headers.get('X-Fallback-Format') === 'dxf';
     var fbReason   = res.headers.get('X-Fallback-Reason') || '';
     var ext  = isFallback ? '.dxf' : '.dwg';
-    var mime = isFallback ? 'application/dxf' : 'application/octet-stream';
 
     var blob = await res.blob();
     var url  = URL.createObjectURL(blob);
@@ -279,12 +197,5 @@ window.geoJSONtoDWG = async function(features, options, onProgress) {
   }
 };
 
-// Backwards-compatible alias for existing code that calls asposeStatus()
-window.asposeStatus = async function() {
-  var s = await window.backendStatus();
-  return { authenticated: s.ok && s.aspose_configured, error: s.error };
-};
-
-console.log('✓ Backend client loaded' +
-  (BACKEND_URL === 'YOUR_RENDER_URL' ? ' (⚠️ not configured!)' : ' → ' + BACKEND_URL));
+console.log('✓ Backend client loaded (JWT auth) → ' + DWG_EXPORT_URL);
 })();

@@ -147,45 +147,32 @@ async function saveUser() {
 
     btn.disabled = true; btn.textContent = '⏳ יוצר...';
 
-    var savedAdminSession = (await gSb.auth.getSession()).data.session;
+    // Server-side, admin-gated creation via the Supabase Admin API. This keeps
+    // the admin logged in (no session juggling) and works even when public
+    // sign-ups are DISABLED in Supabase. The endpoint re-verifies that the
+    // caller is an active admin before creating anyone.
+    try {
+      var sess = (await gSb.auth.getSession()).data.session;
+      if (!sess) { btn.disabled = false; btn.textContent = '💾 שמור'; showToast('פג תוקף ההתחברות, התחבר מחדש', 'error'); return; }
 
-    var signRes = await gSb.auth.signUp({
-      email: email,
-      password: password,
-      options: {
-        data: {
-          full_name: name,
-          role: role,
-          phone: phone,
-          department: dept
-        }
-      }
-    });
-
-    if (signRes.error) {
-      btn.disabled = false; btn.textContent = '💾 שמור';
-      showToast('שגיאה: ' + signRes.error.message, 'error');
-      if (savedAdminSession) await gSb.auth.setSession({access_token:savedAdminSession.access_token, refresh_token:savedAdminSession.refresh_token});
-      return;
-    }
-
-    if (savedAdminSession) {
-      await gSb.auth.setSession({
-        access_token: savedAdminSession.access_token,
-        refresh_token: savedAdminSession.refresh_token
+      var resp = await fetch('/api/admin-create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.access_token },
+        body: JSON.stringify({ email: email, password: password, full_name: name, role: role, phone: phone, department: dept })
       });
-    }
+      var data = await resp.json().catch(function(){ return {}; });
 
-    if (signRes.data.user) {
-      await gSb.from('profiles').update({
-        full_name: name, role: role, phone: phone, department: dept, is_active: true
-      }).eq('id', signRes.data.user.id);
-    }
+      btn.disabled = false; btn.textContent = '💾 שמור';
+      if (!resp.ok) { showToast('שגיאה: ' + (data.error || ('HTTP ' + resp.status)), 'error'); return; }
+      if (data.warning) showToast('⚠️ ' + data.warning, 'error');
 
-    btn.disabled = false; btn.textContent = '💾 שמור';
-    showToast('✅ ' + name + ' נוצר בהצלחה', 'success');
-    closeModal();
-    loadUsers();
+      showToast('✅ ' + name + ' נוצר בהצלחה', 'success');
+      closeModal();
+      loadUsers();
+    } catch (e) {
+      btn.disabled = false; btn.textContent = '💾 שמור';
+      showToast('שגיאה: ' + e.message, 'error');
+    }
   }
 }
 
