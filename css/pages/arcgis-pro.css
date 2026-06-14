@@ -199,7 +199,37 @@
 
 /* ── Status bar → ArcGIS footer ───────────────────────────────────────────── */
 #statusbar { height: 24px; background: #0a2f4d; gap: 10px; }
-#statusbar > span:not(#coords):not(#ags-scale):not(#ags-proj) { opacity: 0.4; }
+#statusbar > span:not(#coords):not(#ags-scale-wrap):not(#ags-proj):not(#ags-statusstats) { opacity: 0.45; }
+
+/* ── Relocated top-panel controls (old topbar dissolved into ribbon + footer) ── */
+/* app title → start of the ribbon tab strip */
+#ags-logo { align-self: center; font-size: 13px; font-weight: 700; color: var(--ags-accent-dark); white-space: nowrap; padding: 0 12px 0 6px; letter-spacing: -0.2px; }
+#ags-logo span { color: var(--ags-accent); }
+
+/* account cluster (admin links + user menu + realtime dot) → end of tab strip */
+#ags-account { align-self: center; margin-inline-start: auto; display: flex; align-items: center; gap: 7px; padding: 0 4px 0 6px; }
+#ags-account #realtime-dot { width: 8px; height: 8px; }
+#ags-account .admin-link {
+  background: #e9ebee; border: 1px solid var(--ags-ribbon-border); color: var(--ags-accent-dark);
+  padding: 4px 10px; font-size: 11.5px; border-radius: 5px; font-weight: 500;
+}
+#ags-account .admin-link:hover { background: #dde2e7; color: var(--ags-accent-dark); }
+#ags-account .user-btn { background: #e9ebee; border: 1px solid var(--ags-ribbon-border); color: var(--ags-accent-dark); padding: 4px 9px; }
+#ags-account .user-btn:hover { background: #dde2e7; }
+#ags-account .user-avatar { background: var(--ags-accent); width: 24px; height: 24px; }
+#ags-account .user-name { color: var(--ags-accent-dark); font-size: 12px; }
+#ags-account .user-role-label { color: var(--ags-cmd-muted); }
+#ags-account .dropdown { z-index: 2000; top: calc(100% + 6px); }
+
+/* incident stats + live coordinates → status bar */
+#ags-statusstats { display: flex; align-items: center; gap: 14px; }
+#ags-statusstats .stat { background: transparent !important; border: none; padding: 0; display: flex; align-items: baseline; gap: 5px; }
+#ags-statusstats .stat .n { font-size: 12px; font-weight: 700; color: #fff; }
+#ags-statusstats .stat .l { font-size: 10px; color: rgba(255,255,255,0.5); }
+#ags-statusstats .stat.alert .n { color: #fca5a5; }
+#ags-statusstats .stat.mine .n { color: #86efac; }
+#ags-statusstats .stat.coords { min-width: auto; }
+#ags-statusstats .stat.coords .n { font-size: 11px; color: var(--blue-light); }
 
 /* ══════════════════════════════════════════════════════════════════════════
    Network trace (Phase 2): arm banner, valve markers, results card

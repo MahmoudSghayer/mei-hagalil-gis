@@ -248,6 +248,37 @@
     }
 
     initStatusScale();
+    relocateTopbar();
+  }
+
+  // Dissolve the old top panel: move its controls into the ribbon strip + status
+  // bar (moving the NODES keeps every id, so index.js/auth.js wiring is intact),
+  // then hide the now-empty bar.
+  function relocateTopbar() {
+    var topbar = $('topbar'); if (!topbar || topbar.dataset.relocated) return;
+    var tabs = $('ags-tabs'), statusbar = $('statusbar');
+
+    // app title → start of the tab strip
+    var logo = topbar.querySelector('.logo');
+    if (logo && tabs) { logo.id = 'ags-logo'; tabs.insertBefore(logo, tabs.firstChild); }
+
+    // account cluster (admin links + user menu + realtime dot) → end of tab strip
+    if (tabs) {
+      var cluster = document.createElement('div'); cluster.id = 'ags-account';
+      ['realtime-dot', 'upload-link', 'admin-link', 'logs-link'].forEach(function (id) { var el = $(id); if (el) cluster.appendChild(el); });
+      var ua = topbar.querySelector('.user-area'); if (ua) cluster.appendChild(ua);
+      tabs.appendChild(cluster);
+    }
+
+    // incident stats + live coordinates → status bar (front)
+    if (statusbar) {
+      var wrap = document.createElement('span'); wrap.id = 'ags-statusstats';
+      Array.prototype.slice.call(topbar.querySelectorAll('.stats .stat')).forEach(function (s) { wrap.appendChild(s); });
+      statusbar.insertBefore(wrap, statusbar.firstChild);
+    }
+
+    topbar.dataset.relocated = '1';
+    topbar.style.display = 'none';
   }
 
   function switchTab(id) {
