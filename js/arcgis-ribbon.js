@@ -55,7 +55,8 @@
         ] }
       ] },
       { label: 'איתור', cmds: [
-        { ic: '🔍', lb: 'חיפוש', size: 'lg', act: focusSearch }
+        { ic: '🔍', lb: 'חיפוש', size: 'lg', act: focusSearch },
+        { ic: '🔖', lb: 'סימניות', size: 'lg', act: toggleBookmarks }
       ] },
       { label: 'מראה', cmds: [
         { ic: '📖', lb: 'מקרא', size: 'lg', act: toggleLegend },
@@ -148,6 +149,7 @@
   function anlyLoc() { if (window.GISAnalysis) { window.GISAnalysis.selectByLocation(); } else { toast('מנוע הניתוח עדיין נטען…'); } }
   function anlyBuffer() { if (window.GISAnalysis) { window.GISAnalysis.buffer(); } else { toast('מנוע הניתוח עדיין נטען…'); } }
   function anlyClear() { if (window.GISAnalysis) { window.GISAnalysis.clear(); } }
+  function toggleBookmarks() { if (window.GISBookmarks) { window.GISBookmarks.toggle(); } else { toast('הסימניות עדיין נטענות…'); } }
   function focusSearch() {
     var inp = document.querySelector('#search-bar input');
     if (inp) { inp.focus(); inp.select && inp.select(); }
@@ -257,6 +259,24 @@
 
     initStatusScale();
     relocateTopbar();
+    cleanStatusBar();
+  }
+
+  // Strip status-bar clutter: drop the "|" separators + the "© 2025" span, and
+  // push the readouts to the far end with a spacer → clean two-side footer.
+  function cleanStatusBar() {
+    var sb = $('statusbar'); if (!sb || sb.dataset.cleaned) return;
+    Array.prototype.slice.call(sb.children).forEach(function (el) {
+      var t = (el.textContent || '').trim();
+      if (el.tagName === 'SPAN' && (t === '|' || t.indexOf('©') >= 0)) el.remove();
+    });
+    if (!$('ags-sb-spacer')) {
+      var sp = document.createElement('span'); sp.id = 'ags-sb-spacer';
+      var stats = $('ags-statusstats');
+      if (stats && stats.nextSibling) sb.insertBefore(sp, stats.nextSibling);
+      else sb.insertBefore(sp, sb.firstChild);
+    }
+    sb.dataset.cleaned = '1';
   }
 
   // Dissolve the old top panel: move its controls into the ribbon strip + status
