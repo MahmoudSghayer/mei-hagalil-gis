@@ -1,8 +1,8 @@
 /* ══════════════════════════════════════════════════════════════════════════
    Print / Layout composer — ArcGIS-style map sheet.
-   Layout mode: toggle Title / Legend / North arrow / Scale bar (each DRAGGABLE);
-   optionally draw a print AREA rectangle; then print exactly that area.
-   The Legend is editable — rename or remove entries inline (contenteditable).
+   Compact draggable toolbar; toggle Title / Legend / North arrow / Scale bar
+   (each draggable); draw a print AREA (overlays go non-interactive so the drag
+   is free); print fits that area TIGHTLY (fractional zoom). Editable legend.
    Native print, map size locked so tiles never blank. Self-contained IIFE.
    ══════════════════════════════════════════════════════════════════════════ */
 (function () {
@@ -23,7 +23,7 @@
     ['title', 'legend', 'north', 'scale'].forEach(addEl);
     moveHandler = function () { updateScale(); };
     window.gMap.on('moveend zoomend', moveHandler);
-    toast('מצב פריסה: גרור רכיבים, ערוך את המקרא, בחר אזור — ואז הדפס');
+    toast('פריסה: גרור רכיבים, ערוך מקרא, בחר אזור — ואז הדפס');
   }
   function exit() {
     active = false;
@@ -35,21 +35,21 @@
     document.body.classList.remove('gis-printing');
   }
 
-  // ── toolbar ───────────────────────────────────────────────────────────────────
+  // ── compact toolbar (draggable by its title) ────────────────────────────────────
   function buildBar() {
     if (document.getElementById('gis-layout-bar')) return;
     var bar = document.createElement('div'); bar.id = 'gis-layout-bar';
     bar.innerHTML =
-      '<span class="glb-title">🖨️ פריסת הדפסה</span>' +
+      '<span class="glb-grip" title="גרור להזזת הסרגל">⠿ פריסה</span>' +
       '<input id="glb-titletext" class="glb-in" value="מפת תשתית מים" title="כותרת">' +
-      '<label class="glb-tg"><input type="checkbox" data-el="title" checked> כותרת</label>' +
-      '<label class="glb-tg"><input type="checkbox" data-el="legend" checked> מקרא</label>' +
-      '<label class="glb-tg"><input type="checkbox" data-el="north" checked> חץ צפון</label>' +
-      '<label class="glb-tg"><input type="checkbox" data-el="scale" checked> קנה מידה</label>' +
+      '<label class="glb-tg"><input type="checkbox" data-el="title" checked>כותרת</label>' +
+      '<label class="glb-tg"><input type="checkbox" data-el="legend" checked>מקרא</label>' +
+      '<label class="glb-tg"><input type="checkbox" data-el="north" checked>צפון</label>' +
+      '<label class="glb-tg"><input type="checkbox" data-el="scale" checked>קנ״מ</label>' +
       '<button class="glb-area" id="glb-area">✏️ בחר אזור</button>' +
       '<select id="glb-orient" class="glb-in"><option value="landscape">לרוחב</option><option value="portrait">לאורך</option></select>' +
       '<button class="glb-print">🖨️ הדפס</button>' +
-      '<button class="glb-exit">יציאה</button>';
+      '<button class="glb-exit">✕</button>';
     document.body.appendChild(bar);
     Array.prototype.forEach.call(bar.querySelectorAll('input[data-el]'), function (cb) {
       cb.onchange = function () { toggleEl(cb.getAttribute('data-el'), cb.checked); };
@@ -61,11 +61,24 @@
     bar.querySelector('#glb-area').onclick = startAreaSelect;
     bar.querySelector('.glb-print').onclick = doPrint;
     bar.querySelector('.glb-exit').onclick = exit;
+    dragByHandle(bar, bar.querySelector('.glb-grip'));
     setOrient('landscape');
   }
   function setOrient(o) {
     if (!orientStyle) { orientStyle = document.createElement('style'); document.head.appendChild(orientStyle); }
     orientStyle.textContent = '@media print{@page{size:' + o + ';margin:8mm}}';
+  }
+  // drag a fixed/absolute element by a handle, using viewport coords
+  function dragByHandle(el, handle) {
+    if (!handle) return;
+    handle.addEventListener('mousedown', function (ev) {
+      ev.preventDefault();
+      var r = el.getBoundingClientRect(), bl = r.left, bt = r.top, sx = ev.clientX, sy = ev.clientY;
+      el.style.left = bl + 'px'; el.style.top = bt + 'px'; el.style.transform = 'none';
+      function mv(e) { el.style.left = (bl + e.clientX - sx) + 'px'; el.style.top = (bt + e.clientY - sy) + 'px'; }
+      function up() { document.removeEventListener('mousemove', mv); document.removeEventListener('mouseup', up); }
+      document.addEventListener('mousemove', mv); document.addEventListener('mouseup', up);
+    });
   }
 
   // ── draggable layout elements ──────────────────────────────────────────────────
@@ -75,16 +88,16 @@
     if (key === 'title') {
       var tt = (document.getElementById('glb-titletext') || {}).value || 'מפת תשתית מים';
       el.innerHTML = '<div class="lt-t">' + esc(tt) + '</div><div class="lt-m">💧 מי הגליל GIS · ' + new Date().toLocaleDateString('he-IL') + '</div>';
-      el.style.top = '10px'; el.style.left = '50%'; el.style.transform = 'translateX(-50%)';
+      el.style.top = '8px'; el.style.left = '50%'; el.style.transform = 'translateX(-50%)';
     } else if (key === 'legend') {
       el.innerHTML = legendInner();
-      el.style.bottom = '28px'; el.style.left = '14px';
+      el.style.bottom = '24px'; el.style.left = '12px';
     } else if (key === 'north') {
       el.innerHTML = '<div class="ln-a">⬆</div><div class="ln-n">צפון</div>';
-      el.style.top = '70px'; el.style.right = '14px';
+      el.style.top = '60px'; el.style.right = '12px';
     } else if (key === 'scale') {
       el.innerHTML = '<span class="ls-line"></span><span class="ls-lbl">—</span>';
-      el.style.bottom = '28px'; el.style.right = '14px';
+      el.style.bottom = '24px'; el.style.right = '12px';
     }
     host.appendChild(el);
     if (window.L && L.DomEvent) { L.DomEvent.disableClickPropagation(el); L.DomEvent.disableScrollPropagation(el); }
@@ -101,9 +114,9 @@
   // ── dynamic, editable legend ───────────────────────────────────────────────────
   function swatch(l) {
     var color = l.color || (l.geometry_type === 'Point' ? '#0d3b5e' : l.geometry_type === 'Polygon' ? '#0e7490' : '#1a7fc1');
-    if (l.geometry_type === 'Point') return '<span style="display:inline-block;width:13px;height:13px;border-radius:50%;background:' + color + ';border:1.5px solid #fff;box-shadow:0 0 0 1px ' + color + '"></span>';
-    if (l.geometry_type === 'Polygon') return '<span style="display:inline-block;width:16px;height:11px;background:' + color + '33;border:1.5px solid ' + color + '"></span>';
-    return '<span style="display:inline-block;width:22px;height:0;border-top:3px solid ' + color + ';vertical-align:middle"></span>';
+    if (l.geometry_type === 'Point') return '<span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:' + color + ';border:1.5px solid #fff;box-shadow:0 0 0 1px ' + color + '"></span>';
+    if (l.geometry_type === 'Polygon') return '<span style="display:inline-block;width:15px;height:10px;background:' + color + '33;border:1.5px solid ' + color + '"></span>';
+    return '<span style="display:inline-block;width:20px;height:0;border-top:3px solid ' + color + ';vertical-align:middle"></span>';
   }
   function legendInner() {
     var layers = (window.GISEngineSidebar && window.GISEngineSidebar.activeLayers) ? window.GISEngineSidebar.activeLayers() : [];
@@ -148,10 +161,14 @@
 
   // ── print AREA selection (drag a rectangle) ─────────────────────────────────────
   function clearArea() { if (printRectLayer && window.gMap) window.gMap.removeLayer(printRectLayer); printRectLayer = null; printBounds = null; }
+  function setOverlaysInteractive(on) {
+    Object.keys(els).forEach(function (k) { if (els[k] && els[k].el) els[k].el.style.pointerEvents = on ? '' : 'none'; });
+  }
   function startAreaSelect() {
     var m = window.gMap; if (!m) return;
     clearArea();
     var btn = document.getElementById('glb-area'); if (btn) btn.textContent = '✏️ גרור על המפה…';
+    setOverlaysInteractive(false);                 // let the drag pass through the layout elements
     m.dragging.disable(); if (m.boxZoom) m.boxZoom.disable();
     m.getContainer().style.cursor = 'crosshair';
     var start = null;
@@ -162,17 +179,14 @@
       if (printRectLayer) printRectLayer.setBounds(b);
       else printRectLayer = L.rectangle(b, { color: '#dc2626', weight: 2, dashArray: '6 4', fillColor: '#dc2626', fillOpacity: 0.06 }).addTo(m);
     }
-    function up(e) {
-      if (!start) return;
-      printBounds = L.latLngBounds(start, e.latlng);
-      start = null; finish();
-    }
+    function up(e) { if (!start) return; printBounds = L.latLngBounds(start, e.latlng); start = null; finish(); }
     function finish() {
       m.off('mousedown', down); m.off('mousemove', move); m.off('mouseup', up);
       m.dragging.enable(); if (m.boxZoom) m.boxZoom.enable();
       m.getContainer().style.cursor = '';
-      if (btn) btn.textContent = '✏️ אזור נבחר ✓ (לחץ לשינוי)';
-      toast('אזור הדפסה נבחר — לחץ הדפס');
+      setOverlaysInteractive(true);
+      if (btn) btn.textContent = '✏️ אזור ✓ (לשינוי)';
+      toast('אזור נבחר — לחץ הדפס');
     }
     m.on('mousedown', down); m.on('mousemove', move); m.on('mouseup', up);
     toast('גרור על המפה לסימון אזור ההדפסה');
@@ -181,20 +195,22 @@
   // ── print ───────────────────────────────────────────────────────────────────────
   function doPrint() {
     var m = document.getElementById('map'); if (!m) { window.print(); return; }
-    if (printBounds) {
+    if (printBounds && window.gMap) {
       if (printRectLayer) { window.gMap.removeLayer(printRectLayer); printRectLayer = null; }
-      window.gMap.fitBounds(printBounds, { padding: [6, 6] });
+      var snap = window.gMap.options.zoomSnap;
+      window.gMap.options.zoomSnap = 0;                          // fit the drawn rect TIGHTLY (fractional zoom)
+      window.gMap.fitBounds(printBounds, { padding: [0, 0], animate: false });
       toast('מכין הדפסה…');
-      setTimeout(function () { lockAndPrint(m); }, 1100); // let tiles settle after fit
+      setTimeout(function () { lockAndPrint(m, function () { if (window.gMap) window.gMap.options.zoomSnap = snap; }); }, 1200);
     } else {
-      lockAndPrint(m);
+      lockAndPrint(m, null);
     }
   }
-  function lockAndPrint(m) {
+  function lockAndPrint(m, after) {
     var w = m.offsetWidth, h = m.offsetHeight;
     m.style.width = w + 'px'; m.style.height = h + 'px';
     document.body.classList.add('gis-printing');
-    function restore() { m.style.width = ''; m.style.height = ''; document.body.classList.remove('gis-printing'); }
+    function restore() { m.style.width = ''; m.style.height = ''; document.body.classList.remove('gis-printing'); if (after) after(); }
     window.addEventListener('afterprint', restore, { once: true });
     setTimeout(function () { window.print(); }, 150);
     setTimeout(restore, 6000);
