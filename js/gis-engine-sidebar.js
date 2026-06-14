@@ -50,6 +50,10 @@ css.textContent = `
 #gis-eng-panel .ge-del:hover{opacity:1;filter:saturate(1.5);}
 #gis-eng-panel .ge-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 #gis-eng-panel .ge-count{font-size:10px;color:#94a3b8;}
+#gis-eng-panel .ge-stat{display:inline-flex;align-items:center;min-width:12px;}
+#gis-eng-panel .ge-spin{width:11px;height:11px;border:2px solid #cbd5e1;border-top-color:#0d3b5e;border-radius:50%;animation:ge-spin .7s linear infinite;}
+#gis-eng-panel .ge-warn{color:#d97706;font-size:12px;cursor:help;}
+@keyframes ge-spin{to{transform:rotate(360deg);}}
 #gis-eng-panel .ge-empty{font-size:11px;color:#94a3b8;padding:8px 2px;line-height:1.5;}
 #gis-eng-panel .ge-refresh{background:none;border:none;cursor:pointer;color:#64748b;font-size:13px;}
 #gis-eng-panel.collapsed .ge-body{display:none;}`;
@@ -79,12 +83,33 @@ function makeFeatureLayers(layer) {
 function createLoader(layer) {
   return GISTileLoader.create({
     map: window.gMap,
-    fetchTile: function (bbox, signal) { return GIS.features.getInBBox(layer.id, bbox, 2000, signal); },
+    // Durable tile cache (IndexedDB) in front of the bbox RPC: a tile is fetched
+    // over the network once, then reused across reloads/sessions until it ages
+    // out (TTL) or the layer is edited (onInvalidate clears its tiles).
+    fetchTile: function (bbox, signal, tileKey) {
+      var ck = layer.id + '/' + tileKey;
+      var hit = window.GISTileCache ? GISTileCache.get(ck) : Promise.resolve(null);
+      return hit.then(function (cached) {
+        if (cached) return cached;
+        return GIS.features.getInBBox(layer.id, bbox, 2000, signal).then(function (fc) {
+          if (window.GISTileCache && fc && fc.features) GISTileCache.set(ck, fc);
+          return fc;
+        });
+      });
+    },
+    onInvalidate: function () { if (window.GISTileCache) GISTileCache.clearPrefix(layer.id + '/'); },
     makeLayers: makeFeatureLayers(layer),
     featureId: function (f) { return f.id != null ? f.id : (f.properties && f.properties.__id); },
     onCount: function (n) {
       if (layer._cntEl) layer._cntEl.textContent = n;
       if (window.GISSymbology && window.GISSymbology.refreshLegend) window.GISSymbology.refreshLegend();
+    },
+    onStatus: function (s) {
+      if (!layer._statEl) return;
+      var html = '';
+      if (s.loading) html += '<span class="ge-spin" title="טוען אריחים…"></span>';
+      else if (s.errors) html += '<span class="ge-warn" title="חלק מהאריחים נכשלו בטעינה — הזז מעט את המפה כדי לנסות שוב">⚠</span>';
+      layer._statEl.innerHTML = html;
     },
     prefetchRing: 1
   });
@@ -255,11 +280,13 @@ function row(layer) {
     '<input type="checkbox">' +
     '<input type="color" class="ge-color" value="' + toHex(color) + '" title="שנה צבע שכבה">' +
     '<span class="ge-name" title="' + esc(layer.name) + '">' + esc(catLabel(layer._cat)) + '</span>' +
-    '<span class="ge-count"></span>';
+    '<span class="ge-count"></span>' +
+    '<span class="ge-stat"></span>';
   var cb = el.querySelector('input[type=checkbox]');
   var picker = el.querySelector('.ge-color');
   var cnt = el.querySelector('.ge-count');
   layer._cntEl = cnt;
+  layer._statEl = el.querySelector('.ge-stat');
 
   // clicking the name toggles the layer (the row is a div, not a label)
   el.querySelector('.ge-name').onclick = function () { cb.checked = !cb.checked; cb.onchange(); };

@@ -54,11 +54,16 @@
   //
   //  opts:
   //    map           Leaflet map
-  //    fetchTile(bbox, signal) → Promise<FeatureCollection>   (honours signal)
+  //    fetchTile(bbox, signal, tileKey) → Promise<FeatureCollection>
+  //                                          (honours signal; tileKey = "z/x/y")
+  //    onInvalidate()                       called on invalidate() so a durable
+  //                                          cache (IndexedDB) can be cleared too
   //    makeLayers(feature) → [L.Layer]      build the styled layer(s) for one
   //                                          feature (click handlers, labels…)
   //    featureId(feature) → string|number   stable id for dedup (default f.id)
   //    onCount(n)                            reports # features on the map
+  //    onStatus({loading,pending,errors,count})  reports load state for a
+  //                                          per-layer spinner / error badge
   //    tileLimit     per-tile feature cap   (default 2000)
   //    maxTiles      LRU cache budget        (default 96 tiles)
   //    prefetchRing  rings to prefetch       (default 1; 0 = off)
@@ -81,11 +86,20 @@
     var inflight = new Map();   // tileKey   → { ctrl:AbortController, prio:bool }
     var queue    = [];          // pending jobs { key, bbox, z, prio }
     var running  = 0;
+    var errors   = 0;           // tiles that failed (not counting aborts)
     var dead     = false;
     var lastDesired = new Set();
 
     function tileZoom() { return clamp(Math.round(map.getZoom()), MIN_TZ, MAX_TZ); }
-    function report() { if (opts.onCount) opts.onCount(refs.size); }
+    function report() {
+      if (opts.onCount) opts.onCount(refs.size);
+      if (opts.onStatus) opts.onStatus({
+        loading: running > 0 || queue.length > 0,
+        pending: queue.length + running,
+        errors: errors,
+        count: refs.size
+      });
+    }
 
     // Tiles covering the current viewport (pad = extra rings of tiles around it).
     function tilesForView(z, pad) {
@@ -161,13 +175,15 @@
       running++;
       var ctrl = new AbortController();
       inflight.set(job.key, { ctrl: ctrl, prio: job.prio });
+      report(); // reflect "loading" as soon as a fetch starts
       Promise.resolve()
-        .then(function () { return opts.fetchTile(job.bbox, ctrl.signal); })
+        .then(function () { return opts.fetchTile(job.bbox, ctrl.signal, job.key); })
         .then(function (fc) { if (!dead && inflight.has(job.key)) addTile(job.key, fc, job.z); })
         .catch(function (e) {
           if (ctrl.signal.aborted) return;                  // we cancelled it → silent
           var m = (e && (e.name + ' ' + e.message)) || '';
           if (/abort/i.test(m) || (e && e.code === '20')) return;
+          errors++;
           if (window.console) console.warn('[GISTileLoader] tile ' + job.key, e && e.message || e);
         })
         .then(function () {
@@ -210,8 +226,9 @@
     // user actions, never on pan/zoom.
     function invalidate() {
       inflight.forEach(function (v) { v.ctrl.abort(); });
-      inflight.clear(); queue = [];
+      inflight.clear(); queue = []; errors = 0;
       group.clearLayers(); refs.clear(); tiles.clear();
+      if (opts.onInvalidate) try { opts.onInvalidate(); } catch (e) {}
       update();
     }
 
