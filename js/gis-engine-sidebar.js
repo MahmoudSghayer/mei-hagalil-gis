@@ -55,34 +55,49 @@ css.textContent = `
 #gis-eng-panel.collapsed .ge-body{display:none;}`;
 document.head.appendChild(css);
 
-var loaded = {};        // layerId → L.layer (currently on the map)
+var loaded = {};        // layerId → GISTileLoader controller (on the map)
 var active = {};        // layerId → layer (toggled on → reload on pan/zoom)
 var openVillages = {};  // villageName → bool (expanded)
 var meterLayers = {};       // village name → meters L.layer on the map
 var moveendWired = false;
 var _mt;
 
-function currentBounds() {
-  var b = window.gMap.getBounds();
-  return { minLng: b.getWest(), minLat: b.getSouth(), maxLng: b.getEast(), maxLat: b.getNorth() };
+// Build the styled Leaflet layer(s) for ONE feature (reuses buildLayer so the
+// tile loader keeps the exact symbology / labels / click behaviour). colorFor
+// is read per call, so a recolour is reflected after invalidate().
+function makeFeatureLayers(layer) {
+  return function (f) {
+    var g = buildLayer({ type: 'FeatureCollection', features: [f] }, layer, colorFor(layer));
+    var out = []; g.eachLayer(function (l) { out.push(l); });
+    return out;
+  };
 }
-// Load only the features in the current viewport (capped) — no timeouts.
-async function renderLayer(layer) {
-  var fc = await GIS.features.getInBBox(layer.id, currentBounds(), 4000);
-  if (loaded[layer.id]) window.gMap.removeLayer(loaded[layer.id]);
-  var lyr = buildLayer(fc, layer, colorFor(layer)).addTo(window.gMap);
-  lyr._gisFC = fc; loaded[layer.id] = lyr;
-  var n = (fc.features || []).length;
-  if (layer._cntEl) layer._cntEl.textContent = (n >= 4000 ? '4000+' : n);
-  if (window.GISSymbology && window.GISSymbology.refreshLegend) window.GISSymbology.refreshLegend();
-  return n;
+
+// One tile loader per active layer: viewport tile cache + feature cache +
+// request queue + AbortController + background prefetch. Previously loaded
+// features stay on the map while new tiles stream in (no clear-on-refresh).
+function createLoader(layer) {
+  return GISTileLoader.create({
+    map: window.gMap,
+    fetchTile: function (bbox, signal) { return GIS.features.getInBBox(layer.id, bbox, 2000, signal); },
+    makeLayers: makeFeatureLayers(layer),
+    featureId: function (f) { return f.id != null ? f.id : (f.properties && f.properties.__id); },
+    onCount: function (n) {
+      if (layer._cntEl) layer._cntEl.textContent = n;
+      if (window.GISSymbology && window.GISSymbology.refreshLegend) window.GISSymbology.refreshLegend();
+    },
+    prefetchRing: 1
+  });
 }
+
+// Single debounced map-movement handler → nudge every active loader to fetch
+// the new edge tiles (cached tiles are reused; nothing is re-requested).
 function wireMoveend() {
   if (moveendWired || !window.gMap) return;
   moveendWired = true;
-  window.gMap.on('moveend', function () { clearTimeout(_mt); _mt = setTimeout(reloadActive, 350); });
+  window.gMap.on('moveend', function () { clearTimeout(_mt); _mt = setTimeout(reloadActive, 250); });
 }
-function reloadActive() { Object.keys(active).forEach(function (id) { renderLayer(active[id]).catch(function () {}); }); }
+function reloadActive() { Object.keys(loaded).forEach(function (id) { try { loaded[id].update(); } catch (e) {} }); }
 
 var tries = 0;
 var t = setInterval(function () {
@@ -224,7 +239,7 @@ async function deleteVillage(village, layers) {
   if (!window.confirm('למחוק את כל שכבות "' + village + '" מהמנוע? כולל כל הפיצ\'רים. פעולה בלתי הפיכה.')) return;
   for (var i = 0; i < layers.length; i++) {
     var id = layers[i].id;
-    if (loaded[id]) { window.gMap.removeLayer(loaded[id]); delete loaded[id]; }
+    if (loaded[id]) { loaded[id].destroy(); delete loaded[id]; }
     delete active[id];
     try { await GIS.layers.deleteLayer(id); }
     catch (e) { alert('שגיאה במחיקה: ' + e.message); break; }
@@ -256,23 +271,20 @@ function row(layer) {
     layer.color = newColor;
     try { await GIS.layers.setColor(layer.id, newColor); }
     catch (e) { alert('שגיאה בשמירת צבע: ' + e.message); return; }
-    if (loaded[layer.id]) {
-      window.gMap.removeLayer(loaded[layer.id]);
-      var fc = loaded[layer.id]._gisFC;
-      loaded[layer.id] = buildLayer(fc, layer, newColor).addTo(window.gMap);
-      loaded[layer.id]._gisFC = fc;
-    }
+    // Re-render the live tiles with the new colour (no network round-trip is
+    // possible from cached layers, so invalidate refetches the current view).
+    if (loaded[layer.id]) loaded[layer.id].invalidate();
   };
 
-  cb.onchange = async function () {
+  cb.onchange = function () {
     if (cb.checked) {
-      cb.disabled = true; cnt.textContent = '…';
-      try { active[layer.id] = layer; wireMoveend(); await renderLayer(layer); }
-      catch (e) { cb.checked = false; delete active[layer.id]; cnt.textContent = '✕'; alert('שגיאה: ' + e.message); }
-      finally { cb.disabled = false; }
+      cnt.textContent = '…';
+      active[layer.id] = layer; wireMoveend();
+      if (loaded[layer.id]) loaded[layer.id].destroy();
+      loaded[layer.id] = createLoader(layer);   // first viewport load kicks off now
     } else {
       delete active[layer.id];
-      if (loaded[layer.id]) { window.gMap.removeLayer(loaded[layer.id]); delete loaded[layer.id]; }
+      if (loaded[layer.id]) { loaded[layer.id].destroy(); delete loaded[layer.id]; }
       cnt.textContent = '';
     }
   };
@@ -346,7 +358,7 @@ function meterVillageRow(village) {
   el.innerHTML =
     '<input type="checkbox">' +
     '<span class="ge-dot" style="background:' + METER_COLOR + '"></span>' +
-    '<span class="ge-name">🔢 מדי מים</span>' +
+    '<span class="ge-name" title="מדי מים מתוך מערכת Arad (עם קריאות), ממוקמים לפי קואורדינטות">🔢 מדי מים (Arad)</span>' +
     '<span class="ge-count"></span>';
   var cb = el.querySelector('input[type=checkbox]');
   var cnt = el.querySelector('.ge-count');
@@ -385,8 +397,8 @@ window.GISLayerLabel = catLabel;
 
 // Allow the attribute table to refresh a rendered layer on the map after an edit.
 window.GISEngineSidebar = {
-  reload: function (layerId) { if (active[layerId]) renderLayer(active[layerId]).catch(function () {}); },
-  reloadAll: function () { reloadActive(); },                       // Phase 3: re-style all active layers (labels toggle)
+  reload: function (layerId) { if (loaded[layerId]) loaded[layerId].invalidate(); },        // after an edit → refetch that layer
+  reloadAll: function () { Object.keys(loaded).forEach(function (id) { loaded[id].invalidate(); }); }, // re-style all active (labels toggle)
   activeLayers: function () { return Object.keys(active).map(function (id) { return active[id]; }); },
   refresh: function () { try { render(); } catch (e) {} }
 };
