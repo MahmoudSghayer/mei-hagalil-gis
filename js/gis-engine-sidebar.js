@@ -518,7 +518,8 @@ window.GISEngineSidebar = {
   reload: function (layerId) { if (loaded[layerId]) loaded[layerId].invalidate(); },        // after an edit → refetch that layer
   reloadAll: function () { Object.keys(loaded).forEach(function (id) { loaded[id].invalidate(); }); }, // re-style all active (labels toggle)
   activeLayers: function () { return Object.keys(active).map(function (id) { return active[id]; }); },
-  refresh: function () { try { render(); } catch (e) {} }
+  refresh: function () { try { render(); } catch (e) {} },
+  villageAt: function (lng, lat) { return nearestVillage(lng, lat); }
 };
 
 })();

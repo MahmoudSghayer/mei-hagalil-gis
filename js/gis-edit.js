@@ -302,9 +302,31 @@
     if (window.gMap && state.createHandler) { window.gMap.off('pm:create', state.createHandler); state.createHandler = null; }
     banner(false);
     if (!gj || !gj.geometry) { disarm(); return; }
-    // route to the geographically-correct village's layer for this category.
-    var layerId = resolveLayerForPoint(repPoint(gj.geometry), group, centers);
+    // route to the correct village's layer for this category (create it if missing).
+    var layerId = await resolveAddLayer(repPoint(gj.geometry), group, centers);
+    if (!layerId) { disarm(); return; }
     await openAttrForm({ id: layerId, label: group.label }, gj.geometry);
+  }
+
+  async function resolveAddLayer(pt, group, centers) {
+    var village = (pt && window.GISEngineSidebar && GISEngineSidebar.villageAt)
+      ? GISEngineSidebar.villageAt(pt[0], pt[1]) : null;
+    if (village) {
+      var hit = group.layers.filter(function (l) { return l.village === village; })[0];
+      if (hit) return hit.id;
+      var name = village + ' · ' + group.label;
+      try {
+        var found = await GIS.layers.findByName(name);
+        if (found) return found.id;
+        toast('יוצר שכבה: ' + name + '…');
+        var created = await GIS.layers.createLayer({ name: name, geometry_type: group.geometry_type });
+        return created && created.id;
+      } catch (err) {
+        toast('לא ניתן ליצור שכבה חדשה — ' + cleanErr(err), 'error');
+        return null;
+      }
+    }
+    return resolveLayerForPoint(pt, group, centers);
   }
 
   // Attribute form built from the layer's field schema + a required asset_code.
