@@ -115,8 +115,15 @@
           { ic: '⬇️', lb: 'במורד הזרם', act: soon, disabled: true }
         ] }
       ] },
+      { label: 'מונים', cmds: [
+        { ic: '🔗', lb: 'חיבור אוטומטי', size: 'lg', act: meterAutoConnect },
+        { col: [
+          { ic: '✏️', lb: 'ערוך חיבור',  act: meterEditConnect },
+          { ic: '🧷', lb: 'הצג חיבורים', act: meterShowConnectors }
+        ] }
+      ] },
       { label: 'ניקוי', cmds: [
-        { ic: '🧹', lb: 'נקה תוצאה', size: 'lg', act: traceClear }
+        { ic: '🧹', lb: 'נקה תוצאה', size: 'lg', act: traceClearAll }
       ] }
     ],
 
@@ -146,6 +153,10 @@
   function traceIsolation() { if (window.GISTrace) { window.GISTrace.startIsolation(); } else { toast('מנוע הרשת עדיין נטען…'); } }
   function traceConnected() { if (window.GISTrace) { window.GISTrace.startConnected(); } else { toast('מנוע הרשת עדיין נטען…'); } }
   function traceClear() { if (window.GISTrace) { window.GISTrace.clear(); } }
+  function traceClearAll() { if (window.GISTrace) { window.GISTrace.clear(); } if (window.GISMeterConnect) { window.GISMeterConnect.clear(); } }
+  function meterAutoConnect() { if (window.GISMeterConnect) { window.GISMeterConnect.run(); } else { toast('מנוע חיבור המונים עדיין נטען…'); } }
+  function meterEditConnect() { if (window.GISMeterConnect) { window.GISMeterConnect.editArm(); } else { toast('מנוע חיבור המונים עדיין נטען…'); } }
+  function meterShowConnectors() { if (window.GISMeterConnect) { window.GISMeterConnect.toggleConnectors(); } else { toast('מנוע חיבור המונים עדיין נטען…'); } }
   function toggleLegend() { if (window.GISSymbology) { window.GISSymbology.toggleLegend(); } else { toast('מנוע הסימבולוגיה עדיין נטען…'); } }
   function toggleLabels() { if (window.GISSymbology) { window.GISSymbology.toggleLabels(); } else { toast('מנוע הסימבולוגיה עדיין נטען…'); } }
   function anlyAttr() { if (window.GISAnalysis) { window.GISAnalysis.selectByAttribute(); } else { toast('מנוע הניתוח עדיין נטען…'); } }

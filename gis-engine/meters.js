@@ -281,6 +281,69 @@
     getAnomalies: async function () {
       var sb = GIS.sb();
       return GIS._unwrap(await sb.from('v_meter_anomalies').select('*'), 'load anomalies') || [];
+    },
+
+    // ── Meter → pipeline connection ("Near" geoprocessing) ────────────────
+    // Backed by gis-engine/sql/meter_connect.sql. Distance is metric (PostGIS
+    // ::geography). Connections live on the meters row (connected_pipe_id,
+    // connection_type AUTO|MANUAL|NONE, connection_distance_m, connection_point).
+
+    // Bulk auto-connect every eligible meter to its nearest pipe within a metric
+    // threshold. Meters with no pipe in range are flagged 'NONE' (left
+    // unconnected); MANUAL connections are never overwritten. Admin only.
+    //   layerIds   — pipe layers to match against (array of layer ids).
+    //   opts.thresholdM (default 25), opts.onlyUnset (default true),
+    //   opts.bbox  — { minLng, minLat, maxLng, maxLat } to scope per village/view.
+    // Returns { targets, connected, unmatched, ambiguous, threshold_m }.
+    autoConnect: async function (layerIds, opts) {
+      GIS._assert(Array.isArray(layerIds) && layerIds.length, 'autoConnect requires pipe layerIds');
+      await GIS._requireRole(['admin'], 'auto-connect meters');
+      opts = opts || {};
+      var bb = opts.bbox || {};
+      var sb = GIS.sb();
+      return GIS._unwrap(await sb.rpc('autoconnect_meters', {
+        p_layer_ids: layerIds,
+        p_threshold_m: opts.thresholdM != null ? opts.thresholdM : 25,
+        p_only_unset: opts.onlyUnset !== false,
+        p_minlng: bb.minLng != null ? bb.minLng : null,
+        p_minlat: bb.minLat != null ? bb.minLat : null,
+        p_maxlng: bb.maxLng != null ? bb.maxLng : null,
+        p_maxlat: bb.maxLat != null ? bb.maxLat : null
+      }), 'auto-connect meters') || {};
+    },
+
+    // Nearest candidate pipes for one meter (for the "change connection" UI).
+    // Returns an array of { pipe_id, asset_code, layer_id, layer_name,
+    // distance_m, snap(GeoJSON Point) }, nearest first.
+    connectionCandidates: async function (meterId, layerIds, thresholdM, k) {
+      GIS._assert(meterId, 'connectionCandidates requires a meterId');
+      GIS._assert(Array.isArray(layerIds) && layerIds.length, 'connectionCandidates requires pipe layerIds');
+      var sb = GIS.sb();
+      return GIS._unwrap(await sb.rpc('meter_pipe_candidates', {
+        p_meter_id: meterId, p_layer_ids: layerIds,
+        p_threshold_m: thresholdM != null ? thresholdM : 25, p_k: k || 5
+      }), 'load connection candidates') || [];
+    },
+
+    // Manually connect a meter to a specific pipe (override). type defaults to
+    // 'MANUAL' so a later auto-connect pass won't touch it. Admin only.
+    connectMeter: async function (meterId, pipeId, type) {
+      GIS._assert(meterId && pipeId, 'connectMeter requires (meterId, pipeId)');
+      await GIS._requireRole(['admin'], 'connect meters');
+      var sb = GIS.sb();
+      return GIS._unwrap(await sb.rpc('connect_meter', {
+        p_meter_id: meterId, p_pipe_id: pipeId, p_type: type || 'MANUAL'
+      }), 'connect meter');
+    },
+
+    // Remove a meter's connection (sets connection_type 'NONE'). Admin only.
+    disconnectMeter: async function (meterId) {
+      GIS._assert(meterId, 'disconnectMeter requires a meterId');
+      await GIS._requireRole(['admin'], 'disconnect meters');
+      var sb = GIS.sb();
+      return GIS._unwrap(await sb.rpc('disconnect_meter', {
+        p_meter_id: meterId
+      }), 'disconnect meter');
     }
   };
 })();
