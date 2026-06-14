@@ -255,7 +255,8 @@
   // ── render ────────────────────────────────────────────────────────────────
   function cmdButton(c) {
     var b = document.createElement('button');
-    b.className = 'ags-cmd ags-cmd-' + (c.size === 'lg' ? 'lg' : 'sm');
+    // every command renders as a uniform icon-over-label tile (ArcGIS-Pro look)
+    b.className = 'ags-cmd ags-cmd-' + (c.size === 'sm' ? 'sm' : 'lg');
     b.innerHTML = '<span class="ags-ic">' + svgIcon(c.ic) + '</span><span class="ags-lb">' + c.lb + '</span>';
     if (c.disabled) { b.disabled = true; }
     if (c.group) { b.setAttribute('data-group', c.group); }
@@ -263,11 +264,9 @@
     return b;
   }
   function renderCmd(node, c) {
+    // flatten any stacked column into individual uniform tiles in the row
     if (c.col) {
-      var col = document.createElement('div');
-      col.className = 'ags-col';
-      c.col.forEach(function (sc) { sc.size = 'sm'; col.appendChild(cmdButton(sc)); });
-      node.appendChild(col);
+      c.col.forEach(function (sc) { node.appendChild(cmdButton(sc)); });
     } else {
       node.appendChild(cmdButton(c));
     }
@@ -306,8 +305,8 @@
         var lbl = document.createElement('div');
         lbl.className = 'ags-group-label';
         lbl.textContent = g.label;
+        grp.appendChild(lbl);    /* group title on top, ArcGIS-Pro style */
         grp.appendChild(body);
-        grp.appendChild(lbl);
         panel.appendChild(grp);
       });
       panelsEl.appendChild(panel);
