@@ -190,7 +190,13 @@
 
   // ── 2) Connector overlay (meters in current view) ───────────────────────────
   function ensurePane() {
-    if (!window.gMap.getPane('gisMeterConn')) window.gMap.createPane('gisMeterConn').style.zIndex = 648;
+    if (!window.gMap.getPane('gisMeterConn')) {
+      var p = window.gMap.createPane('gisMeterConn');
+      p.style.zIndex = 648;
+      p.style.pointerEvents = 'none';   // overlay is decorative — never eat clicks
+                                        // (esp. with preferCanvas: the pane canvas
+                                        // would otherwise block the layers below)
+    }
   }
   function clearConnectors() {
     if (state.connLayer) { window.gMap.removeLayer(state.connLayer); state.connLayer = null; }
@@ -239,7 +245,11 @@
   // ── pipe highlighting (show the connected / candidate pipe on the map) ──────
   var _pipeCache = {};
   function ensureHiPane() {
-    if (!window.gMap.getPane('gisMeterHi')) window.gMap.createPane('gisMeterHi').style.zIndex = 655;
+    if (!window.gMap.getPane('gisMeterHi')) {
+      var p = window.gMap.createPane('gisMeterHi');
+      p.style.zIndex = 655;
+      p.style.pointerEvents = 'none';   // highlights are decorative — never eat clicks
+    }
   }
   function clearHighlights() {
     ['hiMeter', 'hiConnected', 'hiCandidate'].forEach(function (k) {
@@ -281,6 +291,10 @@
   }
   function disarmEdit() {
     state.editArmed = false;
+    // Remove the pending one-shot click handler if it never fired (otherwise the
+    // next map click would still be consumed by the arm, blocking layer clicks).
+    if (window.gMap && state.editHandler) { window.gMap.off('click', state.editHandler); }
+    state.editHandler = null;
     if (window.gMap) window.gMap.getContainer().style.cursor = '';
     banner(false);
   }
