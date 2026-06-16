@@ -66,14 +66,22 @@
   }
 
   // ── public: line style ─────────────────────────────────────────────────────
+  // Optional user-chosen render style (set when drawing/submitting a line):
+  // solid | dashed | dotted | dashdot. Applied on top of the diameter/role logic.
+  function dashFor(s) { return s === 'dashed' ? '8 6' : s === 'dotted' ? '2 7' : s === 'dashdot' ? '10 6 2 6' : null; }
   function lineStyle(layer, f, baseColor) {
     var role = roleOf(layer);
     var st = statusOf(f);
     if (st === 4) return { color: '#9aa6b2', weight: 2, opacity: 0.7, dashArray: '5 5' }; // abandoned
-    if (role !== 'water' && role !== 'sewer') return { color: baseColor, weight: 3, opacity: 0.9 };
-    var d = diamOf(f), c = classOf(role, d);
-    var idx = breaksFor(role).indexOf(c);
-    return { color: shade(baseColor, idx * 0.12), weight: c.w, opacity: 0.92, lineCap: 'round' };
+    var userDash = dashFor((f.properties || {})._style);
+    var base;
+    if (role !== 'water' && role !== 'sewer') { base = { color: baseColor, weight: 3, opacity: 0.9 }; }
+    else {
+      var d = diamOf(f), c = classOf(role, d), idx = breaksFor(role).indexOf(c);
+      base = { color: shade(baseColor, idx * 0.12), weight: c.w, opacity: 0.92, lineCap: 'round' };
+    }
+    if (userDash) base.dashArray = userDash;
+    return base;
   }
 
   // ── public: point symbol (canvas circleMarker, role-tuned) ─────────────────

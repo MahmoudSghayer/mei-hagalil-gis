@@ -11,8 +11,11 @@
   var VILLAGES = ['מגד אל-כרום', 'בענה', 'דיר אל-אסד', 'נחף', 'סחנין', 'דיר חנא', 'עראבה'];
   var ENTITY_CATS = [
     ['water_pipes', 'קו מים'], ['sewage_pipes', 'קו ביוב'], ['valves', 'מגוף'],
-    ['hydrants', 'ברז כיבוי אש'], ['water_meters', 'מד מים'], ['manholes', 'שוחה'], ['other', 'אחר']
+    ['hydrants', 'ברז כיבוי אש'], ['water_meters', 'מד מים'], ['manholes', 'שוחה'],
+    ['service_route', 'קו שירות'], ['utility_path', 'תוואי תשתית'], ['other', 'אחר']
   ];
+  var LINE_STYLES = [['solid', 'מלא'], ['dashed', 'מקווקו'], ['dotted', 'מנוקד'], ['dashdot', 'קו-נקודה']];
+  function styleOptions() { return LINE_STYLES.map(function (x) { return '<option value="' + x[0] + '">' + esc(x[1]) + '</option>'; }).join(''); }
   var STATUS_HE = { pending: 'ממתין לבדיקה', approved: 'אושר', rejected: 'נדחה' };
 
   function sb() { return window.GIS ? GIS.sb() : window.gSb; }
@@ -103,12 +106,14 @@
     var opts = ENTITY_CATS.map(function (c) { return '<option value="' + c[0] + '">' + esc(c[1]) + '</option>'; }).join('');
     var body =
       '<div class="fld-row"><label>סוג השכבה *</label><select id="fld-cat">' + opts + '</select></div>' +
+      '<div class="fld-row"><label>סגנון קו</label><select id="fld-style">' + styleOptions() + '</select></div>' +
       '<div class="fld-row"><label>קוד נכס (לא חובה)</label><input id="fld-code" placeholder="לדוגמה: WP-1024"></div>' +
       '<div class="fld-row"><label>הערות</label><textarea id="fld-notes" rows="3" placeholder="תיאור / פרטים"></textarea></div>';
     dialog('פרטי הישות', body, function (bg, close) {
       var ok = bg.querySelector('.fld-ok'); ok.disabled = true; ok.textContent = '⏳ מגיש...';
       var payload = { asset_code: bg.querySelector('#fld-code').value.trim() || undefined,
-                      notes: bg.querySelector('#fld-notes').value.trim() };
+                      notes: bg.querySelector('#fld-notes').value.trim(),
+                      _style: bg.querySelector('#fld-style').value };
       sb().rpc('submit_entity', {
         p_geometry: geometry, p_target_category: bg.querySelector('#fld-cat').value, p_payload: payload
       }).then(function (res) {
@@ -271,6 +276,7 @@
     var opts = ENTITY_CATS.map(function (c) { return '<option value="' + c[0] + '">' + esc(c[1]) + '</option>'; }).join('');
     var body =
       '<div class="fld-row"><label>סוג השכבה *</label><select id="fld-cat">' + opts + '</select></div>' +
+      '<div class="fld-row"><label>סגנון קו</label><select id="fld-style">' + styleOptions() + '</select></div>' +
       '<div class="fld-row"><label>קוד נכס (לא חובה)</label><input id="fld-code"></div>' +
       '<div class="fld-row"><label>הערות</label><textarea id="fld-notes" rows="2"></textarea></div>' +
       '<div class="fld-row"><label>מדיה (תמונות / וידאו)</label>' +
@@ -283,7 +289,8 @@
       var ok = bgEl.querySelector('.fld-ok'); ok.disabled = true; ok.textContent = '⏳ מעלה...';
       var payload = Object.assign({}, extra || {}, {
         asset_code: bgEl.querySelector('#fld-code').value.trim() || undefined,
-        notes: bgEl.querySelector('#fld-notes').value.trim()
+        notes: bgEl.querySelector('#fld-notes').value.trim(),
+        _style: bgEl.querySelector('#fld-style').value
       });
       submitEntityWithMedia(geometry, bgEl.querySelector('#fld-cat').value, payload, capFiles.slice())
         .then(function (n) { close(); toast('✅ נשלח לבדיקה' + (n ? ' · ' + n + ' קבצי מדיה' : ''), 'success'); })
