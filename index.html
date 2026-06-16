@@ -6,6 +6,13 @@
   <title>מי הגליל | מערכת GIS</title>
   <!-- Inline SVG favicon (💧 brand drop) — no extra request, stops the /favicon.ico 404 -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💧</text></svg>"/>
+  <!-- PWA: installable mobile field app (L1c) -->
+  <link rel="manifest" href="/manifest.webmanifest"/>
+  <meta name="theme-color" content="#0d3b5e"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-title" content="מי הגליל"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+  <link rel="apple-touch-icon" href="/icon.svg"/>
   <!-- Warm up TLS to the origins we hit on load: data (Supabase), libs, default basemap tiles -->
   <link rel="preconnect" href="https://hlbogufrdxpviyxlwqtf.supabase.co" crossorigin/>
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin/>
