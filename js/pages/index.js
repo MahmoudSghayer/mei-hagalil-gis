@@ -99,6 +99,9 @@ function setUserUI(p) {
     document.getElementById('logs-link').style.display = 'inline-block';
     document.getElementById('upload-link').style.display = 'inline-block';
   }
+  if (p.role === 'admin' || p.role === 'engineer') {
+    var rl = document.getElementById('review-link'); if (rl) rl.style.display = 'inline-block';
+  }
   // Viewers are read-only: hide the "new incident" button (DB RLS also blocks it).
   var canEdit = (p.role === 'admin' || p.role === 'engineer');
   var addBtn = document.getElementById('add-btn');

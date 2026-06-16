@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>מי הגליל | מרכז בדיקה</title>
+  <link rel="stylesheet" href="../css/shared.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+  <script src="../js/auth.js"></script>
+  <style>
+    #rv-wrap{position:fixed;top:56px;left:0;right:0;bottom:0;display:flex}
+    #rv-list{width:min(380px,42%);background:#f1f5f9;overflow:auto;border-inline-start:1px solid #e2e8f0;padding:10px}
+    #rv-main{flex:1;display:flex;flex-direction:column}
+    #rv-map{flex:1;min-height:200px}
+    #rv-detail{background:#fff;border-top:1px solid #e2e8f0;padding:14px;max-height:46%;overflow:auto}
+    .rv-card{background:#fff;border:1px solid #e2e8f0;border-radius:11px;padding:11px 13px;margin-bottom:9px;cursor:pointer}
+    .rv-card:hover{border-color:#1a7fc1}.rv-card.sel{border-color:#0d3b5e;box-shadow:0 0 0 2px rgba(13,59,94,.15)}
+    .rv-card .t{font-weight:700;color:#1e293b;font-size:14px}
+    .rv-card .m{font-size:12px;color:#64748b;margin-top:3px}
+    .rv-kind{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:700;margin-inline-start:6px}
+    .rv-kind.entity{background:#dbeafe;color:#1e40af}.rv-kind.issue{background:#fef3c7;color:#92400e}
+    .rv-empty{text-align:center;color:#94a3b8;padding:30px 12px}
+    #rv-detail h3{margin:0 0 8px;color:#0d3b5e;font-size:16px}
+    .rv-kv{display:flex;gap:8px;font-size:13px;margin:3px 0}.rv-kv b{color:#475569;min-width:90px}
+    .rv-edit{width:100%;padding:8px;border:1px solid #cbd5e1;border-radius:8px;font:inherit;margin-top:4px;box-sizing:border-box}
+    .rv-acts{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+    .rv-acts button{flex:1;min-width:120px;padding:11px;border:none;border-radius:10px;font:inherit;font-weight:700;cursor:pointer}
+    .rv-approve{background:#0d9488;color:#fff}.rv-reject{background:#dc2626;color:#fff}.rv-editap{background:#f59e0b;color:#fff}
+    .rv-row{margin:8px 0}.rv-row label{display:block;font-size:12px;color:#475569;margin-bottom:3px}
+  </style>
+</head>
+<body>
+<div id="topbar">
+  <div class="logo">💧 מי <span>הגליל</span> | מרכז בדיקה</div>
+  <div class="topbar-right">
+    <span class="badge-admin" id="rv-count">—</span>
+    <a href="../index.html" class="topbar-btn solid">למפה</a>
+    <button class="topbar-btn" id="rv-logout">התנתק</button>
+  </div>
+</div>
+
+<div id="rv-wrap">
+  <div id="rv-list"><div class="rv-empty">טוען…</div></div>
+  <div id="rv-main">
+    <div id="rv-map"></div>
+    <div id="rv-detail"><div class="rv-empty">בחר הגשה מהרשימה כדי לבדוק</div></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="../js/motion-utils.js"></script>
+<script src="../js/pages/review.js"></script>
+</body>
+</html>

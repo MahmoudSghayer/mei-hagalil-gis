@@ -314,6 +314,20 @@ BEGIN
   RETURN s;
 END; $$;
 
+-- Review queue: pending submissions with geometry as GeoJSON. SECURITY INVOKER so
+-- the submissions RLS scopes it (engineer = assigned viewers only; admin = all).
+CREATE OR REPLACE FUNCTION public.review_queue()
+RETURNS TABLE (id BIGINT, kind TEXT, submitted_by UUID, submitted_at TIMESTAMPTZ,
+               geometry JSONB, target_category TEXT, payload JSONB)
+LANGUAGE sql STABLE SET search_path = public AS $$
+  SELECT s.id, s.kind, s.submitted_by, s.submitted_at,
+         CASE WHEN s.geometry IS NULL THEN NULL ELSE ST_AsGeoJSON(s.geometry)::jsonb END,
+         s.target_category, s.payload
+  FROM public.submissions s
+  WHERE s.status = 'pending'
+  ORDER BY s.submitted_at ASC;
+$$;
+
 CREATE OR REPLACE FUNCTION public.reject_submission(p_id BIGINT, p_reason TEXT)
 RETURNS public.submissions LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
 DECLARE s public.submissions;
