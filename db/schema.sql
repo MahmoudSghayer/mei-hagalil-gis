@@ -38,8 +38,9 @@ AS $$
   );
 $$;
 
--- Returns true when the caller is an active admin OR editor. Used to gate
--- data-write RLS (incidents, GIS features, meters) — viewers are read-only.
+-- Returns true when the caller can edit production (admin/engineer). Used to gate
+-- data-write RLS (incidents, GIS features, meters). Superseded by field-workflow.sql,
+-- which redefines this to has_perm('edit_production'). Viewers submit (pending) only.
 CREATE OR REPLACE FUNCTION is_editor()
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -49,7 +50,7 @@ AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.profiles
     WHERE id = auth.uid()
-      AND role IN ('admin', 'editor')
+      AND role IN ('admin', 'engineer')
       AND is_active = true
   );
 $$;
@@ -114,7 +115,7 @@ CREATE TABLE IF NOT EXISTS profiles (
   email       TEXT         NOT NULL,
   full_name   TEXT         NOT NULL DEFAULT '',
   role        TEXT         NOT NULL DEFAULT 'viewer'
-                           CHECK (role IN ('admin', 'editor', 'viewer')),
+                           CHECK (role IN ('admin', 'engineer', 'viewer')),
   phone       TEXT,
   department  TEXT,
   is_active   BOOLEAN      NOT NULL DEFAULT true,

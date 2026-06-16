@@ -23,14 +23,14 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";   -- gen_random_uuid()
 
 -- ── ROLES ───────────────────────────────────────────────────────────────
--- Three-tier model:  viewer (read-only) · editor (edit + export) · admin (all).
+-- Three-tier model:  viewer (field submitter) · engineer (edit + review) · admin (all).
 ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
 -- Migrate any legacy role values BEFORE re-adding the constraint, or it fails.
-UPDATE public.profiles SET role = 'editor' WHERE role IN ('engineer');
+UPDATE public.profiles SET role = 'engineer' WHERE role IN ('editor');
 UPDATE public.profiles SET role = 'viewer' WHERE role IN ('office', 'user');
 ALTER TABLE public.profiles
   ADD CONSTRAINT profiles_role_check
-  CHECK (role IN ('admin', 'editor', 'viewer'));
+  CHECK (role IN ('admin', 'engineer', 'viewer'));
 
 -- is_admin() — defined here so the engine schema is self-contained even if the
 -- app's original db/schema.sql has not been applied to this project. Idempotent.
@@ -45,7 +45,7 @@ $$;
 CREATE OR REPLACE FUNCTION public.is_editor()
 RETURNS BOOLEAN LANGUAGE sql SECURITY DEFINER STABLE AS $$
   SELECT EXISTS (SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND is_active = true AND role IN ('admin','editor'));
+    WHERE id = auth.uid() AND is_active = true AND role IN ('admin','engineer'));
 $$;
 
 CREATE OR REPLACE FUNCTION public.can_edit_gis()
