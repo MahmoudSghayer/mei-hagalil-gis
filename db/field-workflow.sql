@@ -17,6 +17,23 @@ ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_role_check;
 ALTER TABLE public.profiles
   ADD CONSTRAINT profiles_role_check CHECK (role IN ('admin', 'engineer', 'viewer'));
 
+-- Signup trigger MUST hard-default role to 'viewer' (a value the CHECK allows).
+-- If a stale version defaults to 'user' or reads role from metadata, the post-
+-- signup INSERT violates the CHECK and Supabase returns "Database error creating
+-- new user" (500) — which broke admin-create-user. Pin it here, authoritatively.
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, full_name, role, phone, department)
+  VALUES (NEW.id, NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', ''),
+    'viewer',
+    COALESCE(NEW.raw_user_meta_data->>'phone', ''),
+    COALESCE(NEW.raw_user_meta_data->>'department', ''))
+  ON CONFLICT (id) DO NOTHING;
+  RETURN NEW;
+END; $$;
+
 -- ── 1. Data-driven RBAC ─────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.role_permissions (
   role        TEXT NOT NULL,
