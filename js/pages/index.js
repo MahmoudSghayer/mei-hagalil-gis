@@ -781,7 +781,22 @@ function zoomToVillage(villageId) {
 //  INCIDENTS
 // ════════════════════════════════════════════════════════════
 function initSB(){loadIncidents();subscribeRT();}
-function loadIncidents(){gSb.from('incidents').select('*').in('status',['open','in_progress']).order('created_at',{ascending:false}).then(function(res){if(res.error){console.error(res.error);return;}gIncidents=res.data||[];renderAll();document.getElementById('realtime-dot').style.background='#22c55e';});}
+function loadIncidents(){gSb.from('incidents').select('*').in('status',['open','in_progress']).order('created_at',{ascending:false}).then(function(res){
+  if(res.error){
+    console.error(res.error);
+    document.getElementById('realtime-dot').style.background='#ef4444';
+    renderIncidentError();
+    showToast('שגיאה בטעינת תקלות', { type:'error', action:{ label:'נסה שוב', fn: loadIncidents } });
+    return;
+  }
+  gIncidents=res.data||[];renderAll();document.getElementById('realtime-dot').style.background='#22c55e';
+});}
+function renderIncidentError(){
+  var p=document.getElementById('incidents-panel');
+  if(p){ p.innerHTML='<div class="empty-msg">שגיאה בטעינת תקלות <button id="inc-retry" style="margin-inline-start:6px;padding:2px 10px;border:1px solid var(--border,#ccc);border-radius:6px;background:transparent;color:inherit;cursor:pointer">נסה שוב</button></div>';
+    var b=document.getElementById('inc-retry'); if(b) b.onclick=loadIncidents; }
+  var mp=document.getElementById('my-panel'); if(mp) mp.style.display='none';
+}
 function subscribeRT(){gSb.channel('inc-rt').on('postgres_changes',{event:'*',schema:'public',table:'incidents'},function(p){if(p.eventType==='INSERT'){gIncidents.unshift(p.new);showToast('תקלה חדשה: '+p.new.title);}else if(p.eventType==='UPDATE'){var i=gIncidents.findIndex(function(x){return x.id===p.new.id;});if(i>=0)gIncidents[i]=p.new;else gIncidents.unshift(p.new);if(p.new.status==='closed')gIncidents=gIncidents.filter(function(x){return x.id!==p.new.id;});}else if(p.eventType==='DELETE')gIncidents=gIncidents.filter(function(x){return x.id!==p.old.id;});renderAll();}).subscribe();}
 
 function isVisibleToMe(inc){if(inc.status==='open')return true;if(inc.status==='in_progress')return inc.assigned_to===gUser.id||gProfile.role==='admin';return false;}
@@ -899,7 +914,24 @@ async function submitIncident(){var title=document.getElementById('f-title').val
 
 function timeAgo(iso){if(!iso)return'';var d=Math.floor((Date.now()-new Date(iso))/60000);if(d<1)return'הרגע';if(d<60)return'לפני '+d+' דק׳';var h=Math.floor(d/60);if(h<24)return'לפני '+h+' שעות';return'לפני '+Math.floor(h/24)+' ימים';}
 function timeSince(iso){if(!iso)return'';var d=Math.floor((Date.now()-new Date(iso))/60000);if(d<1)return'בטיפול: זה עתה';if(d<60)return'בטיפול: '+d+' דק׳';var h=Math.floor(d/60);if(h<24)return'בטיפול: '+h+' שעות';return'בטיפול: '+Math.floor(h/24)+' ימים';}
-function showToast(msg){var t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(function(){t.classList.remove('show');},3000);}
+function showToast(msg, opts){
+  if (typeof opts === 'string') opts = { type: opts };   // back-compat: showToast(msg, 'error')
+  opts = opts || {};
+  var t = document.getElementById('toast');
+  t.innerHTML = '';
+  var span = document.createElement('span'); span.textContent = msg; t.appendChild(span);
+  if (opts.action && typeof opts.action.fn === 'function') {
+    var b = document.createElement('button');
+    b.textContent = opts.action.label || 'נסה שוב';
+    b.style.cssText = 'margin-inline-start:10px;padding:2px 10px;border:1px solid rgba(255,255,255,.6);border-radius:6px;background:transparent;color:#fff;cursor:pointer;font:inherit';
+    b.onclick = function(){ t.classList.remove('show'); opts.action.fn(); };
+    t.appendChild(b);
+  }
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  // Keep actionable toasts up longer so the user can hit Retry.
+  t._timer = setTimeout(function(){ t.classList.remove('show'); }, opts.action ? 8000 : (opts.duration || 3000));
+}
 
 window.startIncPick=startIncPick;
 window.cancelIncPick=cancelIncPick;

@@ -1,87 +1,81 @@
 # 🔄 Handoff — Mei HaGalil GIS
 
-> Continuity doc for resuming on any device. Last updated end of the Phase 1 (security + RBAC) session.
-> Branch `main`, all work pushed. Latest commit at write time: `6382059`.
+> Continuity doc for resuming on any device. Branch `main`, all work pushed.
+> Latest commit at write time: `277f0a7`. (Phase 1 security/RBAC done; Phase 2 hardening in progress; CI + tests landed.)
 
 ## Project overview
-Web GIS for the Mei HaGalil water/sewage utility (7 villages, N. Israel). Vanilla JS + Leaflet front end, Supabase (Postgres/PostGIS + Auth + RLS) backend, Vercel serverless `api/`, and a Python/FastAPI DWG export microservice on Render. Hebrew RTL UI, ArcGIS-Pro-style ribbon.
+Web GIS for the Mei HaGalil water/sewage utility (7 villages, N. Israel). Vanilla JS + Leaflet front end, Supabase (Postgres/PostGIS + Auth + RLS), Vercel serverless `api/`, and a Python/FastAPI DWG export microservice on Render. Hebrew RTL UI, ArcGIS-Pro-style ribbon.
 
 ## What I'm building right now
-Acting on a full production-readiness audit. **Phase 1 (security + a 3-role RBAC system) is done.** Next is **Phase 2 (production hardening: DB indexes, pagination, a11y, onboarding, monitoring).**
+Working a production-readiness audit. **Phase 1 (security + 3-role RBAC) is done.** **Phase 2 (hardening) is in progress.** Marquee features (#3 planned-shutoff notifications, #4 NRW dashboard) are queued and need a scoping decision.
 
 ## Current state
-- **Branch:** `main` — clean, fully pushed.
-- **Remote:** `github.com/MahmoudSghayer/mei-hagalil-gis`
-- **Latest commit:** `6382059`. Phase 1 = `d0548b3 → 6382059` (7 commits).
-- **Deploys:** Vercel (frontend + `api/`) at temporary domain **https://mei-hagalil-gis.vercel.app**; Render (DWG service).
-- **Full audit report + roadmap:** lives at `~/.claude/plans/valiant-stargazing-badger.md` on the *original* machine (local, not in this repo).
+- **Branch:** `main` — clean (only untracked `Data/` shapefiles, don't commit).
+- **Remote:** `github.com/MahmoudSghayer/mei-hagalil-gis`. **Latest:** `277f0a7`.
+- **CI:** GitHub Actions on every push/PR — `node --check` all JS, Vitest (API), pytest (DWG auth). 25 tests, green locally.
+- **Deploys:** Vercel at **https://mei-hagalil-gis.vercel.app**; Render (DWG service).
+- **Audit report + roadmap:** `~/.claude/plans/valiant-stargazing-badger.md` (local to the original machine, not in repo).
 
-## What is currently working ✅
-- 3-role RBAC end-to-end (viewer / editor / admin) — confirmed in prod.
-- DWG export via JWT auth — confirmed working.
-- Server-side admin user creation (`/api/admin-create-user`) — confirmed working.
-- Public signups disabled; self-promotion & signup priv-esc closed; CORS locked; magic-byte upload checks; tamper-proof incident audit log.
+## What is working ✅
+- 3-role RBAC (viewer/editor/admin) end-to-end: DB RLS + client + admin UI + export service. Confirmed in prod.
+- Viewer is fully read-only in the UI (no "+", no take/close, no export, no edit tools).
+- DWG export via JWT (remote validation, role-checked). Server-side admin user creation.
+- Public signups disabled; priv-esc + self-promotion closed; CORS locked; magic-byte upload checks; tamper-proof audit log.
+- Feature table paginates (load-more/all, "showing X of Y") — no more silent 1500-row drop.
+- CI + automated tests guarding the security-critical paths.
 
-## What is broken / not finished ⚠️
-- Nothing broken. **Not done:** Phase 2 items (below).
-- **Possible leftover:** 5 demo incidents may still be in the live DB (removed from schema, not from DB) — delete SQL in Next Steps.
-- Retired tokens remain in **git history** (inert — invalidated at Render — but history not scrubbed).
+## What is not finished ⚠️
+Phase 2 remaining: error-recovery/retry toasts, onboarding/empty states, accessibility pass, monitoring (needs a Sentry DSN), backup/DR doc. Nothing broken.
+**Possible leftover:** 5 demo incidents may still be in the live DB (removed from schema, not DB).
 
-## Recent changes (Phase 1)
-1. **Priv-esc fixes** — signup trigger forces `role='viewer'`; BEFORE UPDATE trigger blocks self-promotion via profile update.
-2. **JWT-only DWG** — removed static `BACKEND_TOKEN`/`DWG_EXPORT_TOKEN` from client; DWG service validates token **remotely** (`/auth/v1/user`, algorithm-agnostic) and reads role.
-3. **Admin user creation** moved server-side (service-role, admin-gated) so signups could be disabled.
-4. **3-role RBAC** consolidated from old conflicting sets (`admin/user` vs `admin/engineer/office/user`).
-5. **CORS** locked to app origin; **magic-byte** upload validation; **parcel** SQL-injection fix + 12s budget; **snap-guide** parallel fetch; **seed data** moved out of prod schema.
+## Recent changes (this session, 13+ commits)
+Phase 1 security + RBAC, then: added Vitest + pytest + GitHub Actions CI; `incidents.assigned_to` UUID CHECK + index; feature-table pagination; viewer read-only UI gating (incident buttons); removed disabled "coming soon" ribbon buttons.
 
 ## Key decisions
-- Roles: **viewer** (read-only) · **editor** (edit + meter-connect + export) · **admin** (everything). `layers`/`fields`/import stay **admin-only** (structural).
-- Enforcement is **DB-first** (RLS via `is_admin()`/`is_editor()`; `can_edit_gis()`/`can_edit_meters()` = `is_editor()`). Client gates are UX hints only.
-- `incidents` UPDATE left open to any authenticated user — **accepted** (signups off = vetted staff; locking breaks "take an unassigned incident").
-- Supabase **anon key in client is fine** (public by design); the real perimeter is RLS.
+- Roles: viewer (read-only) · editor (edit + meter-connect + export) · admin (everything). layers/fields/import stay admin-only.
+- Enforcement is DB-first (RLS via `is_admin()`/`is_editor()`; `can_edit_gis()`/`can_edit_meters()` = `is_editor()`). Client gates are UX hints.
+- `incidents` UPDATE left open to any authenticated user — accepted (signups off = vetted staff).
+- Audit over-flagged DB indexes; the hot-path ones (features GIN, meters.customer_id) already exist.
 
-## File map (touched / important)
-| File | Purpose |
+## File map (key)
+| Path | Purpose |
 |---|---|
-| `db/schema.sql` | App tables (profiles, incidents, incident_logs), `is_admin`/`is_editor`, RLS, signup trigger |
-| `gis-engine/sql/schema.sql` | GIS tables (layers/features/fields/meters), role constraint + migration, `can_edit_*`, RLS |
-| `gis-engine/sql/meter_connect.sql` | Meter-connect RPCs (SECURITY DEFINER, guarded by `can_edit_meters()`) |
+| `db/schema.sql` | App tables, `is_admin`/`is_editor`, RLS, signup trigger, assigned_to guard |
+| `gis-engine/sql/schema.sql` | GIS tables, role constraint+migration, `can_edit_*`, RLS |
+| `gis-engine/sql/meter_connect.sql` | Meter-connect RPCs (DEFINER, guarded by `can_edit_meters()`) |
 | `gis-engine/core.js` | `GIS.permissions` client role helpers |
 | `gis-engine/features.js` / `meters.js` | Client write guards (admin\|editor) |
-| `js/backend-client.js` | DWG service client (JWT-only) |
-| `js/export-feature.js` | Export wizard; gated by `canExport` |
+| `js/backend-client.js` | DWG client (JWT-only) |
+| `js/export-feature.js` | Export wizard, gated by `canExport` |
+| `js/gis-feature-table.js` | Attribute table (paginated; `state.limit`, default 500) |
+| `js/arcgis-ribbon.js` | Ribbon toolbar |
+| `js/pages/index.js` | Map shell, role UI gating, incidents |
 | `js/pages/admin.js` + `pages/admin.html` | User mgmt + 3-role selector |
-| `js/pages/index.js` | Main map shell, role UI gating, incidents |
-| `js/pages/upload.js` | File import + magic-byte validation |
 | `api/admin-create-user.js` | Server-side admin user creation |
 | `api/tiles.js` / `api/parcel.js` | MVT proxy / parcel lookup (CORS-locked) |
 | `dwg-export/main.py` | FastAPI export service (remote JWT + role check) |
-| `db/seed.sample.sql` | Demo incidents (dev only) |
+| `test/` + `dwg-export/tests/` | Vitest + pytest suites |
+| `.github/workflows/ci.yml` | CI |
 
 ## Active problems / Phase 2 backlog
-- **DB:** missing indexes (JSONB `properties->>'customer_id'`, `incidents.assigned_to`, `layer_mapping_rules.created_by`); no FK/CHECK on `incidents.assigned_to` (free TEXT).
-- **Reliability:** feature table silently caps at 1500 rows (no pagination); failed requests show a vanishing toast (no retry).
-- **UX:** no onboarding/empty states; disabled "coming soon" ribbon buttons (`js/arcgis-ribbon.js`); viewer still sees take/close incident popup buttons (DB blocks them; UI should hide).
-- **A11y:** no ARIA/keyboard/focus pass.
-- **Ops:** no error monitoring (Sentry) or documented backup/DR.
+- Error-recovery: failed requests show a vanishing toast (no retry). **(in progress)**
+- UX: no onboarding; some empty states still say "טוען…". **(in progress)**
+- A11y: no ARIA/keyboard/focus pass.
+- Ops: no monitoring (Sentry) or backup/DR doc.
 
-## Critical context notes (don't forget)
-- **Always commit AND push** — verified via Vercel deploy; never stop at a local commit.
-- **DB schema files are source-of-truth only** — changes must be **applied manually in the Supabase SQL editor** to take effect.
-- **Env vars (dashboards, not repo):** Vercel → `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`. Render DWG → `SUPABASE_URL`, `SUPABASE_ANON_KEY` (role enforcement needs these), `API_TOKEN` blanked.
-- **Never put `service_role` key in client code** — server/env only. Anon key in `auth.js` is fine.
-- `js/*` assets are **CDN-cached up to 1h** (`vercel.json`) — hard-refresh (Ctrl+F5) after deploy when testing.
-- Use `git commit -F <file>` for multi-line messages (PowerShell here-strings are fragile here).
-- Audit auto-flagged some non-issues (anon key, tiles "service-role exposure") — verify before treating audit claims as fact.
+## Critical context notes
+- **Always commit AND push** — verified via Vercel deploy.
+- **DB schema files are source-of-truth only** — apply changes manually in the Supabase SQL editor.
+- **Env (dashboards, not repo):** Vercel → `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`. Render DWG → `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `API_TOKEN` blanked.
+- **Never put `service_role` in client code.** Anon key in `auth.js` is fine.
+- `js/*` CDN-cached up to 1h (`vercel.json`) — hard-refresh after deploy when testing.
+- Local Python can't build `pyproj==3.6.1` on Python 3.13 — CI uses 3.11. Use `git commit -F <file>` for multi-line messages.
 
 ## Next steps (in order)
 1. `git pull` on `main`.
-2. **Test the 3 roles in prod** (viewer/editor/admin). Negative test: as viewer, `gSb.from('incidents').insert([...])` in console must be RLS-denied.
-3. **Clean live DB** if demo incidents present:
-   ```sql
-   DELETE FROM incidents WHERE title IN ('נזילה בצנרת ראשית','לחץ מים נמוך','תקלת מד מים','חסימה בקו ביוב','תחנת שאיבה בתחזוקה');
-   ```
-4. **Start Phase 2:** DB indexes + FK on `incidents.assigned_to`, then feature-table pagination.
+2. Apply the `incidents.assigned_to` SQL (UUID CHECK + index) in Supabase.
+3. Confirm CI is green (Actions tab).
+4. Decide the next big unit: **#3 planned-shutoff + notifications** (pick channel: list/email/SMS) or **#4 NRW dashboard**. Meanwhile Phase 2 polish (error-recovery, empty states, a11y) continues.
 
 ## ▶️ Resume instruction
-**To continue: start from branch `main`. First `git pull`, then verify the 3 roles work in production at https://mei-hagalil-gis.vercel.app. Once confirmed, begin Phase 2 with the DB indexes + `incidents.assigned_to` FK.**
+**To continue: branch `main`. `git pull`, confirm CI green + apply the assigned_to SQL, then either continue Phase 2 polish or pick #3/#4 (and a notification channel for #3).**
