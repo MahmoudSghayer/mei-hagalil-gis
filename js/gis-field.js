@@ -48,7 +48,12 @@
       '.fld-sub{background:#fff;border:1px solid #e2e8f0;border-radius:11px;padding:11px 13px;margin-bottom:9px}' +
       '.fld-sub .t{font-weight:700;color:#1e293b;font-size:14px}.fld-sub .m{font-size:12px;color:#64748b;margin-top:3px}' +
       '.fld-badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:700}' +
-      '.fld-badge.pending{background:#fef3c7;color:#92400e}.fld-badge.approved{background:#dcfce7;color:#166534}.fld-badge.rejected{background:#fee2e2;color:#991b1b}';
+      '.fld-badge.pending{background:#fef3c7;color:#92400e}.fld-badge.approved{background:#dcfce7;color:#166534}.fld-badge.rejected{background:#fee2e2;color:#991b1b}' +
+      '.fld-media-btn{padding:8px 12px;border:1px dashed #94a3b8;border-radius:9px;background:#f8fafc;cursor:pointer;font:inherit;font-size:13px}' +
+      '.cap-thumb{background:#e2e8f0;border-radius:8px;padding:4px 8px;font-size:12px;display:flex;align-items:center;gap:5px}' +
+      '.cap-rm{cursor:pointer;color:#dc2626;font-weight:700}' +
+      '#fld-route-bar{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:1400;background:#0d9488;color:#fff;padding:10px 16px;border-radius:10px;display:flex;align-items:center;gap:14px;box-shadow:0 4px 16px rgba(0,0,0,.35)}' +
+      '#fld-route-bar button{background:#fff;color:#0d9488;border:none;border-radius:8px;padding:6px 12px;font:inherit;font-weight:700;cursor:pointer}';
     var s = document.createElement('style'); s.id = 'fld-styles'; s.textContent = css; document.head.appendChild(s);
   }
 
@@ -193,16 +198,136 @@
     });
   }
 
+  // ── Camera + GPS capture (L1) ──────────────────────────────────────────────
+  var capFiles = [];
+
+  function startCapture() {
+    var bg = document.createElement('div'); bg.className = 'fld-bg';
+    bg.innerHTML = '<div class="fld-dlg"><h3>לכידת שטח</h3>' +
+      '<div class="fld-geom">' +
+      '<button data-c="point"><span class="i">📍</span>נקודה + מדיה<br><small>מיקום נוכחי (GPS)</small></button>' +
+      '<button data-c="route"><span class="i">🛰️</span>מסלול + מדיה<br><small>הקלטת הליכה</small></button>' +
+      '</div><div class="fld-acts"><button class="fld-cancel">ביטול</button></div></div>';
+    document.body.appendChild(bg);
+    bg.addEventListener('click', function (e) { if (e.target === bg) bg.remove(); });
+    bg.querySelector('.fld-cancel').onclick = function () { bg.remove(); };
+    bg.querySelector('[data-c="point"]').onclick = function () { bg.remove(); capturePoint(); };
+    bg.querySelector('[data-c="route"]').onclick = function () { bg.remove(); captureRoute(); };
+  }
+
+  function capturePoint() {
+    if (!navigator.geolocation) { toast('אין GPS במכשיר', 'error'); return; }
+    toast('מאתר מיקום…', 'info');
+    navigator.geolocation.getCurrentPosition(function (pos) {
+      var geometry = { type: 'Point', coordinates: [pos.coords.longitude, pos.coords.latitude] };
+      if (window.gMap) gMap.setView([pos.coords.latitude, pos.coords.longitude], 18);
+      captureForm(geometry, { captured_at: new Date().toISOString(), accuracy_m: Math.round(pos.coords.accuracy) });
+    }, function (err) { toast('שגיאת GPS: ' + err.message, 'error'); }, { enableHighAccuracy: true, timeout: 15000 });
+  }
+
+  function captureRoute() {
+    if (!navigator.geolocation) { toast('אין GPS במכשיר', 'error'); return; }
+    var coords = [], line = null, startedAt = new Date().toISOString();
+    var bar = document.createElement('div'); bar.id = 'fld-route-bar';
+    bar.innerHTML = '<span id="fld-route-info">מקליט מסלול… 0 מ׳</span><button id="fld-route-stop">עצור וסיים</button>';
+    document.body.appendChild(bar);
+    var watchId = navigator.geolocation.watchPosition(function (pos) {
+      coords.push([pos.coords.longitude, pos.coords.latitude]);
+      var latlngs = coords.map(function (c) { return [c[1], c[0]]; });
+      if (line) gMap.removeLayer(line);
+      line = L.polyline(latlngs, { color: '#0d9488', weight: 5 }).addTo(gMap);
+      if (latlngs.length) gMap.panTo(latlngs[latlngs.length - 1]);
+      document.getElementById('fld-route-info').textContent = 'מקליט… ' + Math.round(routeLen(coords)) + ' מ׳ · ' + coords.length + ' נק׳';
+    }, function (err) { toast('שגיאת GPS: ' + err.message, 'error'); }, { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 });
+    document.getElementById('fld-route-stop').onclick = function () {
+      navigator.geolocation.clearWatch(watchId);
+      bar.remove(); if (line) gMap.removeLayer(line);
+      if (coords.length < 2) { toast('המסלול קצר מדי', 'error'); return; }
+      captureForm({ type: 'LineString', coordinates: coords },
+        { started_at: startedAt, ended_at: new Date().toISOString(), point_count: coords.length, length_m: Math.round(routeLen(coords)) });
+    };
+  }
+
+  function routeLen(c) { var d = 0; for (var i = 1; i < c.length; i++) d += haversine(c[i - 1], c[i]); return d; }
+  function haversine(a, b) {
+    var R = 6371000, t = Math.PI / 180;
+    var dLat = (b[1] - a[1]) * t, dLng = (b[0] - a[0]) * t, la1 = a[1] * t, la2 = b[1] * t;
+    var x = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(la1) * Math.cos(la2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    return 2 * R * Math.asin(Math.sqrt(x));
+  }
+
+  function renderThumbs(box) {
+    box.innerHTML = capFiles.map(function (f, i) {
+      var isV = (f.type || '').indexOf('video') === 0;
+      return '<div class="cap-thumb">' + (isV ? '🎥' : '🖼️') + ' ' + esc((f.name || 'media').slice(0, 16)) + ' <span class="cap-rm" data-i="' + i + '">✕</span></div>';
+    }).join('');
+    Array.prototype.forEach.call(box.querySelectorAll('.cap-rm'), function (x) {
+      x.onclick = function () { capFiles.splice(+x.getAttribute('data-i'), 1); renderThumbs(box); };
+    });
+  }
+
+  function captureForm(geometry, extra) {
+    capFiles = [];
+    var opts = ENTITY_CATS.map(function (c) { return '<option value="' + c[0] + '">' + esc(c[1]) + '</option>'; }).join('');
+    var body =
+      '<div class="fld-row"><label>סוג השכבה *</label><select id="fld-cat">' + opts + '</select></div>' +
+      '<div class="fld-row"><label>קוד נכס (לא חובה)</label><input id="fld-code"></div>' +
+      '<div class="fld-row"><label>הערות</label><textarea id="fld-notes" rows="2"></textarea></div>' +
+      '<div class="fld-row"><label>מדיה (תמונות / וידאו)</label>' +
+      '<div style="display:flex;gap:8px"><button type="button" class="fld-media-btn" id="cap-ap">📷 תמונה</button>' +
+      '<button type="button" class="fld-media-btn" id="cap-av">🎥 סרטון</button></div>' +
+      '<div id="cap-thumbs" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"></div></div>' +
+      '<input type="file" accept="image/*" capture="environment" multiple id="cap-pin" style="display:none">' +
+      '<input type="file" accept="video/*" capture="environment" id="cap-vin" style="display:none">';
+    var bg = dialog('פרטי הלכידה', body, function (bgEl, close) {
+      var ok = bgEl.querySelector('.fld-ok'); ok.disabled = true; ok.textContent = '⏳ מעלה...';
+      var payload = Object.assign({}, extra || {}, {
+        asset_code: bgEl.querySelector('#fld-code').value.trim() || undefined,
+        notes: bgEl.querySelector('#fld-notes').value.trim()
+      });
+      submitEntityWithMedia(geometry, bgEl.querySelector('#fld-cat').value, payload, capFiles.slice())
+        .then(function (n) { close(); toast('✅ נשלח לבדיקה' + (n ? ' · ' + n + ' קבצי מדיה' : ''), 'success'); })
+        .catch(function (e) { ok.disabled = false; ok.textContent = 'שמור והגש'; toast('שגיאה: ' + (e.message || e), 'error'); });
+    });
+    var thumbs = bg.querySelector('#cap-thumbs');
+    var pin = bg.querySelector('#cap-pin'), vin = bg.querySelector('#cap-vin');
+    bg.querySelector('#cap-ap').onclick = function () { pin.click(); };
+    bg.querySelector('#cap-av').onclick = function () { vin.click(); };
+    pin.onchange = function () { Array.prototype.forEach.call(pin.files, function (f) { capFiles.push(f); }); renderThumbs(thumbs); };
+    vin.onchange = function () { if (vin.files[0]) capFiles.push(vin.files[0]); renderThumbs(thumbs); };
+  }
+
+  // Submit the entity, then upload media to the 'submissions' bucket and link rows.
+  async function submitEntityWithMedia(geometry, category, payload, files) {
+    var res = await sb().rpc('submit_entity', { p_geometry: geometry, p_target_category: category, p_payload: payload });
+    if (res.error) throw res.error;
+    var subId = res.data && res.data.id;
+    var n = 0;
+    for (var i = 0; i < files.length; i++) {
+      var f = files[i];
+      var isV = (f.type || '').indexOf('video') === 0;
+      var ext = (f.name && f.name.lastIndexOf('.') >= 0) ? f.name.slice(f.name.lastIndexOf('.')) : (isV ? '.mp4' : '.jpg');
+      var path = subId + '/' + Date.now() + '-' + i + ext;
+      try {
+        var up = await sb().storage.from('submissions').upload(path, f, { contentType: f.type || undefined });
+        if (!up.error) { await sb().from('submission_media').insert([{ submission_id: subId, kind: isV ? 'video' : 'photo', storage_path: path }]); n++; }
+      } catch (e) { /* skip a failed file */ }
+    }
+    return n;
+  }
+
   // ── bar + init ───────────────────────────────────────────────────────────────
   function buildBar() {
     if (document.getElementById('fld-bar')) return;
     var bar = document.createElement('div'); bar.id = 'fld-bar';
     bar.innerHTML =
       '<button id="fld-ent"><span class="i">➕</span>צור ישות</button>' +
+      '<button id="fld-cap"><span class="i">📷</span>מצלמה/מסלול</button>' +
       '<button id="fld-iss"><span class="i">⚠️</span>דווח תקלה</button>' +
       '<button id="fld-mn"><span class="i">📋</span>ההגשות שלי</button>';
     document.body.appendChild(bar);
     document.getElementById('fld-ent').onclick = startEntity;
+    document.getElementById('fld-cap').onclick = startCapture;
     document.getElementById('fld-iss').onclick = startIssue;
     document.getElementById('fld-mn').onclick = openMine;
   }
