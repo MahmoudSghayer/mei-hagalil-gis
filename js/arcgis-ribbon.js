@@ -23,7 +23,6 @@
     if (el) { el.click(); }
     else { toast('הרכיב עדיין נטען…'); }
   }
-  function soon() { toast('בקרוב — שלב הבא ברודמפ 🛣️'); }
 
   // ── ribbon definition ─────────────────────────────────────────────────────
   // Each tab → array of groups; each group → { label, cmds:[...] }.
@@ -109,11 +108,7 @@
         { ic: 'valve', lb: 'בידוד מגופים', size: 'lg', act: traceIsolation }
       ] },
       { label: 'מעקב זרימה', cmds: [
-        { ic: 'link', lb: 'מחוברים',    size: 'lg', act: traceConnected },
-        { col: [
-          { ic: 'arrow-up',   lb: 'במעלה הזרם', act: soon, disabled: true },
-          { ic: 'arrow-down', lb: 'במורד הזרם', act: soon, disabled: true }
-        ] }
+        { ic: 'link', lb: 'מחוברים',    size: 'lg', act: traceConnected }
       ] },
       { label: 'מונים', cmds: [
         { ic: 'link', lb: 'חיבור אוטומטי', size: 'lg', act: meterAutoConnect },
