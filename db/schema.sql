@@ -168,7 +168,11 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
-  IF NOT is_admin() THEN
+  -- Only restrict a LOGGED-IN non-admin editing a profile (self-promotion guard).
+  -- Trusted server contexts — the service-role key and SECURITY DEFINER RPCs —
+  -- have auth.uid() = NULL and MUST be allowed to set role/is_active (e.g. the
+  -- admin-create-user endpoint). A real user always has a non-null auth.uid().
+  IF auth.uid() IS NOT NULL AND NOT is_admin() THEN
     NEW.role      := OLD.role;
     NEW.is_active := OLD.is_active;
   END IF;
