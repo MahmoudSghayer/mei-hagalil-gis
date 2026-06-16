@@ -782,10 +782,12 @@ function isInBounds(g, b) {
 // ── ITM CONVERSION ────────────────────────────────────────────────────────────
 function makeToITM() {
   if (window.proj4 && !window.proj4.defs('EPSG:2039')) {
+    // EXACT "Israel 1993 to WGS 84 (2)" 7-param Helmert that PROJ/pyproj uses (~0.5 m);
+    // the old 3-param -48,55,52 was ~10 m off. Keep in sync with search/upload.
     window.proj4.defs('EPSG:2039',
       '+proj=tmerc +lat_0=31.7343936111111 +lon_0=35.2045169444444 ' +
       '+k=1.0000067 +x_0=219529.584 +y_0=626907.39 +ellps=GRS80 ' +
-      '+towgs84=-48,55,52,0,0,0,0 +units=m +no_defs');
+      '+towgs84=23.772,17.49,17.859,-0.3132,-1.85274,1.67299,-5.4262 +units=m +no_defs');
   }
   return function (lng, lat) {
     if (window.proj4) { try { return window.proj4('EPSG:4326', 'EPSG:2039', [lng, lat]); } catch (e) {} }

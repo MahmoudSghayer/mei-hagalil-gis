@@ -21,11 +21,14 @@ function loadProj4(cb) {
   var s = document.createElement('script');
   s.src = 'https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js';
   s.onload = function() {
-    // Define EPSG:2039 (Israel TM Grid - ITM)
+    // Define EPSG:2039 (Israel 1993 / Israeli TM Grid - ITM).
+    // towgs84 = the EXACT "Israel 1993 to WGS 84 (2)" 7-param Helmert (position-vector
+    // convention) that PROJ/pyproj uses (~0.5 m). The old 3-param -48,55,52 was ~10 m off
+    // and mismatched the DWG import path. Keep identical to upload.js + export-feature.js.
     window.proj4.defs('EPSG:2039',
       '+proj=tmerc +lat_0=31.7343936111111 +lon_0=35.2045169444444 ' +
       '+k=1.0000067 +x_0=219529.584 +y_0=626907.39 +ellps=GRS80 ' +
-      '+towgs84=-48,55,52,0,0,0,0 +units=m +no_defs'
+      '+towgs84=23.772,17.49,17.859,-0.3132,-1.85274,1.67299,-5.4262 +units=m +no_defs'
     );
     cb();
   };
