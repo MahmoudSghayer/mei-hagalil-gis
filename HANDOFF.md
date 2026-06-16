@@ -1,7 +1,23 @@
 # 🔄 Handoff — Mei HaGalil GIS
 
 > Continuity doc for resuming on any device. Branch `main`, all work pushed.
-> Latest commit at write time: `277f0a7`. (Phase 1 security/RBAC done; Phase 2 hardening in progress; CI + tests landed.)
+> Latest commit: `644a571`.
+
+## Field Submission & Approval Workflow — BUILT (F1–F6 + L1 + L1c + L2)
+3-role model **viewer (field submitter) / engineer (reviewer+editor) / admin**, data-driven RBAC (`role_permissions`+`has_perm`), one shared `submissions` engine (entity|issue) → review → promote to `features`/`incidents`, append-only `audit_log`, in-app `notifications` (Realtime bell), viewer↔engineer assignments. Plus mobile camera + GPS-route capture (L1), installable PWA (L1c), and line styles (L2). Code is done; **needs DB applies + the Storage bucket + end-to-end testing**.
+
+**Apply in Supabase (delta since last apply):**
+1. `review_queue()` RPC (Review Center) — in `db/field-workflow.sql`.
+2. `prevent_privileged_self_update()` fix (so admins can set engineer/admin roles) — in `db/schema.sql` (commit 418efb4).
+3. Create **private Storage bucket `submissions`** + its policies (commented at the bottom of `db/field-workflow.sql`).
+Also: Supabase **Email provider must stay ENABLED** (only "Confirm email" + "Allow signups" are OFF) — disabling the provider blocks all logins.
+
+**Key files:** `db/field-workflow.sql` (migration+RPCs), `js/gis-field.js` (viewer field mode + capture), `pages/review.html`+`js/pages/review.js` (Review Center), `js/gis-notifications.js` (bell), `js/pages/admin.js` (assignments UI), `gis-engine/core.js` (`GIS.can`).
+
+**Not built:** L3 = email/SMS/push notifications (needs a provider + keys).
+
+---
+### (earlier) Phase 1 security/RBAC + Phase 2 hardening — done; CI + tests landed.
 
 ## Project overview
 Web GIS for the Mei HaGalil water/sewage utility (7 villages, N. Israel). Vanilla JS + Leaflet front end, Supabase (Postgres/PostGIS + Auth + RLS), Vercel serverless `api/`, and a Python/FastAPI DWG export microservice on Render. Hebrew RTL UI, ArcGIS-Pro-style ribbon.
