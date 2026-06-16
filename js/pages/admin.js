@@ -6,6 +6,9 @@ var gPwdTargetUser = null;
 var gDelTargetUser = null;
 var gSelectedRole = 'viewer';
 var gAdminSession = null;
+var gAssignments = [];
+
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
 
 window.addEventListener('load', async function() {
   var res = await gSb.auth.getSession();
@@ -28,6 +31,7 @@ async function loadUsers() {
   gUsers = res.data || [];
   renderUsers();
   renderStats();
+  loadAssignments();
   MotionUtils.animateTableRows('#users-table-wrap tbody');
 }
 
@@ -41,6 +45,45 @@ function renderStats() {
   document.getElementById('s-paused').textContent = paused;
   document.getElementById('s-admins').textContent = admins;
 }
+
+// ── Viewer → Engineer assignments ────────────────────────────────────────────
+async function loadAssignments() {
+  var r = await gSb.from('viewer_engineer_assignments').select('viewer_id,engineer_id');
+  if (r.error) { var w = document.getElementById('assign-wrap'); if (w) w.innerHTML = '<div class="empty">שגיאה: ' + esc(r.error.message) + '</div>'; return; }
+  gAssignments = r.data || [];
+  renderAssignments();
+}
+
+function renderAssignments() {
+  var wrap = document.getElementById('assign-wrap');
+  if (!wrap) return;
+  var viewers = gUsers.filter(function (u) { return u.role === 'viewer'; });
+  var engineers = gUsers.filter(function (u) { return u.role === 'engineer'; });
+  if (!viewers.length || !engineers.length) {
+    wrap.innerHTML = '<div class="empty" style="padding:14px">צריך לפחות צופה אחד ומהנדס אחד כדי לשייך.</div>';
+    return;
+  }
+  var on = {};
+  gAssignments.forEach(function (a) { on[a.viewer_id + '|' + a.engineer_id] = true; });
+  wrap.innerHTML = viewers.map(function (v) {
+    var chips = engineers.map(function (e) {
+      var isOn = !!on[v.id + '|' + e.id];
+      return '<button class="assign-chip' + (isOn ? ' on' : '') + '" onclick="toggleAssignment(\'' + v.id + '\',\'' + e.id + '\',' + isOn + ')">' +
+        esc(e.full_name || e.email) + (isOn ? ' ✓' : '') + '</button>';
+    }).join('');
+    return '<div class="assign-row"><div class="assign-viewer">👁 ' + esc(v.full_name || v.email) + '</div><div class="assign-chips">' + chips + '</div></div>';
+  }).join('');
+}
+
+async function toggleAssignment(viewerId, engId, isOn) {
+  var r = isOn
+    ? await gSb.from('viewer_engineer_assignments').delete().eq('viewer_id', viewerId).eq('engineer_id', engId)
+    : await gSb.from('viewer_engineer_assignments').insert([{ viewer_id: viewerId, engineer_id: engId }]);
+  if (r.error) { showToast('שגיאה: ' + r.error.message, 'error'); return; }
+  showToast(isOn ? 'השיוך הוסר' : '✅ שויך', 'success');
+  loadAssignments();
+}
+window.toggleAssignment = toggleAssignment;
 
 function renderUsers() {
   var el = document.getElementById('users-table-wrap');
