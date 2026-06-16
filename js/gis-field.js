@@ -116,8 +116,35 @@
   // ── Create Issue ───────────────────────────────────────────────────────────
   function startIssue() {
     if (!window.gMap) { toast('המפה עדיין נטענת', 'error'); return; }
-    toast('לחץ על המפה במיקום התקלה', 'info');
-    gMap.once('click', function (e) { issueForm(e.latlng); });
+    enterPickMode('📍 לחץ על המפה במיקום התקלה', function (latlng) { issueForm(latlng); });
+  }
+
+  // Map-pick mode mirroring the main app's incident pick: crosshair + a persistent
+  // hint banner + Esc/cancel, capturing the next map click. Replaces the fragile
+  // once('click') so the viewer clearly picks the spot, then fills the form.
+  function enterPickMode(message, cb) {
+    if (document.getElementById('fld-pick-hint')) return;  // already picking
+    var hint = document.createElement('div');
+    hint.id = 'fld-pick-hint';
+    hint.style.cssText = 'position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:1400;' +
+      'background:#1e293b;color:#fff;padding:10px 18px;border-radius:10px;font-size:14px;direction:rtl;' +
+      'box-shadow:0 4px 16px rgba(0,0,0,.35);display:flex;align-items:center;gap:14px';
+    hint.innerHTML = '<span>' + message + '</span>' +
+      '<button id="fld-pick-cancel" style="background:#475569;color:#fff;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font:inherit;font-size:13px">ביטול (Esc)</button>';
+    document.body.appendChild(hint);
+    gMap.getContainer().style.cursor = 'crosshair';
+
+    function cleanup() {
+      gMap.off('click', onClick);
+      document.removeEventListener('keydown', onEsc);
+      gMap.getContainer().style.cursor = '';
+      var h = document.getElementById('fld-pick-hint'); if (h) h.remove();
+    }
+    function onClick(e) { cleanup(); cb(e.latlng); }
+    function onEsc(e) { if (e.key === 'Escape') cleanup(); }
+    document.getElementById('fld-pick-cancel').onclick = cleanup;
+    gMap.on('click', onClick);
+    document.addEventListener('keydown', onEsc);
   }
 
   function issueForm(latlng) {
