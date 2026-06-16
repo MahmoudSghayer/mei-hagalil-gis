@@ -55,8 +55,9 @@
       '.fld-media-btn{padding:8px 12px;border:1px dashed #94a3b8;border-radius:9px;background:#f8fafc;cursor:pointer;font:inherit;font-size:13px}' +
       '.cap-thumb{background:#e2e8f0;border-radius:8px;padding:4px 8px;font-size:12px;display:flex;align-items:center;gap:5px}' +
       '.cap-rm{cursor:pointer;color:#dc2626;font-weight:700}' +
-      '#fld-route-bar{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:1400;background:#0d9488;color:#fff;padding:10px 16px;border-radius:10px;display:flex;align-items:center;gap:14px;box-shadow:0 4px 16px rgba(0,0,0,.35)}' +
-      '#fld-route-bar button{background:#fff;color:#0d9488;border:none;border-radius:8px;padding:6px 12px;font:inherit;font-weight:700;cursor:pointer}';
+      '#fld-route-bar{position:fixed;top:64px;left:50%;transform:translateX(-50%);z-index:2500;background:#0d9488;color:#fff;padding:10px 16px;border-radius:10px;display:flex;align-items:center;gap:10px;box-shadow:0 4px 16px rgba(0,0,0,.35);max-width:94vw;flex-wrap:wrap;justify-content:center}' +
+      '#fld-route-bar button{background:#fff;color:#0d9488;border:none;border-radius:8px;padding:6px 12px;font:inherit;font-weight:700;cursor:pointer}' +
+      '#fld-route-cancel{background:rgba(255,255,255,.22)!important;color:#fff!important}';
     var s = document.createElement('style'); s.id = 'fld-styles'; s.textContent = css; document.head.appendChild(s);
   }
 
@@ -232,24 +233,39 @@
 
   function captureRoute() {
     if (!navigator.geolocation) { toast('אין GPS במכשיר', 'error'); return; }
-    var coords = [], line = null, startedAt = new Date().toISOString();
+    var coords = [], line = null, startedAt = new Date().toISOString(), watchId = null;
     var bar = document.createElement('div'); bar.id = 'fld-route-bar';
-    bar.innerHTML = '<span id="fld-route-info">מקליט מסלול… 0 מ׳</span><button id="fld-route-stop">עצור וסיים</button>';
+    bar.innerHTML = '<span id="fld-route-info">מקליט מסלול… ממתין ל-GPS…</span>' +
+      '<button id="fld-route-done">✓ סיים</button><button id="fld-route-cancel">✕ בטל</button>';
     document.body.appendChild(bar);
-    var watchId = navigator.geolocation.watchPosition(function (pos) {
+
+    function stop() { if (watchId != null) { navigator.geolocation.clearWatch(watchId); watchId = null; } bar.remove(); if (line) { try { gMap.removeLayer(line); } catch (e) {} } }
+
+    watchId = navigator.geolocation.watchPosition(function (pos) {
       coords.push([pos.coords.longitude, pos.coords.latitude]);
       var latlngs = coords.map(function (c) { return [c[1], c[0]]; });
       if (line) gMap.removeLayer(line);
       line = L.polyline(latlngs, { color: '#0d9488', weight: 5 }).addTo(gMap);
-      if (latlngs.length) gMap.panTo(latlngs[latlngs.length - 1]);
-      document.getElementById('fld-route-info').textContent = 'מקליט… ' + Math.round(routeLen(coords)) + ' מ׳ · ' + coords.length + ' נק׳';
-    }, function (err) { toast('שגיאת GPS: ' + err.message, 'error'); }, { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 });
-    document.getElementById('fld-route-stop').onclick = function () {
-      navigator.geolocation.clearWatch(watchId);
-      bar.remove(); if (line) gMap.removeLayer(line);
-      if (coords.length < 2) { toast('המסלול קצר מדי', 'error'); return; }
-      captureForm({ type: 'LineString', coordinates: coords },
-        { started_at: startedAt, ended_at: new Date().toISOString(), point_count: coords.length, length_m: Math.round(routeLen(coords)) });
+      gMap.panTo(latlngs[latlngs.length - 1]);
+      var info = document.getElementById('fld-route-info');
+      if (info) info.textContent = 'מקליט… ' + Math.round(routeLen(coords)) + ' מ׳ · ' + coords.length + ' נק׳';
+    }, function (err) {
+      var info = document.getElementById('fld-route-info'); if (info) info.textContent = '⚠ אין מיקום GPS (' + (err && err.message ? err.message : '') + ')';
+    }, { enableHighAccuracy: true, maximumAge: 1000, timeout: 20000 });
+
+    // Cancel always works. Finish submits whatever was captured (line / point) →
+    // opens the form where you choose the type (מים / ביוב / …) and submit.
+    document.getElementById('fld-route-cancel').onclick = stop;
+    document.getElementById('fld-route-done').onclick = function () {
+      var pts = coords.slice(); stop();
+      if (pts.length >= 2) {
+        captureForm({ type: 'LineString', coordinates: pts },
+          { started_at: startedAt, ended_at: new Date().toISOString(), point_count: pts.length, length_m: Math.round(routeLen(pts)) });
+      } else if (pts.length === 1) {
+        captureForm({ type: 'Point', coordinates: pts[0] }, { captured_at: new Date().toISOString() });
+      } else {
+        toast('לא התקבל מיקום GPS. צא לשטח עם GPS פעיל, או השתמש ב״צור ישות״ לשרטוט ידני.', 'error');
+      }
     };
   }
 
