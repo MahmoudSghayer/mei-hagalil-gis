@@ -103,26 +103,9 @@
     });
   }
 
-  function entityForm(geometry) {
-    var opts = ENTITY_CATS.map(function (c) { return '<option value="' + c[0] + '">' + esc(c[1]) + '</option>'; }).join('');
-    var body =
-      '<div class="fld-row"><label>סוג השכבה *</label><select id="fld-cat">' + opts + '</select></div>' +
-      '<div class="fld-row"><label>סגנון קו</label><select id="fld-style">' + styleOptions() + '</select></div>' +
-      '<div class="fld-row"><label>קוד נכס (לא חובה)</label><input id="fld-code" placeholder="לדוגמה: WP-1024"></div>' +
-      '<div class="fld-row"><label>הערות</label><textarea id="fld-notes" rows="3" placeholder="תיאור / פרטים"></textarea></div>';
-    dialog('פרטי הישות', body, function (bg, close) {
-      var ok = bg.querySelector('.fld-ok'); ok.disabled = true; ok.textContent = '⏳ מגיש...';
-      var payload = { asset_code: bg.querySelector('#fld-code').value.trim() || undefined,
-                      notes: bg.querySelector('#fld-notes').value.trim(),
-                      _style: bg.querySelector('#fld-style').value };
-      sb().rpc('submit_entity', {
-        p_geometry: geometry, p_target_category: bg.querySelector('#fld-cat').value, p_payload: payload
-      }).then(function (res) {
-        if (res.error) { ok.disabled = false; ok.textContent = 'שמור והגש'; toast('שגיאה: ' + res.error.message, 'error'); return; }
-        close(); toast('✅ ההגשה נשלחה לבדיקה', 'success');
-      });
-    });
-  }
+  // The draw flow uses the SAME full submit form as capture, so every asset gets
+  // consistent fields: category, line style, Top Level, Invert Level, notes, photos.
+  function entityForm(geometry) { captureForm(geometry, {}); }
 
   // ── Create Issue ───────────────────────────────────────────────────────────
   function startIssue() {
@@ -173,7 +156,7 @@
                       village: bg.querySelector('#fld-vil').value, priority: bg.querySelector('#fld-prio').value };
       sb().rpc('submit_issue', { p_lng: latlng.lng, p_lat: latlng.lat, p_payload: payload }).then(function (res) {
         if (res.error) { ok.disabled = false; ok.textContent = 'שמור והגש'; toast('שגיאה: ' + res.error.message, 'error'); return; }
-        close(); toast('✅ התקלה דווחה ונשלחה לבדיקה', 'success');
+        close(); toast('✅ התקלה דווחה ונשלחה לבדיקה', 'success'); renderPending();
       });
     });
   }
@@ -293,6 +276,8 @@
     var body =
       '<div class="fld-row"><label>סוג השכבה *</label><select id="fld-cat">' + opts + '</select></div>' +
       '<div class="fld-row"><label>סגנון קו</label><select id="fld-style">' + styleOptions() + '</select></div>' +
+      '<div class="fld-row"><label>מפלס עליון · Top Level (מ׳)</label><input id="fld-top" type="number" step="0.01" inputmode="decimal" placeholder="לדוגמה: 245.30"></div>' +
+      '<div class="fld-row"><label>מפלס תחתית · Invert (מ׳)</label><input id="fld-invert" type="number" step="0.01" inputmode="decimal" placeholder="לדוגמה: 243.10"></div>' +
       '<div class="fld-row"><label>קוד נכס (לא חובה)</label><input id="fld-code"></div>' +
       '<div class="fld-row"><label>הערות</label><textarea id="fld-notes" rows="2"></textarea></div>' +
       '<div class="fld-row"><label>מדיה (תמונות / וידאו)</label>' +
@@ -301,15 +286,18 @@
       '<div id="cap-thumbs" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"></div></div>' +
       '<input type="file" accept="image/*" capture="environment" multiple id="cap-pin" style="display:none">' +
       '<input type="file" accept="video/*" capture="environment" id="cap-vin" style="display:none">';
-    var bg = dialog('פרטי הלכידה', body, function (bgEl, close) {
+    var bg = dialog('פרטי הישות', body, function (bgEl, close) {
       var ok = bgEl.querySelector('.fld-ok'); ok.disabled = true; ok.textContent = '⏳ מעלה...';
+      var topEl = bgEl.querySelector('#fld-top'), invEl = bgEl.querySelector('#fld-invert');
       var payload = Object.assign({}, extra || {}, {
         asset_code: bgEl.querySelector('#fld-code').value.trim() || undefined,
         notes: bgEl.querySelector('#fld-notes').value.trim(),
-        _style: bgEl.querySelector('#fld-style').value
+        _style: bgEl.querySelector('#fld-style').value,
+        top_level: topEl && topEl.value !== '' ? Number(topEl.value) : undefined,
+        invert_level: invEl && invEl.value !== '' ? Number(invEl.value) : undefined
       });
       submitEntityWithMedia(geometry, bgEl.querySelector('#fld-cat').value, payload, capFiles.slice())
-        .then(function (n) { close(); toast('✅ נשלח לבדיקה' + (n ? ' · ' + n + ' קבצי מדיה' : ''), 'success'); })
+        .then(function (n) { close(); toast('✅ נשלח לבדיקה' + (n ? ' · ' + n + ' קבצי מדיה' : ''), 'success'); renderPending(); })
         .catch(function (e) { ok.disabled = false; ok.textContent = 'שמור והגש'; toast('שגיאה: ' + (e.message || e), 'error'); });
     });
     var thumbs = bg.querySelector('#cap-thumbs');
@@ -339,6 +327,29 @@
     return n;
   }
 
+  // Render the viewer's OWN pending submissions on the map (review_queue is RLS-
+  // scoped to "own" for a viewer) so a just-reported issue/entity is visible while
+  // it waits for approval — it isn't in the production layers yet.
+  var pendingLayer = null;
+  async function renderPending() {
+    if (!window.gMap) return;
+    var r;
+    try { r = await sb().rpc('review_queue'); } catch (e) { return; }
+    if (!r || r.error) return;
+    if (pendingLayer) { try { gMap.removeLayer(pendingLayer); } catch (e) {} }
+    pendingLayer = L.layerGroup().addTo(gMap);
+    (r.data || []).forEach(function (s) {
+      if (!s.geometry) return;
+      var label = s.kind === 'issue' ? (s.payload && s.payload.title || 'תקלה') : ('ישות · ' + esc(s.target_category || ''));
+      var lyr = L.geoJSON(s.geometry, {
+        style: { color: '#f59e0b', weight: 4, dashArray: '6 6' },
+        pointToLayer: function (f, ll) { return L.circleMarker(ll, { radius: 9, color: '#f59e0b', weight: 3, fillColor: '#fde68a', fillOpacity: 0.6 }); }
+      });
+      lyr.bindPopup('<b>' + esc(label) + '</b><br>⏳ ממתין לבדיקה');
+      lyr.addTo(pendingLayer);
+    });
+  }
+
   // ── bar + init ───────────────────────────────────────────────────────────────
   function buildBar() {
     if (document.getElementById('fld-bar')) return;
@@ -360,6 +371,7 @@
     injectStyles();
     document.body.classList.add('field-mode');
     buildBar();
+    renderPending();
     setTimeout(function () { if (window.gMap) gMap.invalidateSize(); }, 350);
   }
 

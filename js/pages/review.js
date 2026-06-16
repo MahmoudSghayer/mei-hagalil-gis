@@ -101,6 +101,8 @@
         : '<div style="color:#b91c1c;font-size:12px">אין שכבות ייצור — צור שכבה תחילה</div>');
       fields =
         row('סוג', '<input id="rv-cat" class="rv-edit" value="' + esc(s.target_category || '') + '">') +
+        row('מפלס עליון · Top', '<input id="rv-top" type="number" step="0.01" class="rv-edit" value="' + (p.top_level != null ? p.top_level : '') + '">') +
+        row('מפלס תחתית · Invert', '<input id="rv-invert" type="number" step="0.01" class="rv-edit" value="' + (p.invert_level != null ? p.invert_level : '') + '">') +
         row('קוד נכס', '<input id="rv-code" class="rv-edit" value="' + esc(p.asset_code || '') + '">') +
         row('הערות', '<textarea id="rv-notes" class="rv-edit" rows="2">' + esc(p.notes || '') + '</textarea>');
     }
@@ -122,13 +124,18 @@
     var s = gCurrent; if (!s) return;
     var orig = JSON.stringify(s.payload || {});
     var edited, layerId = null;
+    var p = s.payload || {};
     if (s.kind === 'issue') {
-      edited = { title: val('rv-title'), village: val('rv-village'), priority: val('rv-prio'), description: val('rv-desc') };
+      edited = Object.assign({}, p, { title: val('rv-title'), village: val('rv-village'), priority: val('rv-prio'), description: val('rv-desc') });
     } else {
       if (!gLayers.length) { toast('אין שכבת ייצור לפרסום'); return; }
       layerId = val('rv-layer');
-      edited = { _category: undefined }; // not used
-      edited = { asset_code: val('rv-code') || undefined, notes: val('rv-notes') };
+      var top = val('rv-top'), inv = val('rv-invert');
+      edited = Object.assign({}, p, {
+        asset_code: val('rv-code') || undefined, notes: val('rv-notes'),
+        top_level: top !== '' ? Number(top) : undefined,
+        invert_level: inv !== '' ? Number(inv) : undefined
+      });
     }
     var changed = JSON.stringify(edited) !== orig;
     var args = { p_id: s.id, p_layer_id: layerId, p_edited_payload: changed ? edited : null };
