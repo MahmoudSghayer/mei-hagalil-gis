@@ -206,6 +206,14 @@ CREATE INDEX IF NOT EXISTS idx_incidents_village  ON incidents(village);
 CREATE INDEX IF NOT EXISTS idx_incidents_priority ON incidents(priority);
 CREATE INDEX IF NOT EXISTS idx_incidents_created  ON incidents(created_at DESC);
 
+-- Data integrity + lookups for assignee: assigned_to holds a user UUID (set to
+-- auth user id by takeIncident) or NULL. Guard against garbage values and index
+-- for "incidents assigned to me" queries.
+ALTER TABLE incidents DROP CONSTRAINT IF EXISTS incidents_assigned_to_uuid_chk;
+ALTER TABLE incidents ADD CONSTRAINT incidents_assigned_to_uuid_chk
+  CHECK (assigned_to IS NULL OR assigned_to ~ '^[0-9a-fA-F-]{36}$');
+CREATE INDEX IF NOT EXISTS idx_incidents_assigned ON incidents(assigned_to);
+
 -- Trigger: auto-update timestamps on edit
 DROP TRIGGER IF EXISTS set_incidents_updated_at ON incidents;
 CREATE TRIGGER set_incidents_updated_at
