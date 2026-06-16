@@ -61,7 +61,7 @@
   // ── Role / permissions (cached for the session) ────────────────────────
   GIS._roleCache = null;
 
-  // Returns the current user's role ('admin'|'editor'|'viewer') or null.
+  // Returns the current user's role ('admin'|'engineer'|'viewer') or null.
   GIS.currentRole = async function (force) {
     if (GIS._roleCache && !force) return GIS._roleCache;
     var sb = GIS.sb();
@@ -73,14 +73,31 @@
     return GIS._roleCache;
   };
 
-  // Role tiers:  viewer (read-only) · editor (edit + export) · admin (all).
-  // These are UX hints only — the database RLS is the real enforcement.
+  // Role tiers:  viewer (field submitter) · engineer (edit + review) · admin (all).
+  // Legacy role-based hints — kept for existing call sites. Prefer GIS.can(perm).
   GIS.permissions = {
-    canEditGis:    function (role) { return role === 'admin' || role === 'editor'; },
-    canEditMeters: function (role) { return role === 'admin' || role === 'editor'; },
-    canExport:     function (role) { return role === 'admin' || role === 'editor'; },
+    canEditGis:    function (role) { return role === 'admin' || role === 'engineer'; },
+    canEditMeters: function (role) { return role === 'admin' || role === 'engineer'; },
+    canExport:     function (role) { return role === 'admin' || role === 'engineer'; },
     canEditSchema: function (role) { return role === 'admin'; }
   };
+
+  // ── Data-driven permissions (RBAC) — fetched once from my_permissions() ──
+  // The real enforcement is DB RLS; this drives UI gating + new workflow code.
+  GIS._perms = null;
+  GIS.loadPermissions = async function (force) {
+    if (GIS._perms && !force) return GIS._perms;
+    try {
+      var res = await GIS.sb().rpc('my_permissions');
+      var rows = (res && res.data) || [];
+      GIS._perms = new Set(rows.map(function (r) {
+        return typeof r === 'string' ? r : (r.my_permissions || r.permission || r);
+      }));
+    } catch (e) { GIS._perms = new Set(); }
+    return GIS._perms;
+  };
+  // Sync permission check (call after loadPermissions() has resolved at init).
+  GIS.can = function (perm) { return !!(GIS._perms && GIS._perms.has(perm)); };
 
   // Optional early client-side guard (RLS is the real enforcement).
   GIS._requireRole = async function (allowed, action) {

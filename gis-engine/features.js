@@ -3,7 +3,7 @@
 //  The GIS objects: pipes, valves, hydrants, ...
 //
 //  Reads return GeoJSON FeatureCollections (drop straight into L.geoJSON).
-//  Writes go through RLS: only admin|editor may mutate features.
+//  Writes go through RLS: only admin|engineer may mutate features.
 //
 //  DATA RULE: every feature carries an `asset_code` — the primary link key
 //  to Arad meters and external systems.
@@ -68,7 +68,7 @@
     // properties is a plain object (length_m / age auto-filled by DB trigger).
     createFeature: async function (layerId, geometry, properties, assetCode) {
       GIS._assert(layerId && geometry, 'createFeature requires (layerId, geometry, ...)');
-      await GIS._requireRole(['admin', 'editor'],'create features');
+      await GIS._requireRole(['admin', 'engineer'],'create features');
       var props = properties || {};
       var code = assetCode || props.asset_code;
       GIS._assert(code, 'createFeature requires an asset_code (primary link key)');
@@ -79,10 +79,10 @@
       }), 'create feature');
     },
 
-    // Update a feature's attributes (geometry unchanged). RLS: admin|editor.
+    // Update a feature's attributes (geometry unchanged). RLS: admin|engineer.
     updateFeature: async function (id, properties) {
       GIS._assert(id && properties, 'updateFeature requires (id, properties)');
-      await GIS._requireRole(['admin', 'editor'],'edit features');
+      await GIS._requireRole(['admin', 'engineer'],'edit features');
       var sb = GIS.sb();
       return GIS._unwrap(
         await sb.from('features').update({ properties: properties }).eq('id', id).select().single(),
@@ -92,10 +92,10 @@
     // Update a feature's GEOMETRY (attributes unchanged). geometry = GeoJSON
     // geometry object. Goes through the update_feature_geometry RPC (PostGIS
     // ST_GeomFromGeoJSON); the DB trigger then recomputes length_m. The
-    // features RLS enforces admin|editor. Used by the on-map Edit tool.
+    // features RLS enforces admin|engineer. Used by the on-map Edit tool.
     updateGeometry: async function (id, geometry) {
       GIS._assert(id && geometry, 'updateGeometry requires (id, geometry)');
-      await GIS._requireRole(['admin', 'editor'],'edit geometry');
+      await GIS._requireRole(['admin', 'engineer'],'edit geometry');
       var sb = GIS.sb();
       return GIS._unwrap(await sb.rpc('update_feature_geometry', {
         p_id: id, p_geometry: geometry
@@ -104,7 +104,7 @@
 
     deleteFeature: async function (id) {
       GIS._assert(id, 'deleteFeature requires an id');
-      await GIS._requireRole(['admin', 'editor'],'delete features');
+      await GIS._requireRole(['admin', 'engineer'],'delete features');
       var sb = GIS.sb();
       GIS._unwrap(await sb.from('features').delete().eq('id', id), 'delete feature');
       return { id: id, deleted: true };

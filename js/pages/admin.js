@@ -55,8 +55,8 @@ function renderUsers() {
     var col = avatarColors[i % avatarColors.length];
     var roleBadge = u.role === 'admin'
       ? '<span class="role-pill role-admin">👑 מנהל</span>'
-      : (u.role === 'editor'
-          ? '<span class="role-pill role-editor">✎ עורך</span>'
+      : (u.role === 'engineer'
+          ? '<span class="role-pill role-engineer">🛠 מהנדס</span>'
           : '<span class="role-pill role-user">👁 צופה</span>');
     var statusHtml = '<span class="status-dot ' + (u.is_active ? 'active' : 'inactive') + '"></span>' + (u.is_active ? 'פעיל' : 'מושהה');
     var isSelf = (u.id === gAdminId);
@@ -84,10 +84,10 @@ function renderUsers() {
 }
 
 function selectRole(r) {
-  if (r !== 'viewer' && r !== 'editor' && r !== 'admin') r = 'viewer';
+  if (r !== 'viewer' && r !== 'engineer' && r !== 'admin') r = 'viewer';
   gSelectedRole = r;
   document.getElementById('role-viewer').classList.toggle('selected', r==='viewer');
-  document.getElementById('role-editor').classList.toggle('selected', r==='editor');
+  document.getElementById('role-engineer').classList.toggle('selected', r==='engineer');
   document.getElementById('role-admin').classList.toggle('selected', r==='admin');
 }
 

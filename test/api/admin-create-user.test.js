@@ -54,10 +54,10 @@ describe('api/admin-create-user (admin-gated user creation)', () => {
     expect(res.statusCode).toBe(403);
   });
 
-  it('403 when the caller is an editor (still not admin)', async () => {
+  it('403 when the caller is an engineer (still not admin)', async () => {
     vi.stubGlobal('fetch', routeFetch([
       { match: '/auth/v1/user', json: { id: 'u1' } },
-      { match: '/rest/v1/profiles', json: [{ role: 'editor', is_active: true }] },
+      { match: '/rest/v1/profiles', json: [{ role: 'engineer', is_active: true }] },
     ]));
     const res = mockRes();
     await handler(mockReq({
@@ -104,7 +104,7 @@ describe('api/admin-create-user (admin-gated user creation)', () => {
     const res = mockRes();
     await handler(mockReq({
       method: 'POST', headers: { authorization: 'Bearer t' },
-      body: { email: 'new@user.co', password: '12345678', role: 'editor', full_name: 'New' },
+      body: { email: 'new@user.co', password: '12345678', role: 'engineer', full_name: 'New' },
     }), res);
     expect(res.statusCode).toBe(200);
     expect(res.body).toMatchObject({ ok: true, id: 'new-user-1' });

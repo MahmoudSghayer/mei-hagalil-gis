@@ -322,7 +322,7 @@
     var sel = state.selection;
     if (!sel || !sel.features.length) { toast('אין בחירה'); return; }
     var role = null; try { role = await GIS.currentRole(); } catch (e) {}
-    if (role !== 'admin' && role !== 'editor') { toast('אין הרשאת עריכה', 'error'); return; }
+    if (role !== 'admin' && role !== 'engineer') { toast('אין הרשאת עריכה', 'error'); return; }
     var body =
       row('שם שדה', '<input id="gcf-field" class="gad-in" placeholder="לדוגמה: age">') +
       row('ביטוי', '<input id="gcf-expr" class="gad-in" placeholder="לדוגמה: 2026 - install_year">') +

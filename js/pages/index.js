@@ -68,7 +68,7 @@ var gSelectedLayer = null;
 var PRIORITY_COLORS={high:'#dc2626',medium:'#d97706',low:'#16a34a'};
 var PRIORITY_HE={high:'גבוהה',medium:'בינונית',low:'נמוכה'};
 var STATUS_HE={open:'פתוחה',in_progress:'בטיפול',closed:'סגורה'};
-var ROLE_HE={admin:'מנהל מערכת',editor:'עורך',viewer:'צופה'};
+var ROLE_HE={admin:'מנהל מערכת',engineer:'מהנדס',viewer:'צופה'};
 
 window.addEventListener('load', async function() {
   var res = await gSb.auth.getSession();
@@ -86,6 +86,7 @@ window.addEventListener('load', async function() {
 });
 
 function setUserUI(p) {
+  if (window.GIS && GIS.loadPermissions) GIS.loadPermissions();
   var name = p.full_name || gUser.email.split('@')[0];
   var initials = name.split(' ').map(function(w){return w[0]||'';}).join('').substring(0,2).toUpperCase() || '??';
   document.getElementById('user-avatar').textContent = initials;
@@ -99,7 +100,7 @@ function setUserUI(p) {
     document.getElementById('upload-link').style.display = 'inline-block';
   }
   // Viewers are read-only: hide the "new incident" button (DB RLS also blocks it).
-  var canEdit = (p.role === 'admin' || p.role === 'editor');
+  var canEdit = (p.role === 'admin' || p.role === 'engineer');
   var addBtn = document.getElementById('add-btn');
   if (addBtn) addBtn.style.display = canEdit ? '' : 'none';
 }
@@ -816,7 +817,7 @@ function addMarker(inc, flyTo) {
   var ic = L.divIcon({className:'',html:'<div style="width:24px;height:24px;background:'+color+';'+ringStyle+'border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center"><span style="color:#fff;font-size:12px;font-weight:800">!</span></div>',iconSize:[24,24],iconAnchor:[12,12]});
   var mineTag = mine?'<div class="popup-mine-tag">🛠️ בטיפולך</div>':'';
   // Viewers are read-only — only editors/admins get take/close actions (DB RLS also blocks it).
-  var canEditInc = gProfile && (gProfile.role === 'admin' || gProfile.role === 'editor');
+  var canEditInc = gProfile && (gProfile.role === 'admin' || gProfile.role === 'engineer');
   var actions = '';
   if (canEditInc && inc.status==='open') actions = '<div class="popup-actions"><button class="popup-btn" onclick="takeIncident('+inc.id+')">📋 קח לטיפול</button><button class="popup-btn danger" onclick="openCloseModal('+inc.id+')">✔ סגור</button></div>';
   else if (canEditInc && inc.status==='in_progress' && mine) actions = '<div class="popup-actions"><button class="popup-btn success" onclick="openCloseModal('+inc.id+')">✔ סיים וסגור</button></div>';

@@ -75,7 +75,7 @@
   async function requireEditor() {
     var role = null;
     try { role = await GIS.currentRole(); } catch (e) {}
-    if (role === 'admin' || role === 'editor') return true;
+    if (role === 'admin' || role === 'engineer') return true;
     toast('אין הרשאת עריכה', 'error');
     return false;
   }
