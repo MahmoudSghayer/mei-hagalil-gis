@@ -1,5 +1,12 @@
 {
   "name": "mei-hagalil-gis",
   "version": "1.0.0",
-  "engines": { "node": "24.x" }
+  "engines": { "node": "24.x" },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.8"
+  }
 }
