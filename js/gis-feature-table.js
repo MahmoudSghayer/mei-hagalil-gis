@@ -13,7 +13,7 @@
 (function () {
 'use strict';
 
-var CAP = 1500, HIDE = /^_|^__/;
+var HIDE = /^_|^__/;
 // Auto-derived fields recomputed by the DB on every save → never editable by hand.
 var READONLY = { length_m: 1, age: 1 };
 var CAT_HE = {
@@ -97,13 +97,13 @@ document.body.appendChild(el);
 var state = {
   source:null, vid:null, catId:null, layerId:null,
   all:[], cols:[], fieldDefs:{}, selected:null,
-  sortKey:null, sortDir:1, filter:'', editable:false, role:null
+  sortKey:null, sortDir:1, filter:'', editable:false, role:null, limit:500
 };
 var hl = null;
 
 document.getElementById('gt-x').onclick = close;
 document.getElementById('gt-zoom').onclick = function () { if (state.selected) zoomTo(state.selected); };
-document.getElementById('gt-search').oninput = debounce(function (e) { state.filter = e.target.value; renderBody(); }, 180);
+document.getElementById('gt-search').oninput = debounce(function (e) { state.filter = e.target.value; state.limit = 500; renderBody(); }, 180);
 document.getElementById('gt-add').onclick = addColumn;       // ➕ עמודה (inline)
 document.getElementById('gt-addrow').onclick = addRow;        // ➕ שורה
 document.getElementById('gt-calc').onclick = openCalc;        // 🧮 חשב שדה
@@ -130,7 +130,7 @@ async function open(vid, catId, selProps) {
   state.source = 'village'; state.vid = vid; state.catId = catId; state.layerId = null;
   state.all = feats; state.editable = false; state.fieldDefs = {};
   state.cols = deriveColumns(feats);
-  state.sortKey = null; state.sortDir = 1; state.filter = ''; document.getElementById('gt-search').value = '';
+  state.sortKey = null; state.sortDir = 1; state.filter = ''; state.limit = 500; document.getElementById('gt-search').value = '';
   state.selected = selProps ? (feats.find(function (f) { return f.properties === selProps; }) ||
                                feats.find(function (f) { return shallowMatch(f.properties, selProps); }) || null) : null;
 
@@ -167,7 +167,7 @@ async function openLayer(layerId, selectAssetCode, meta) {
   state.cols = deriveColumns(state.all);
   state.role = await GIS.currentRole();
   state.editable = GIS.permissions.canEditGis(state.role);
-  if (meta.reset !== false) { state.sortKey = null; state.sortDir = 1; }
+  if (meta.reset !== false) { state.sortKey = null; state.sortDir = 1; state.limit = 500; }
   state.selected = selectAssetCode
     ? state.all.find(function (f) { return f.properties.asset_code === selectAssetCode; }) || null
     : state.selected;
@@ -208,8 +208,10 @@ function renderBody(scrollToSel) {
       return String(av == null ? '' : av).localeCompare(String(bv == null ? '' : bv), 'he') * dir;
     });
   }
-  var total = rows.length, capped = total > CAP, view = rows.slice(0, CAP);
-  if (state.selected && view.indexOf(state.selected) === -1 && rows.indexOf(state.selected) >= 0) view = [state.selected].concat(view.slice(0, CAP - 1));
+  var PAGE = 500;
+  if (!state.limit) state.limit = PAGE;
+  var total = rows.length, view = rows.slice(0, state.limit);
+  if (state.selected && view.indexOf(state.selected) === -1 && rows.indexOf(state.selected) >= 0) view = [state.selected].concat(view.slice(0, state.limit - 1));
   if (!total) { wrap.innerHTML = '<div class="gt-empty">אין תוצאות</div>'; return; }
 
   var arrow = function (c) { return '<span class="a">' + (state.sortKey === c ? (state.sortDir > 0 ? '▲' : '▼') : '↕') + '</span>'; };
@@ -241,9 +243,22 @@ function renderBody(scrollToSel) {
     html += '</tr>';
   });
   html += '</tbody></table>';
+  // Load-more bar — replaces the old silent 1500-row cap so no rows are ever dropped.
+  if (total > view.length) {
+    var moreN = Math.min(PAGE, total - view.length);
+    html += '<div class="gt-more" style="padding:8px 10px;text-align:center;font-size:12px;color:var(--muted,#888)">' +
+      'מציג ' + view.length + ' מתוך ' + total + ' · ' +
+      '<button id="gt-load-more" style="margin:0 4px;padding:3px 10px;border:1px solid var(--border,#ccc);border-radius:6px;background:var(--blue-mid,#1a7fc1);color:#fff;cursor:pointer">טען עוד ' + moreN + '</button>' +
+      '<button id="gt-load-all" style="margin:0 4px;padding:3px 10px;border:1px solid var(--border,#ccc);border-radius:6px;background:transparent;color:inherit;cursor:pointer">טען הכל (' + total + ')</button>' +
+      '</div>';
+  }
   wrap.innerHTML = html;
+  var _lm = document.getElementById('gt-load-more');
+  if (_lm) _lm.onclick = function () { state.limit = (state.limit || PAGE) + PAGE; renderBody(); };
+  var _la = document.getElementById('gt-load-all');
+  if (_la) _la.onclick = function () { state.limit = total; renderBody(); };
   if (state.source === 'engine') footer(state.editable ? 'דאבל-קליק על תא לעריכה · על כותרת לשינוי שם · 🗑 / × למחיקה' : 'תצוגה בלבד');
-  else if (!document.getElementById('gt-foot').firstChild) footer(capped ? ('מציג ' + view.length + ' מתוך ' + total) : ('סה״כ ' + total));
+  else footer('סה״כ ' + total + (total > view.length ? ' · מציג ' + view.length : ''));
 
   // כותרת: קליק=מיון, דאבל-קליק=שינוי שם
   Array.prototype.forEach.call(wrap.querySelectorAll('th[data-col] .gt-h'), function (h) {
