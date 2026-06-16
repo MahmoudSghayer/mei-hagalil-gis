@@ -800,9 +800,11 @@ function addMarker(inc, flyTo) {
   var ringStyle = mine ? 'border:3px solid #1e40af;' : 'border:2.5px solid #fff;';
   var ic = L.divIcon({className:'',html:'<div style="width:24px;height:24px;background:'+color+';'+ringStyle+'border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center"><span style="color:#fff;font-size:12px;font-weight:800">!</span></div>',iconSize:[24,24],iconAnchor:[12,12]});
   var mineTag = mine?'<div class="popup-mine-tag">🛠️ בטיפולך</div>':'';
+  // Viewers are read-only — only editors/admins get take/close actions (DB RLS also blocks it).
+  var canEditInc = gProfile && (gProfile.role === 'admin' || gProfile.role === 'editor');
   var actions = '';
-  if (inc.status==='open') actions = '<div class="popup-actions"><button class="popup-btn" onclick="takeIncident('+inc.id+')">📋 קח לטיפול</button><button class="popup-btn danger" onclick="openCloseModal('+inc.id+')">✔ סגור</button></div>';
-  else if (inc.status==='in_progress' && mine) actions = '<div class="popup-actions"><button class="popup-btn success" onclick="openCloseModal('+inc.id+')">✔ סיים וסגור</button></div>';
+  if (canEditInc && inc.status==='open') actions = '<div class="popup-actions"><button class="popup-btn" onclick="takeIncident('+inc.id+')">📋 קח לטיפול</button><button class="popup-btn danger" onclick="openCloseModal('+inc.id+')">✔ סגור</button></div>';
+  else if (canEditInc && inc.status==='in_progress' && mine) actions = '<div class="popup-actions"><button class="popup-btn success" onclick="openCloseModal('+inc.id+')">✔ סיים וסגור</button></div>';
   var m = L.marker([inc.lat,inc.lng],{icon:ic}).bindPopup(mineTag+'<div class="popup-title">'+inc.title+'</div><div class="popup-row"><span class="popup-key">ישוב</span><span class="popup-val">'+inc.village+'</span></div><div class="popup-row"><span class="popup-key">עדיפות</span><span class="popup-val" style="color:'+color+'">'+(PRIORITY_HE[inc.priority]||inc.priority)+'</span></div><div class="popup-row"><span class="popup-key">סטטוס</span><span class="popup-val">'+(STATUS_HE[inc.status]||inc.status)+'</span></div><div class="popup-row"><span class="popup-key">נפתח</span><span class="popup-val">'+timeAgo(inc.created_at)+'</span></div>'+(inc.description?'<div style="font-size:12px;color:#64748b;margin-top:6px;padding-top:5px;border-top:1px solid #e2e8f0">'+inc.description+'</div>':'')+actions);
   m.addTo(gIncidentsLayer); gMarkers[inc.id]=m;
   if (flyTo) { gMap.flyTo([inc.lat,inc.lng],17,{duration:1.5}); setTimeout(function(){m.openPopup();},1600); }
