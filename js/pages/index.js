@@ -151,7 +151,13 @@ function initMap() {
     if(gIncPicking){ finishIncPick(e.latlng.lat,e.latlng.lng); }
   });
   gIncidentsLayer = L.layerGroup().addTo(gMap);
-  MeasureTools.init(gMap);
+  // MeasureTools is lazy-loaded after first paint (see the idle loader in index.html),
+  // so it may not be defined yet — init it the moment it lands instead of throwing
+  // (a ReferenceError here used to abort the rest of initMap: cadastral layer + popups).
+  (function waitForMeasureTools(tries) {
+    if (window.MeasureTools) { MeasureTools.init(gMap); return; }
+    if (tries > 0) setTimeout(function() { waitForMeasureTools(tries - 1); }, 250);
+  })(40);
   initCadastralLayer();
   gMap.on('popupopen', function(e) { makePopupDraggable(e.popup); });
 }
