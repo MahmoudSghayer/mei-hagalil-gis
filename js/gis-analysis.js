@@ -16,7 +16,22 @@
 
   // ── helpers ─────────────────────────────────────────────────────────────────
   function ready() { if (!window.GIS || !window.gMap) { toast('המנוע עדיין נטען…'); return false; } return true; }
-  function hasTurf() { if (typeof window.turf === 'undefined') { toast('ספריית הניתוח המרחבי (Turf) עדיין נטענת — נסה שוב'); return false; } return true; }
+  // Turf (~0.5MB) is lazy-loaded only when buffer/location-select is first used —
+  // keeps it out of the initial page load (perf).
+  var _turfP = null;
+  function ensureTurf() {
+    if (window.turf) return Promise.resolve(true);
+    if (_turfP) return _turfP;
+    toast('טוען ספריית ניתוח מרחבי…');
+    _turfP = new Promise(function (resolve) {
+      var s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js';
+      s.onload = function () { resolve(!!window.turf); };
+      s.onerror = function () { _turfP = null; toast('טעינת Turf נכשלה — בדוק חיבור'); resolve(false); };
+      document.head.appendChild(s);
+    });
+    return _turfP;
+  }
   function toast(msg, type) {
     var t = document.getElementById('toast'); if (!t) return;
     t.textContent = msg; t.className = (type ? type + ' ' : '') + 'show';
@@ -176,7 +191,7 @@
 
   // ── 2) Buffer ───────────────────────────────────────────────────────────────────
   async function buffer() {
-    if (!ready() || !hasTurf()) return;
+    if (!ready()) return; if (!(await ensureTurf())) return;
     var layers = await engineLayers();
     var selN = state.selection ? state.selection.features.length : 0;
     var body =
@@ -214,7 +229,7 @@
 
   // ── 3) Select by Location ────────────────────────────────────────────────────────
   async function selectByLocation() {
-    if (!ready() || !hasTurf()) return;
+    if (!ready()) return; if (!(await ensureTurf())) return;
     var layers = await engineLayers();
     if (!layers.length) { toast('אין שכבות במנוע'); return; }
     var body =

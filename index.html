@@ -223,7 +223,7 @@
 <!-- Leaflet-Geoman (free): on-map editing — must load before index.js so map.pm auto-attaches -->
 <script defer src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.3/dist/leaflet-geoman.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
+<!-- Turf is lazy-loaded by gis-analysis.js on first buffer/location-select use (perf) -->
 <script defer src="js/motion-utils.js"></script>
 <script defer src="js/measure-tools.js"></script>
 <script defer src="js/pages/index.js?v=10"></script>
@@ -260,7 +260,7 @@
 <!-- Network trace (Phase 2): client-side connectivity graph + valve isolation -->
 <script defer src="js/gis-network-trace.js?v=2"></script>
 <!-- Analysis tools: buffer + select by attribute/location (needs Turf) -->
-<script defer src="js/gis-analysis.js?v=3"></script>
+<script defer src="js/gis-analysis.js?v=4"></script>
 <!-- Spatial bookmarks: save/jump to named map views -->
 <script defer src="js/gis-bookmarks.js?v=1"></script>
 <!-- Find/Locate asset: search features by attribute, zoom to result -->
