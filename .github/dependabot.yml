@@ -1,0 +1,22 @@
+version: 2
+updates:
+  # Frontend / serverless dev deps (vitest etc.)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  # DWG export FastAPI service
+  - package-ecosystem: "pip"
+    directory: "/dwg-export"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+
+  # Keep the GitHub Actions themselves patched
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
