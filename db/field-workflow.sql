@@ -356,14 +356,41 @@ DO $$ BEGIN
 EXCEPTION WHEN duplicate_object THEN NULL; END $$;
 
 -- ════════════════════════════════════════════════════════════════════════
---  STORAGE (run once, after creating the bucket):
---    Dashboard → Storage → New bucket → name "submissions", Private.
---  Then these policies on storage.objects (submitter writes own; viewers of the
---  submission read). Paths are "<submission_id>/<filename>".
+--  STORAGE — bucket "submissions" (P1-3). Holds field-submission media AND
+--  field-task completion media — both are PII (resident photos + GPS).
+--
+--  The bucket MUST be PRIVATE. Create once:
+--    Dashboard → Storage → New bucket → name "submissions", Public = OFF.
+--  Verify it is private (run in SQL editor — `public` must be false):
+--    SELECT id, public FROM storage.buckets WHERE id = 'submissions';
+--  If it is public (or unsure), force it private:
+--    UPDATE storage.buckets SET public = false WHERE id = 'submissions';
+--
+--  Object paths use two namespaces:
+--    "<submission_id>/<file>"   submission photos/videos
+--    "tasks/<task_id>/<file>"   field-task completion photos
+--  The client reads media via createSignedUrl(), which requires the SELECT
+--  policy below — so these policies are REQUIRED, not optional hardening.
 -- ════════════════════════════════════════════════════════════════════════
--- DROP POLICY IF EXISTS "submissions media insert" ON storage.objects;
--- CREATE POLICY "submissions media insert" ON storage.objects FOR INSERT TO authenticated
---   WITH CHECK (bucket_id = 'submissions' AND public.has_perm('submit'));
--- DROP POLICY IF EXISTS "submissions media read" ON storage.objects;
--- CREATE POLICY "submissions media read" ON storage.objects FOR SELECT TO authenticated
---   USING (bucket_id = 'submissions');
+
+-- INSERT: only field submitters may write into the bucket.
+DROP POLICY IF EXISTS "submissions media insert" ON storage.objects;
+CREATE POLICY "submissions media insert" ON storage.objects FOR INSERT TO authenticated
+  WITH CHECK (bucket_id = 'submissions' AND public.has_perm('submit'));
+
+-- SELECT: scoped to whoever may see the PARENT record. The inner EXISTS run under
+-- the caller's RLS, so submission media is readable only by the submitter / assigned
+-- engineer / admin (submissions RLS), and task media only by the assignee / engineer
+-- / admin (field_tasks RLS). A bad/short object name simply matches nothing (no cast
+-- errors — we compare id::text, never cast the path to bigint).
+DROP POLICY IF EXISTS "submissions media read" ON storage.objects;
+CREATE POLICY "submissions media read" ON storage.objects FOR SELECT TO authenticated
+  USING (
+    bucket_id = 'submissions' AND (
+      EXISTS (SELECT 1 FROM public.submissions s
+              WHERE s.id::text = split_part(name, '/', 1))
+      OR (split_part(name, '/', 1) = 'tasks'
+          AND EXISTS (SELECT 1 FROM public.field_tasks t
+                      WHERE t.id::text = split_part(name, '/', 2)))
+    )
+  );
