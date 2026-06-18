@@ -154,10 +154,12 @@
       var ok = bg.querySelector('.fld-ok'); ok.disabled = true; ok.textContent = '⏳ מגיש...';
       var payload = { title: title, description: bg.querySelector('#fld-desc').value.trim(),
                       village: bg.querySelector('#fld-vil').value, priority: bg.querySelector('#fld-prio').value };
+      function queued() { enqueue({ kind: 'issue', lng: latlng.lng, lat: latlng.lat, payload: payload }); close(); toast('📴 נשמר במכשיר — יישלח כשתחזור הרשת', 'success'); renderPending(); }
+      if (isOffline()) { queued(); return; }
       sb().rpc('submit_issue', { p_lng: latlng.lng, p_lat: latlng.lat, p_payload: payload }).then(function (res) {
         if (res.error) { ok.disabled = false; ok.textContent = 'שמור והגש'; toast('שגיאה: ' + res.error.message, 'error'); return; }
         close(); toast('✅ התקלה דווחה ונשלחה לבדיקה', 'success'); renderPending();
-      });
+      }).catch(queued);   // network failure → offline queue
     });
   }
 
@@ -176,14 +178,22 @@
     sb().from('submissions').select('*').order('submitted_at', { ascending: false }).limit(100).then(function (res) {
       if (res.error) { list.innerHTML = '<div style="color:#b91c1c;padding:16px">שגיאה בטעינה</div>'; return; }
       var rows = res.data || [];
-      if (!rows.length) { list.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px">עדיין אין הגשות.<br>צור ישות או דווח תקלה כדי להתחיל.</div>'; return; }
-      list.innerHTML = rows.map(function (s) {
+      var html = rows.map(function (s) {
         var t = s.kind === 'issue' ? (s.payload && s.payload.title || 'תקלה') : ('ישות · ' + esc(s.target_category || ''));
         var when = new Date(s.submitted_at).toLocaleString('he-IL');
         var rej = (s.status === 'rejected' && s.rejection_reason) ? '<div class="m" style="color:#b91c1c">סיבת דחייה: ' + esc(s.rejection_reason) + '</div>' : '';
         return '<div class="fld-sub"><div class="t">' + esc(t) + ' <span class="fld-badge ' + s.status + '">' + (STATUS_HE[s.status] || s.status) + '</span></div>' +
                '<div class="m">' + esc(when) + '</div>' + rej + '</div>';
       }).join('');
+      // prepend not-yet-sent (offline) items with a pending badge
+      idbAll().then(function (q) {
+        var qhtml = (q || []).map(function (it) {
+          var qt = it.kind === 'issue' ? (it.payload && it.payload.title || 'תקלה') : ('ישות · ' + esc(it.category || ''));
+          return '<div class="fld-sub" style="border-color:#fde68a;background:#fffbeb"><div class="t">' + esc(qt) +
+            ' <span class="fld-badge pending">📴 ממתין לשליחה</span></div><div class="m">' + new Date(it.ts).toLocaleString('he-IL') + '</div></div>';
+        }).join('');
+        list.innerHTML = (qhtml + html) || '<div style="text-align:center;color:#94a3b8;padding:24px">עדיין אין הגשות.<br>צור ישות או דווח תקלה כדי להתחיל.</div>';
+      });
     });
   }
 
@@ -296,7 +306,12 @@
         top_level: topEl && topEl.value !== '' ? Number(topEl.value) : undefined,
         invert_level: invEl && invEl.value !== '' ? Number(invEl.value) : undefined
       });
-      submitEntityWithMedia(geometry, bgEl.querySelector('#fld-cat').value, payload, capFiles.slice())
+      var cat = bgEl.querySelector('#fld-cat').value, files = capFiles.slice();
+      if (isOffline()) {
+        enqueue({ kind: 'entity', geometry: geometry, category: cat, payload: payload, files: files });
+        close(); toast('📴 נשמר במכשיר (כולל תמונות) — יישלח כשתחזור הרשת', 'success'); renderPending(); return;
+      }
+      submitEntityWithMedia(geometry, cat, payload, files)
         .then(function (n) { close(); toast('✅ נשלח לבדיקה' + (n ? ' · ' + n + ' קבצי מדיה' : ''), 'success'); renderPending(); })
         .catch(function (e) { ok.disabled = false; ok.textContent = 'שמור והגש'; toast('שגיאה: ' + (e.message || e), 'error'); });
     });
@@ -326,6 +341,37 @@
     }
     return n;
   }
+
+  // ── Offline-first queue (C1) — IndexedDB; flushed by pwa.js on reconnect ──────
+  var IDB_DB = 'mhg-field', IDB_STORE = 'pending';
+  function idb() {
+    return new Promise(function (res, rej) {
+      var r = indexedDB.open(IDB_DB, 1);
+      r.onupgradeneeded = function () { r.result.createObjectStore(IDB_STORE, { keyPath: 'id', autoIncrement: true }); };
+      r.onsuccess = function () { res(r.result); }; r.onerror = function () { rej(r.error); };
+    });
+  }
+  function idbAdd(rec) { return idb().then(function (db) { return new Promise(function (res, rej) { var tx = db.transaction(IDB_STORE, 'readwrite'); tx.objectStore(IDB_STORE).add(rec); tx.oncomplete = function () { res(); }; tx.onerror = function () { rej(tx.error); }; }); }); }
+  function idbAll() { return idb().then(function (db) { return new Promise(function (res) { var out = []; var c = db.transaction(IDB_STORE).objectStore(IDB_STORE).openCursor(); c.onsuccess = function (e) { var cur = e.target.result; if (cur) { out.push(Object.assign({ _id: cur.key }, cur.value)); cur.continue(); } else res(out); }; c.onerror = function () { res(out); }; }); }); }
+  function idbDel(id) { return idb().then(function (db) { return new Promise(function (res) { var tx = db.transaction(IDB_STORE, 'readwrite'); tx.objectStore(IDB_STORE).delete(id); tx.oncomplete = function () { res(); }; tx.onerror = function () { res(); }; }); }); }
+  function isOffline() { return typeof navigator !== 'undefined' && navigator.onLine === false; }
+  function enqueue(rec) { rec.ts = Date.now(); return idbAdd(rec).catch(function () {}); }
+
+  async function flushQueue() {
+    if (isOffline()) return;
+    var items; try { items = await idbAll(); } catch (e) { return; }
+    var sent = 0;
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      try {
+        if (it.kind === 'issue') { var r = await sb().rpc('submit_issue', { p_lng: it.lng, p_lat: it.lat, p_payload: it.payload }); if (r.error) throw r.error; }
+        else { await submitEntityWithMedia(it.geometry, it.category, it.payload, it.files || []); }
+        await idbDel(it._id); sent++;
+      } catch (e) { break; }   // still offline / server busy → keep the rest, retry next reconnect
+    }
+    if (sent) { toast('✅ ' + sent + ' הגשות שנשמרו נשלחו', 'success'); if (window.gMap) renderPending(); var p = document.getElementById('fld-mine'); if (p && p.classList.contains('open')) openMine(); }
+  }
+  window.GISField = { flushQueue: flushQueue };
 
   // Render the viewer's OWN pending submissions on the map (review_queue is RLS-
   // scoped to "own" for a viewer) so a just-reported issue/entity is visible while
