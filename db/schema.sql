@@ -66,16 +66,35 @@ BEGIN
 END;
 $$;
 
--- Incidents-specific update handler: stamps updated_at and sets closed_at.
+-- Incidents-specific update handler: stamps updated_at/closed_at and (P1-2)
+-- attributes the edit. updated_by is overwritten with the JWT identity
+-- (unforgeable) and created_by is pinned to its original value, so creator
+-- attribution is immutable after insert.
 CREATE OR REPLACE FUNCTION handle_incident_update()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
 BEGIN
   NEW.updated_at = NOW();
+  NEW.updated_by = auth.uid();
+  NEW.edited_at  = NOW();
+  NEW.created_by = OLD.created_by;
   IF NEW.status = 'closed' AND OLD.status <> 'closed' THEN
     NEW.closed_at = NOW();
   END IF;
+  RETURN NEW;
+END;
+$$;
+
+-- Incidents insert handler (P1-2): stamp the creator server-side. COALESCE lets a
+-- server-side promote flow pass the original field submitter; normal client inserts
+-- are attributed to the authenticated caller.
+CREATE OR REPLACE FUNCTION handle_incident_insert()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  NEW.created_by = COALESCE(NEW.created_by, auth.uid());
   RETURN NEW;
 END;
 $$;
@@ -219,7 +238,19 @@ ALTER TABLE incidents ADD CONSTRAINT incidents_assigned_to_uuid_chk
   CHECK (assigned_to IS NULL OR assigned_to ~ '^[0-9a-fA-F-]{36}$');
 CREATE INDEX IF NOT EXISTS idx_incidents_assigned ON incidents(assigned_to);
 
--- Trigger: auto-update timestamps on edit
+-- Attribution (P1-2): record who created / last edited each incident so changes to
+-- this public-safety dataset are accountable. Stamped server-side by the triggers
+-- below; clients cannot forge updated_by, and created_by is immutable after insert.
+ALTER TABLE incidents ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+ALTER TABLE incidents ADD COLUMN IF NOT EXISTS updated_by UUID REFERENCES auth.users(id) ON DELETE SET NULL;
+ALTER TABLE incidents ADD COLUMN IF NOT EXISTS edited_at  TIMESTAMPTZ;
+
+-- Triggers: stamp creator on insert; stamp timestamps + editor on update
+DROP TRIGGER IF EXISTS set_incident_created_by ON incidents;
+CREATE TRIGGER set_incident_created_by
+  BEFORE INSERT ON incidents
+  FOR EACH ROW EXECUTE FUNCTION handle_incident_insert();
+
 DROP TRIGGER IF EXISTS set_incidents_updated_at ON incidents;
 CREATE TRIGGER set_incidents_updated_at
   BEFORE UPDATE ON incidents
@@ -241,6 +272,10 @@ CREATE POLICY "incidents: authenticated can insert"
   ON incidents FOR INSERT
   WITH CHECK (is_editor());
 
+-- UPDATE stays open to any editor/admin by design: incidents are a shared
+-- operational queue (any field crew may act on any incident). Accountability is
+-- enforced by handle_incident_update() (P1-2), which stamps an unforgeable
+-- updated_by + edited_at on every change.
 CREATE POLICY "incidents: authenticated can update"
   ON incidents FOR UPDATE
   USING (is_editor())
