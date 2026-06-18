@@ -129,11 +129,14 @@ function createMvtLayer(layer) {
     map: window.gMap,
     layerId: layer.id,
     getFeatureId: function (p) { return p.__id; },
-    style: function (p) {
+    style: function (p, zoom) {
       var f = { properties: p };   // p already has LineDiamet/Status/ValveDiame
       var base = (window.GISSymbology && GISSymbology.lineStyle) ? GISSymbology.lineStyle(layer, f, color) : { color: color, weight: 3, opacity: .9 };
+      // Zoom-scaled point radius so dense layers don't blob at low zoom (lines are
+      // already scaled inside lineStyle). VectorGrid re-renders on zoom → live resize.
+      var sc = (window.GISSymbology && GISSymbology.zoomScale) ? GISSymbology.zoomScale(zoom) : 1;
       // One style object serves lines, polygons and points (points use radius/fill).
-      return Object.assign({ radius: 5, fill: true, fillColor: base.color || color, fillOpacity: .9,
+      return Object.assign({ radius: Math.max(1.4, 5 * sc), fill: true, fillColor: base.color || color, fillOpacity: .9,
         weight: base.weight != null ? base.weight : 3, color: base.color || color,
         opacity: base.opacity != null ? base.opacity : .9 }, base);
     },

@@ -69,18 +69,28 @@
   // Optional user-chosen render style (set when drawing/submitting a line):
   // solid | dashed | dotted | dashdot. Applied on top of the diameter/role logic.
   function dashFor(s) { return s === 'dashed' ? '8 6' : s === 'dotted' ? '2 7' : s === 'dashdot' ? '10 6 2 6' : null; }
+
+  // Zoom-dependent size factor. Dense networks render thousands of symbols into a
+  // small area at low zoom and merge into a solid blob — shrink them when zoomed
+  // out, full size only at street level. Pass a zoom (MVT) or read the map (GeoJSON).
+  function zoomScale(z) {
+    if (z == null) z = window.gMap ? window.gMap.getZoom() : 16;
+    return z >= 17 ? 1 : z >= 16 ? 0.8 : z >= 15 ? 0.62 : z >= 14 ? 0.46 : z >= 13 ? 0.34 : 0.26;
+  }
+
   function lineStyle(layer, f, baseColor) {
     var role = roleOf(layer);
     var st = statusOf(f);
-    if (st === 4) return { color: '#9aa6b2', weight: 2, opacity: 0.7, dashArray: '5 5' }; // abandoned
     var userDash = dashFor((f.properties || {})._style);
     var base;
-    if (role !== 'water' && role !== 'sewer') { base = { color: baseColor, weight: 3, opacity: 0.9 }; }
+    if (st === 4) base = { color: '#9aa6b2', weight: 2, opacity: 0.7, dashArray: '5 5' };  // abandoned
+    else if (role !== 'water' && role !== 'sewer') base = { color: baseColor, weight: 3, opacity: 0.9 };
     else {
       var d = diamOf(f), c = classOf(role, d), idx = breaksFor(role).indexOf(c);
       base = { color: shade(baseColor, idx * 0.12), weight: c.w, opacity: 0.92, lineCap: 'round' };
     }
     if (userDash) base.dashArray = userDash;
+    base.weight = Math.max(0.6, base.weight * zoomScale());
     return base;
   }
 
@@ -98,8 +108,9 @@
     var s = POINT[role] || POINT.point;
     var r = s.r;
     if (role === 'valve') { var vd = parseFloat((f.properties || {}).ValveDiame); if (isFinite(vd)) r = vd >= 8 ? 7 : vd >= 4 ? 6 : 5; }
+    var sc = zoomScale();
     return L.circleMarker(latlng, {
-      radius: r, color: s.stroke, weight: s.sw,
+      radius: Math.max(1.4, r * sc), color: s.stroke, weight: sc < 0.6 ? 0.6 : s.sw,
       fillColor: s.fill || baseColor, fillOpacity: 0.95
     });
   }
@@ -172,6 +183,7 @@
     roleOf: roleOf,
     lineStyle: lineStyle,
     pointToLayer: pointToLayer,
+    zoomScale: zoomScale,
     wantLabel: wantLabel,
     labelText: labelText,
     toggleLegend: toggleLegend,
