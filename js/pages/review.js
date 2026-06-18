@@ -7,7 +7,7 @@
 // ════════════════════════════════════════════════════════════════════════
 (function () {
   'use strict';
-  var map, geomLayer, gProfiles = {}, gLayers = [], gItems = [], gCurrent = null;
+  var map, geomLayer, gProfiles = {}, gLayers = [], gItems = [], gCurrent = null, gSel = {};
 
   function toast(m) { var t = document.getElementById('toast'); if (!t) { alert(m); return; } t.textContent = m; t.classList.add('show'); setTimeout(function () { t.classList.remove('show'); }, 3000); }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
@@ -52,16 +52,51 @@
       if (geomLayer) { map.removeLayer(geomLayer); geomLayer = null; }
       return;
     }
-    list.innerHTML = gItems.map(function (s) {
-      var who = gProfiles[s.submitted_by] || '—';
-      var title = s.kind === 'issue' ? (s.payload && s.payload.title || 'תקלה') : ('ישות · ' + esc(s.target_category || ''));
-      return '<div class="rv-card" data-id="' + s.id + '"><div class="t">' + esc(title) +
-        '<span class="rv-kind ' + s.kind + '">' + (s.kind === 'issue' ? 'תקלה' : 'ישות') + '</span></div>' +
-        '<div class="m">' + esc(who) + ' · ' + new Date(s.submitted_at).toLocaleString('he-IL') + '</div></div>';
-    }).join('');
+    gSel = {};
+    list.innerHTML =
+      '<div id="rv-batch" style="display:none;position:sticky;top:0;z-index:2;background:#0d3b5e;color:#fff;padding:8px 10px;border-radius:8px;margin-bottom:8px;font-size:12.5px;align-items:center;gap:8px">' +
+        '<span id="rv-batch-n"></span><span style="flex:1"></span>' +
+        '<button id="rv-batch-app" style="background:#16a34a;border:none;color:#fff;border-radius:6px;padding:5px 9px;cursor:pointer;font:inherit">אשר תקלות</button>' +
+        '<button id="rv-batch-rej" style="background:#dc2626;border:none;color:#fff;border-radius:6px;padding:5px 9px;cursor:pointer;font:inherit">דחה</button>' +
+      '</div>' +
+      gItems.map(function (s) {
+        var who = gProfiles[s.submitted_by] || '—';
+        var title = s.kind === 'issue' ? (s.payload && s.payload.title || 'תקלה') : ('ישות · ' + esc(s.target_category || ''));
+        return '<div class="rv-card" data-id="' + s.id + '"><label class="rv-pick" style="float:left;cursor:pointer;padding:0 0 4px 4px"><input type="checkbox" class="rv-chk" data-id="' + s.id + '"></label><div class="t">' + esc(title) +
+          '<span class="rv-kind ' + s.kind + '">' + (s.kind === 'issue' ? 'תקלה' : 'ישות') + '</span></div>' +
+          '<div class="m">' + esc(who) + ' · ' + new Date(s.submitted_at).toLocaleString('he-IL') + '</div></div>';
+      }).join('');
     Array.prototype.forEach.call(list.querySelectorAll('.rv-card'), function (c) {
-      c.onclick = function () { select(+c.getAttribute('data-id'), c); };
+      c.onclick = function (e) { if (e.target.classList.contains('rv-chk') || e.target.classList.contains('rv-pick')) return; select(+c.getAttribute('data-id'), c); };
     });
+    Array.prototype.forEach.call(list.querySelectorAll('.rv-chk'), function (cb) {
+      cb.onclick = function (e) { e.stopPropagation(); if (cb.checked) gSel[+cb.getAttribute('data-id')] = 1; else delete gSel[+cb.getAttribute('data-id')]; updateBatch(); };
+    });
+    document.getElementById('rv-batch-app').onclick = batchApprove;
+    document.getElementById('rv-batch-rej').onclick = batchReject;
+    updateBatch();
+  }
+
+  function updateBatch() {
+    var bar = document.getElementById('rv-batch'); if (!bar) return;
+    var n = Object.keys(gSel).length; bar.style.display = n ? 'flex' : 'none';
+    var el = document.getElementById('rv-batch-n'); if (el) el.textContent = n + ' נבחרו';
+  }
+  async function batchReject() {
+    var ids = Object.keys(gSel).map(Number); if (!ids.length) return;
+    var reason = prompt('סיבת דחייה לכל הנבחרות:', ''); if (reason === null) return;
+    var ok = 0;
+    for (var i = 0; i < ids.length; i++) { try { var r = await gSb.rpc('reject_submission', { p_id: ids[i], p_reason: reason }); if (!r.error) ok++; } catch (e) {} }
+    toast('נדחו ' + ok + ' הגשות'); gSel = {}; await loadQueue();
+  }
+  async function batchApprove() {
+    var ids = Object.keys(gSel).map(Number); if (!ids.length) return;
+    var issues = gItems.filter(function (s) { return ids.indexOf(s.id) >= 0 && s.kind === 'issue'; });
+    var skipped = ids.length - issues.length;
+    if (!issues.length) { toast('אישור קבוצתי לתקלות בלבד — ישויות דורשות בחירת שכבה'); return; }
+    var ok = 0;
+    for (var i = 0; i < issues.length; i++) { try { var r = await gSb.rpc('approve_submission', { p_id: issues[i].id, p_layer_id: null, p_edited_payload: null }); if (!r.error) ok++; } catch (e) {} }
+    toast('אושרו ' + ok + ' תקלות' + (skipped ? ' · ' + skipped + ' ישויות דולגו' : '')); gSel = {}; await loadQueue();
   }
 
   function select(id, card) {
@@ -116,6 +151,29 @@
       '</div>';
     document.getElementById('rv-do-approve').onclick = doApprove;
     document.getElementById('rv-do-reject').onclick = doReject;
+    loadMedia(s.id);
+  }
+
+  // Show the submission's photos/videos inline (private bucket → signed URLs).
+  async function loadMedia(subId) {
+    var r;
+    try { r = await gSb.from('submission_media').select('storage_path,kind').eq('submission_id', subId); } catch (e) { return; }
+    if (!r || r.error || !r.data || !r.data.length) return;
+    var parts = ['<div class="rv-media" style="display:flex;gap:6px;flex-wrap:wrap;margin:10px 0">'];
+    for (var i = 0; i < r.data.length; i++) {
+      var m = r.data[i], u = null;
+      try { var sg = await gSb.storage.from('submissions').createSignedUrl(m.storage_path, 3600); u = sg.data && sg.data.signedUrl; } catch (e) {}
+      if (!u) { try { u = gSb.storage.from('submissions').getPublicUrl(m.storage_path).data.publicUrl; } catch (e) {} }
+      if (!u) continue;
+      parts.push(m.kind === 'video'
+        ? '<video src="' + u + '" controls style="width:108px;border-radius:8px;border:1px solid #e2e8f0"></video>'
+        : '<a href="' + u + '" target="_blank" rel="noopener"><img src="' + u + '" loading="lazy" style="width:84px;height:84px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0"></a>');
+    }
+    parts.push('</div>');
+    if (gCurrent && gCurrent.id !== subId) return;          // selection changed while loading
+    var det = document.getElementById('rv-detail'); if (!det) return;
+    var anchor = det.querySelector('.rv-acts');
+    if (anchor) anchor.insertAdjacentHTML('beforebegin', parts.join('')); else det.insertAdjacentHTML('beforeend', parts.join(''));
   }
   function row(label, inner) { return '<div class="rv-row"><label>' + label + '</label>' + inner + '</div>'; }
   function sel(v, opt) { return v === opt ? ' selected' : ''; }
