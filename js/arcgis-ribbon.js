@@ -345,6 +345,8 @@
         h.innerHTML = '<span class="ico">' + svgIcon('panel') + '</span><span>תוכן · Contents</span>';
         sb.insertBefore(h, sb.firstChild);
       }
+      // on phone/tablet the Contents pane is a drawer — start it closed so the map is full
+      if (window.matchMedia && window.matchMedia('(max-width: 1024px)').matches) sb.classList.add('collapsed');
     }
 
     initStatusScale();

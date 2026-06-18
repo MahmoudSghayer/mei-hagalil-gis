@@ -476,3 +476,39 @@ body.dark-basemap .gis-sym-label { color: #fff; text-shadow: 1px 1px 0 #000, -1p
   body.gis-printing .leaflet-control-zoom, body.gis-printing .leaflet-control-attribution,
   body.gis-printing #gis-trace-banner { display: none !important; }
 }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   Responsive — Engineer/Admin shell on tablet + phone (A1)
+   ══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  /* Contents pane → off-canvas drawer overlaying the map (map stays full-width) */
+  #sidebar.ags-contents {
+    position: absolute; top: 0; bottom: 0; right: 0; width: 300px; max-width: 85vw;
+    z-index: 1500; box-shadow: -4px 0 24px rgba(13,59,94,0.28);
+    transform: translateX(100%); transition: transform 0.25s ease;
+  }
+  #sidebar.ags-contents:not(.collapsed) { transform: translateX(0); }
+  #sidebar.ags-contents.collapsed { width: 300px; }      /* keep width; hidden via transform */
+  #sidebar-collapse-btn { z-index: 1501; }
+  /* ribbon: tighter so more fits before the groups horizontally scroll */
+  #ags-tabs { padding: 0 4px; }
+  .ags-tab { padding: 5px 10px 6px; font-size: 12px; }
+  .ags-cmd-lg { width: 48px; height: 52px; }
+  .ags-cmd-lg .ags-ic { font-size: 18px; }
+}
+
+@media (max-width: 600px) {
+  #ags-titlebar { height: 34px; padding: 0 8px; gap: 5px; }
+  #ags-logo { font-size: 12px; }
+  /* admin nav + account collapse to icons/avatar only */
+  #ags-account .admin-link span { display: none; }
+  #ags-account .admin-link { padding: 4px 7px; }
+  #ags-account .user-name, #ags-account .user-role-label { display: none; }
+  /* status bar: keep the live coords + scale, drop the wordy bits to avoid overflow */
+  #ags-statusstats .stat .l { display: none; }
+  #statusbar > span:not(#ags-statusstats):not(#ags-scale-wrap):not(#coords) { display: none; }
+  /* floating cards never exceed the viewport */
+  #gis-trace-card, #gis-anly-card, #gis-find-card, #gis-bm-card, #gis-legend { max-width: 92vw; }
+  #sidebar.ags-contents { width: 86vw; max-width: 320px; }
+  #gis-tbl { height: 58vh !important; }   /* taller bottom sheet on phones (inline 44vh) */
+}
