@@ -96,11 +96,15 @@
   function showToast(msg, type, duration) {
     var t = document.getElementById('toast');
     if (!t) return;
-    duration = duration || 3500;
+    // Error toasts linger longer so a failure isn't missed; any toast can be
+    // clicked to dismiss so a persistent message never gets in the way.
+    duration = duration || (type === 'error' ? 9000 : 3500);
 
     t.textContent = msg;
     t.className   = '';
     if (type) t.classList.add(type);
+    t.style.cursor = 'pointer';
+    t.onclick = function () { clearTimeout(t.__timer); t.classList.remove('show'); };
 
     clearTimeout(t.__timer);
 
