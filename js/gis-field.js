@@ -434,12 +434,51 @@
       '<button id="fld-ent"><span class="i">➕</span>צור ישות</button>' +
       '<button id="fld-cap"><span class="i">📷</span>מצלמה/מסלול</button>' +
       '<button id="fld-iss"><span class="i">⚠️</span>דווח תקלה</button>' +
+      '<button id="fld-tsk"><span class="i">📌</span>משימות</button>' +
       '<button id="fld-mn"><span class="i">📋</span>ההגשות שלי</button>';
     document.body.appendChild(bar);
     document.getElementById('fld-ent').onclick = startEntity;
     document.getElementById('fld-cap').onclick = startCapture;
     document.getElementById('fld-iss').onclick = startIssue;
+    document.getElementById('fld-tsk').onclick = openTasks;
     document.getElementById('fld-mn').onclick = openMine;
+  }
+
+  // ── My field tasks (C3) — assigned by an engineer; navigate + mark done ───────
+  function openTasks() {
+    var p = document.getElementById('fld-tasks');
+    if (!p) {
+      p = document.createElement('div'); p.id = 'fld-tasks';
+      p.style.cssText = 'position:fixed;top:0;right:0;bottom:0;width:min(420px,100%);z-index:1250;background:#f8fafc;box-shadow:-4px 0 20px rgba(0,0,0,.2);transform:translateX(100%);transition:transform .25s;display:flex;flex-direction:column';
+      p.innerHTML = '<div style="padding:14px 16px;background:#0d3b5e;color:#fff;display:flex;justify-content:space-between;align-items:center"><span>המשימות שלי</span><button id="fld-tasks-x" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer">✕</button></div><div id="fld-tasks-list" style="flex:1;overflow:auto;padding:12px"></div>';
+      document.body.appendChild(p);
+      p.querySelector('#fld-tasks-x').onclick = function () { p.style.transform = 'translateX(100%)'; };
+    }
+    p.style.transform = 'none';
+    var list = document.getElementById('fld-tasks-list');
+    list.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px">טוען…</div>';
+    sb().from('field_tasks').select('*').eq('status', 'open').order('created_at', { ascending: false }).then(function (res) {
+      if (res.error) { list.innerHTML = '<div style="color:#b91c1c;padding:16px">שגיאה בטעינה (הרץ tasks.sql ב-Supabase?)</div>'; return; }
+      var rows = res.data || [];
+      if (!rows.length) { list.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px">אין משימות פתוחות 🎉</div>'; return; }
+      list.innerHTML = rows.map(function (t) {
+        return '<div class="fld-sub"><div class="t">📌 ' + esc(t.title) + '</div>' +
+          (t.description ? '<div class="m">' + esc(t.description) + '</div>' : '') +
+          '<div style="display:flex;gap:8px;margin-top:8px">' +
+          '<button class="fld-media-btn" data-nav="' + t.lat + ',' + t.lng + '">🧭 נווט</button>' +
+          '<button class="fld-media-btn" data-done="' + t.id + '">✓ בוצע</button></div></div>';
+      }).join('');
+      Array.prototype.forEach.call(list.querySelectorAll('[data-nav]'), function (b) {
+        b.onclick = function () { var c = b.getAttribute('data-nav').split(','); window.open('https://www.google.com/maps/dir/?api=1&destination=' + c[0] + ',' + c[1], '_blank'); };
+      });
+      Array.prototype.forEach.call(list.querySelectorAll('[data-done]'), function (b) {
+        b.onclick = async function () {
+          var r = await sb().from('field_tasks').update({ status: 'done', done_at: new Date().toISOString() }).eq('id', b.getAttribute('data-done'));
+          if (r.error) { toast('שגיאה: ' + r.error.message, 'error'); return; }
+          toast('המשימה סומנה כבוצעה', 'success'); openTasks();
+        };
+      });
+    });
   }
 
   function init() {

@@ -79,7 +79,8 @@
         ] }
       ] },
       { label: 'נתונים', cmds: [
-        { ic: 'edit', lb: 'עורך קודים', size: 'lg', act: openDomains }
+        { ic: 'edit', lb: 'עורך קודים', size: 'lg', act: openDomains },
+        { ic: 'plus', lb: 'משימת שטח', size: 'lg', act: createTask }
       ] }
     ],
 
@@ -181,6 +182,7 @@
   function printMap() { if (window.GISPrint) { window.GISPrint.open(); } else { toast('כלי ההדפסה עדיין נטען…'); } }
   function openDashboard() { if (window.GISDashboard) { window.GISDashboard.open(); } else { toast('הסקירה עדיין נטענת…'); } }
   function openDomains() { if (window.GISDomains && window.GISDomains.openEditor) { window.GISDomains.openEditor(); } else { toast('עורך הקודים עדיין נטען…'); } }
+  function createTask() { if (window.GISTasks) { window.GISTasks.openCreate(); } else { toast('כלי המשימות עדיין נטען…'); } }
   function focusSearch() {
     var inp = document.querySelector('#search-bar input');
     if (inp) { inp.focus(); inp.select && inp.select(); }
