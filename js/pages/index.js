@@ -784,6 +784,8 @@ function zoomToVillage(villageId) {
 // ════════════════════════════════════════════════════════════
 //  INCIDENTS
 // ════════════════════════════════════════════════════════════
+// Escape DB/user-supplied strings before HTML interpolation (popups + innerHTML). XSS guard.
+function escHtml(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function initSB(){loadIncidents();subscribeRT();}
 function loadIncidents(){gSb.from('incidents').select('*').in('status',['open','in_progress']).order('created_at',{ascending:false}).then(function(res){
   if(res.error){
@@ -824,7 +826,7 @@ function addMarker(inc, flyTo) {
   var actions = '';
   if (canEditInc && inc.status==='open') actions = '<div class="popup-actions"><button class="popup-btn" onclick="takeIncident('+inc.id+')">📋 קח לטיפול</button><button class="popup-btn danger" onclick="openCloseModal('+inc.id+')">✔ סגור</button></div>';
   else if (canEditInc && inc.status==='in_progress' && mine) actions = '<div class="popup-actions"><button class="popup-btn success" onclick="openCloseModal('+inc.id+')">✔ סיים וסגור</button></div>';
-  var m = L.marker([inc.lat,inc.lng],{icon:ic}).bindPopup(mineTag+'<div class="popup-title">'+inc.title+'</div><div class="popup-row"><span class="popup-key">ישוב</span><span class="popup-val">'+inc.village+'</span></div><div class="popup-row"><span class="popup-key">עדיפות</span><span class="popup-val" style="color:'+color+'">'+(PRIORITY_HE[inc.priority]||inc.priority)+'</span></div><div class="popup-row"><span class="popup-key">סטטוס</span><span class="popup-val">'+(STATUS_HE[inc.status]||inc.status)+'</span></div><div class="popup-row"><span class="popup-key">נפתח</span><span class="popup-val">'+timeAgo(inc.created_at)+'</span></div>'+(inc.description?'<div style="font-size:12px;color:#64748b;margin-top:6px;padding-top:5px;border-top:1px solid #e2e8f0">'+inc.description+'</div>':'')+actions);
+  var m = L.marker([inc.lat,inc.lng],{icon:ic}).bindPopup(mineTag+'<div class="popup-title">'+escHtml(inc.title)+'</div><div class="popup-row"><span class="popup-key">ישוב</span><span class="popup-val">'+escHtml(inc.village)+'</span></div><div class="popup-row"><span class="popup-key">עדיפות</span><span class="popup-val" style="color:'+color+'">'+(PRIORITY_HE[inc.priority]||inc.priority)+'</span></div><div class="popup-row"><span class="popup-key">סטטוס</span><span class="popup-val">'+(STATUS_HE[inc.status]||inc.status)+'</span></div><div class="popup-row"><span class="popup-key">נפתח</span><span class="popup-val">'+timeAgo(inc.created_at)+'</span></div>'+(inc.description?'<div style="font-size:12px;color:#64748b;margin-top:6px;padding-top:5px;border-top:1px solid #e2e8f0">'+escHtml(inc.description)+'</div>':'')+actions);
   m.addTo(gIncidentsLayer); gMarkers[inc.id]=m;
   if (flyTo) { gMap.flyTo([inc.lat,inc.lng],17,{duration:1.5}); setTimeout(function(){m.openPopup();},1600); }
 }
@@ -834,7 +836,7 @@ function renderMyIncidents() {
   document.getElementById('my-count').textContent = mine.length;
   if (!mine.length) { panel.style.display='none'; return; }
   panel.style.display='block';
-  document.getElementById('my-list').innerHTML = mine.map(function(inc){return '<div class="inc-item mine" onclick="zoomTo('+inc.lat+','+inc.lng+','+inc.id+')"><div class="inc-top"><span class="inc-title">'+inc.title+'</span><span class="badge badge-'+inc.priority+'">'+(PRIORITY_HE[inc.priority]||inc.priority)+'</span></div><div class="inc-meta"><span class="inc-village">'+inc.village+'</span><span>'+timeSince(inc.taken_at||inc.created_at)+'</span></div></div>';}).join('');
+  document.getElementById('my-list').innerHTML = mine.map(function(inc){return '<div class="inc-item mine" onclick="zoomTo('+inc.lat+','+inc.lng+','+inc.id+')"><div class="inc-top"><span class="inc-title">'+escHtml(inc.title)+'</span><span class="badge badge-'+inc.priority+'">'+(PRIORITY_HE[inc.priority]||inc.priority)+'</span></div><div class="inc-meta"><span class="inc-village">'+escHtml(inc.village)+'</span><span>'+timeSince(inc.taken_at||inc.created_at)+'</span></div></div>';}).join('');
 }
 
 function renderOpenIncidents() {
@@ -842,8 +844,8 @@ function renderOpenIncidents() {
   if (gFilter) open = open.filter(function(i){return i.village===gFilter;});
   var panel = document.getElementById('incidents-panel');
   document.getElementById('open-count').textContent = open.length;
-  if (!open.length) { panel.innerHTML='<div class="empty-msg">אין תקלות פתוחות'+(gFilter?' ב'+gFilter:'')+'</div>'; return; }
-  panel.innerHTML = open.map(function(inc){return '<div class="inc-item" onclick="zoomTo('+inc.lat+','+inc.lng+','+inc.id+')"><div class="inc-top"><span class="inc-title">'+inc.title+'</span><span class="badge badge-'+inc.priority+'">'+(PRIORITY_HE[inc.priority]||inc.priority)+'</span></div><div class="inc-meta"><span class="inc-village">'+inc.village+'</span><span>'+timeAgo(inc.created_at)+'</span></div></div>';}).join('');
+  if (!open.length) { panel.innerHTML='<div class="empty-msg">אין תקלות פתוחות'+(gFilter?' ב'+escHtml(gFilter):'')+'</div>'; return; }
+  panel.innerHTML = open.map(function(inc){return '<div class="inc-item" onclick="zoomTo('+inc.lat+','+inc.lng+','+inc.id+')"><div class="inc-top"><span class="inc-title">'+escHtml(inc.title)+'</span><span class="badge badge-'+inc.priority+'">'+(PRIORITY_HE[inc.priority]||inc.priority)+'</span></div><div class="inc-meta"><span class="inc-village">'+escHtml(inc.village)+'</span><span>'+timeAgo(inc.created_at)+'</span></div></div>';}).join('');
 }
 
 function updateStats() {
