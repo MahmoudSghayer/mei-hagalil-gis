@@ -1,4 +1,5 @@
 // Vercel serverless proxy — finds parcel centroid via data.gov.il CKAN API
+const { limitByIp } = require('./_ratelimit');
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'https://mei-hagalil-gis.vercel.app')
   .split(',').map(s => s.trim()).filter(Boolean);
 
@@ -10,6 +11,9 @@ module.exports = async function handler(req, res) {
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  // Anti-abuse: cap per-IP lookups (each proxies several data.gov.il calls).
+  if (!(await limitByIp(req, res, 'parcel', 60, 60))) return;
 
   const { gush, helka } = req.query;
   if (!gush || !helka || isNaN(gush) || isNaN(helka)) {

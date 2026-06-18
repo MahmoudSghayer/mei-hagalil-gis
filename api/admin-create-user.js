@@ -13,8 +13,13 @@
 //  POST body: { email, password, full_name?, role?, phone?, department? }
 //  Headers:   Authorization: Bearer <caller's Supabase access_token>
 // ════════════════════════════════════════════════════════════════════════
+const { limitByIp } = require('./_ratelimit');
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
+
+  // Anti-abuse: cap per-IP attempts (each call costs 1-2 Supabase round-trips).
+  if (!(await limitByIp(req, res, 'admin-create', 20, 60))) return;
 
   const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
   const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;

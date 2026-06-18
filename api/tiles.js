@@ -27,6 +27,7 @@
 // it stops other sites from proxying our data / burning Supabase quota.
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'https://mei-hagalil-gis.vercel.app')
   .split(',').map(s => s.trim()).filter(Boolean);
+const { limitByIp } = require('./_ratelimit');
 
 module.exports = async function handler(req, res) {
   const origin = req.headers.origin;
@@ -35,6 +36,10 @@ module.exports = async function handler(req, res) {
     res.setHeader('Vary', 'Origin');
   }
   if (req.method === 'OPTIONS') return res.status(200).end();
+
+  // Anti-abuse ceiling. Generous: a single active map session bursts many tiles
+  // per minute, so this only trips on scripted scraping, not normal panning.
+  if (!(await limitByIp(req, res, 'tiles', 600, 60))) return;
 
   const { z, x, y, layer } = req.query;
   if (z == null || x == null || y == null || !layer ||
