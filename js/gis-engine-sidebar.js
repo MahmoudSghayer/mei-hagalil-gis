@@ -136,7 +136,7 @@ function createMvtLayer(layer) {
       // already scaled inside lineStyle). VectorGrid re-renders on zoom → live resize.
       var sc = (window.GISSymbology && GISSymbology.zoomScale) ? GISSymbology.zoomScale(zoom) : 1;
       // One style object serves lines, polygons and points (points use radius/fill).
-      return Object.assign({ radius: Math.max(1.4, 5 * sc), fill: true, fillColor: base.color || color, fillOpacity: .9,
+      return Object.assign({ radius: Math.max(2.5, 5 * sc), fill: true, fillColor: base.color || color, fillOpacity: .9,
         weight: base.weight != null ? base.weight : 3, color: base.color || color,
         opacity: base.opacity != null ? base.opacity : .9 }, base);
     },

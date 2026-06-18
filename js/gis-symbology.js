@@ -90,7 +90,9 @@
       base = { color: shade(baseColor, idx * 0.12), weight: c.w, opacity: 0.92, lineCap: 'round' };
     }
     if (userDash) base.dashArray = userDash;
-    base.weight = Math.max(0.6, base.weight * zoomScale());
+    // Shrink with zoom, but never below a clickable thickness (thin lines become
+    // impossible to tap, which broke feature selection).
+    base.weight = Math.max(3, base.weight * zoomScale());
     return base;
   }
 
@@ -110,7 +112,7 @@
     if (role === 'valve') { var vd = parseFloat((f.properties || {}).ValveDiame); if (isFinite(vd)) r = vd >= 8 ? 7 : vd >= 4 ? 6 : 5; }
     var sc = zoomScale();
     return L.circleMarker(latlng, {
-      radius: Math.max(1.4, r * sc), color: s.stroke, weight: sc < 0.6 ? 0.6 : s.sw,
+      radius: Math.max(2.5, r * sc), color: s.stroke, weight: sc < 0.6 ? 0.6 : s.sw,
       fillColor: s.fill || baseColor, fillOpacity: 0.95
     });
   }
