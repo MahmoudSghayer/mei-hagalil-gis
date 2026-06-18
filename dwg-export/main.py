@@ -55,12 +55,6 @@ app.add_middleware(
 # Raise this if you move to an instance with more RAM.
 MAX_DWG_FEATURES: int = int(os.getenv("MAX_DWG_FEATURES", "8000"))
 
-# Legacy auth token the frontend sends in X-Api-Token. Kept only as a transitional
-# fallback — the preferred auth is a Supabase session JWT (see SUPABASE_JWT_SECRET).
-# No hardcoded default: if API_TOKEN is unset the static-token path is disabled
-# (an empty token can never match an incoming header) and only JWT auth is accepted.
-API_TOKEN: str = os.getenv("API_TOKEN", "")
-
 # Preferred auth: validate the caller's Supabase access token REMOTELY by asking
 # Supabase (GET /auth/v1/user). This works no matter how the project signs its
 # JWTs (legacy HS256 *or* the newer asymmetric signing keys), so it is more robust
@@ -137,18 +131,18 @@ def _caller_identity(authorization: str | None) -> tuple[str | None, str | None]
     return (None, None)
 
 
-def _require_auth(x_api_token: str | None, authorization: str | None = None) -> None:
+def _require_auth(authorization: str | None = None) -> None:
+    """JWT-only authorization for export/convert calls. The caller must present a
+    valid Supabase session token; if a role is resolved it must be editor or admin.
+    (The legacy static X-Api-Token fallback was removed — P1-1.)"""
     uid, role = _caller_identity(authorization)
-    if uid:
-        # Export is for editors/admins. If the role is known it must be one of
-        # those; if it couldn't be resolved (HS256 fallback), the valid token passes.
-        if role is None or role in ("admin", "editor"):
-            return
-        raise HTTPException(status_code=403, detail="Forbidden: export requires editor or admin role")
-    # Transitional static-token fallback (no role context); dead once API_TOKEN is unset.
-    if API_TOKEN and x_api_token and x_api_token == API_TOKEN:
+    if not uid:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    # If the role is known it must be editor/admin; if it couldn't be resolved
+    # (HS256 fallback path carries no profile), a valid token still passes.
+    if role is None or role in ("admin", "editor"):
         return
-    raise HTTPException(status_code=401, detail="Unauthorized")
+    raise HTTPException(status_code=403, detail="Forbidden: export requires editor or admin role")
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -277,10 +271,9 @@ def health() -> dict:
 @app.post("/api/export/dxf")
 async def export_dxf(
     body: ExportRequest,
-    x_api_token: str | None = Header(None),
     authorization: str | None = Header(None),
 ) -> StreamingResponse:
-    _require_auth(x_api_token, authorization)
+    _require_auth(authorization)
     dxf_bytes = _build_dxf_bytes(body.features)
     fname = f"{body.filename}.dxf"
     return StreamingResponse(
@@ -293,10 +286,9 @@ async def export_dxf(
 @app.post("/api/export/dwg")
 async def export_dwg(
     body: ExportRequest,
-    x_api_token: str | None = Header(None),
     authorization: str | None = Header(None),
 ) -> StreamingResponse:
-    _require_auth(x_api_token, authorization)
+    _require_auth(authorization)
 
     dxf_bytes = _build_dxf_bytes(body.features)
 
@@ -330,11 +322,10 @@ async def export_dwg(
 async def convert_dwg_to_geojson(
     file: UploadFile = File(...),
     source_crs: str = Form("EPSG:2039"),
-    x_api_token: str | None = Header(None),
     authorization: str | None = Header(None),
 ) -> JSONResponse:
     """Convert an uploaded DWG → WGS84 GeoJSON (for importing into the map)."""
-    _require_auth(x_api_token, authorization)
+    _require_auth(authorization)
     dwg_bytes = await file.read()
     dxf_bytes = _dwg_to_dxf(dwg_bytes)
     if not dxf_bytes:
@@ -349,11 +340,10 @@ async def convert_dwg_to_geojson(
 @app.post("/api/convert/dwg-to-dxf")
 async def convert_dwg_to_dxf(
     file: UploadFile = File(...),
-    x_api_token: str | None = Header(None),
     authorization: str | None = Header(None),
 ) -> StreamingResponse:
     """Convert an uploaded DWG file to DXF (for inspection / round-tripping)."""
-    _require_auth(x_api_token, authorization)
+    _require_auth(authorization)
     dwg_bytes = await file.read()
     dxf_bytes = _dwg_to_dxf(dwg_bytes)
     if not dxf_bytes:

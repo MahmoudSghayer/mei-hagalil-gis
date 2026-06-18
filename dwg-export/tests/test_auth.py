@@ -43,7 +43,6 @@ def make_urlopen(routes):
 def cfg(monkeypatch):
     monkeypatch.setattr(main, "SUPABASE_URL", "https://test.supabase.co")
     monkeypatch.setattr(main, "SUPABASE_APIKEY", "anon-key")
-    monkeypatch.setattr(main, "API_TOKEN", "")
 
 
 def _routes_for(role):
@@ -62,12 +61,12 @@ def test_viewer_is_forbidden(monkeypatch):
 
 def test_editor_is_allowed(monkeypatch):
     monkeypatch.setattr(urllib.request, "urlopen", make_urlopen(_routes_for("editor")))
-    main._require_auth(None, "Bearer tok")  # must not raise
+    main._require_auth("Bearer tok")  # must not raise
 
 
 def test_admin_is_allowed(monkeypatch):
     monkeypatch.setattr(urllib.request, "urlopen", make_urlopen(_routes_for("admin")))
-    main._require_auth(None, "Bearer tok")  # must not raise
+    main._require_auth("Bearer tok")  # must not raise
 
 
 def test_invalid_token_is_unauthorized(monkeypatch):
@@ -76,19 +75,14 @@ def test_invalid_token_is_unauthorized(monkeypatch):
         make_urlopen([("/auth/v1/user", FakeResp(401, {}))]),
     )
     with pytest.raises(main.HTTPException) as e:
-        main._require_auth(None, "Bearer bad")
+        main._require_auth("Bearer bad")
     assert e.value.status_code == 401
 
 
 def test_no_auth_is_unauthorized():
     with pytest.raises(main.HTTPException) as e:
-        main._require_auth(None, None)
+        main._require_auth(None)
     assert e.value.status_code == 401
-
-
-def test_static_token_fallback(monkeypatch):
-    monkeypatch.setattr(main, "API_TOKEN", "shared-secret")
-    main._require_auth("shared-secret", None)  # legacy path, must not raise
 
 
 def test_caller_identity_returns_role(monkeypatch):

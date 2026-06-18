@@ -6,6 +6,7 @@ services:
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     plan: free             # upgrade to starter ($7/mo) to avoid sleep/wake delay
-    envVars:
-      - key: API_TOKEN
-        generateValue: true   # Render auto-generates a secure token
+    # Auth env vars are managed in the Render dashboard (not committed):
+    #   SUPABASE_URL, SUPABASE_ANON_KEY  → required for Supabase JWT validation
+    # The legacy static API_TOKEN was removed (P1-1) — the service is JWT-only.
+    # Also delete API_TOKEN in the Render dashboard so no generated value lingers.

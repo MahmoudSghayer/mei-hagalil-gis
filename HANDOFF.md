@@ -82,7 +82,7 @@ Phase 1 security + RBAC, then: added Vitest + pytest + GitHub Actions CI; `incid
 ## Critical context notes
 - **Always commit AND push** — verified via Vercel deploy.
 - **DB schema files are source-of-truth only** — apply changes manually in the Supabase SQL editor.
-- **Env (dashboards, not repo):** Vercel → `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`. Render DWG → `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `API_TOKEN` blanked.
+- **Env (dashboards, not repo):** Vercel → `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`. Render DWG → `SUPABASE_URL`, `SUPABASE_ANON_KEY`. (`API_TOKEN` removed (P1-1) — DWG service is JWT-only; delete it in the Render dashboard.)
 - **Never put `service_role` in client code.** Anon key in `auth.js` is fine.
 - `js/*` CDN-cached up to 1h (`vercel.json`) — hard-refresh after deploy when testing.
 - Local Python can't build `pyproj==3.6.1` on Python 3.13 — CI uses 3.11. Use `git commit -F <file>` for multi-line messages.
