@@ -6,21 +6,22 @@
 //      <script>window.GIS_SENTRY_DSN='https://<key>@o<org>.ingest.<rgn>.sentry.io/<proj>';</script>
 //
 //  With no DSN this file does nothing (no SDK download, no network). With a DSN
-//  it loads Sentry's loader script (auto-tracks the current SDK version, so no
-//  version to maintain) and initialises it — Sentry then captures uncaught
-//  errors and unhandled promise rejections via its default global handlers.
+//  it loads the Sentry browser SDK bundle directly from the CDN and initialises
+//  it — Sentry then captures uncaught errors and unhandled promise rejections
+//  via its default global handlers. (We load the versioned bundle rather than
+//  the js.sentry-cdn.com loader, which depends on a per-project "Loader Script"
+//  toggle that is off by default. Bump SDK_VER to upgrade.)
 // ════════════════════════════════════════════════════════════════════════
 (function () {
   var DSN = window.GIS_SENTRY_DSN || '';
   if (!DSN) return; // inert until a DSN is set
 
-  var key;
-  try { key = DSN.split('@')[0].split('//')[1]; } catch (e) { return; }
-  if (!key) return;
-
-  // Define sentryOnLoad BEFORE the loader runs so it eagerly loads the SDK and
-  // uses our config instead of its lazy default init.
-  window.sentryOnLoad = function () {
+  var SDK_VER = '10.58.0';
+  var s = document.createElement('script');
+  s.src = 'https://browser.sentry-cdn.com/' + SDK_VER + '/bundle.min.js';
+  s.crossOrigin = 'anonymous';
+  s.onload = function () {
+    if (!window.Sentry || !window.Sentry.init) return;
     try {
       window.Sentry.init({
         dsn: DSN,
@@ -36,9 +37,5 @@
       }
     } catch (e) { /* never let monitoring break the app */ }
   };
-
-  var s = document.createElement('script');
-  s.src = 'https://js.sentry-cdn.com/' + key + '.min.js';
-  s.crossOrigin = 'anonymous';
   document.head.appendChild(s);
 })();
