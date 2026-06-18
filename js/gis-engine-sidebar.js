@@ -206,15 +206,21 @@ function openPanelFor(f, layer) {
   else if (window.GISTable) GISTable.openLayer(layer.id, f.properties && f.properties.asset_code, { title: '📋 ' + catLabel(layer._cat), sub: layer.name.split(' · ')[0] });
 }
 
-// ── Map-click "Identify" fallback ─────────────────────────────────────────
-// In MVT mode the features render on stacked CANVAS tiles (L.canvas.tile). The
+// ── Map-click / hover "Identify" for MVT canvas layers ────────────────────
+// In MVT mode features render on stacked CANVAS tiles (L.canvas.tile): the
 // topmost tile canvas (pointer-events:auto) covers the layers beneath it and
-// VectorGrid's per-feature canvas hit-testing is unreliable, so vg.on('click')
-// often never fires — clicking a pipe/point does nothing (no pointer cursor, no
-// panel). Map-level clicks DO still fire (that's how trace/measure/pick work),
-// so on a plain click we find the nearest visible feature within a pixel
-// tolerance and open its panel — the same approach gis-find/gis-network-trace use.
-var TOL_PX = 9;
+// VectorGrid per-feature canvas hit-testing is unreliable, so vg.on('click')
+// never fires AND hovering a feature shows no pointer cursor. Map-level mouse
+// events DO fire, so we cache the viewport's features and hit-test them
+// locally: hover → pointer cursor (click affordance); click → open the nearest
+// feature's panel. Same nearest-feature math as gis-find / gis-network-trace.
+// Tools that own map clicks (crosshair pick, measure, trace, Geoman) are
+// detected and left alone.
+var TOL_PX = 9;            // click / hover pixel tolerance
+var HOVER_MIN_ZOOM = 15;   // build the hover cache only when zoomed in (low feature counts)
+var _vpFeats = [];         // [{f, layer}] features currently in view (MVT only)
+var _vpTimer = null;
+
 function _scaleAt(lat) { return { x: 111320 * Math.cos(lat * Math.PI / 180), y: 110540 }; }
 function _distM(a, b, sc) { var dx = (a[0] - b[0]) * sc.x, dy = (a[1] - b[1]) * sc.y; return Math.hypot(dx, dy); }
 function _segDistM(p, a, b, sc) {
@@ -230,7 +236,21 @@ function _partsOf(g) {
   if (g.type === 'MultiPolygon') { var o = []; g.coordinates.forEach(function (poly) { poly.forEach(function (r) { o.push(r); }); }); return o; }
   return [];
 }
-// Yield to any armed tool that owns map clicks, so we never hijack them.
+// distance (m) from point pt [lng,lat] to a feature geometry
+function _featDistM(g, pt, sc) {
+  if (!g) return Infinity;
+  if (g.type === 'Point') return _distM(pt, g.coordinates, sc);
+  if (g.type === 'MultiPoint') { var d = Infinity; g.coordinates.forEach(function (c) { d = Math.min(d, _distM(pt, c, sc)); }); return d; }
+  var dd = Infinity;
+  _partsOf(g).forEach(function (coords) { for (var k = 1; k < coords.length; k++) { var s = _segDistM(pt, coords[k - 1], coords[k], sc); if (s < dd) dd = s; } });
+  return dd;
+}
+// pixel tolerance → metres at the given latlng / current zoom
+function _tolMeters(ll) {
+  var cp = window.gMap.latLngToContainerPoint(ll);
+  return Math.max(1, ll.distanceTo(window.gMap.containerPointToLatLng(L.point(cp.x + TOL_PX, cp.y))));
+}
+// Yield to any armed tool that owns map clicks / sets its own cursor.
 function _toolArmed() {
   try {
     var c = window.gMap.getContainer();
@@ -245,39 +265,78 @@ function _toolArmed() {
   return false;
 }
 
-async function onMapClickPick(e) {
-  // _mvtMode is the probe result: 'edge'/'rpc' (MVT active) | false (GeoJSON) | null (not probed).
-  // Only the MVT canvas path needs this fallback; GeoJSON layers have working feature clicks.
-  if (!_mvtMode) return;
-  if (_toolArmed()) return;
-  if (!window.GIS || !GIS.features || !GIS.features.getInBBox) return;
+// Refresh the viewport feature cache (MVT mode, zoomed in). Debounced.
+function scheduleVpCache() { clearTimeout(_vpTimer); _vpTimer = setTimeout(buildVpCache, 200); }
+function buildVpCache() {
+  _vpFeats = [];
+  if (!_mvtMode || !window.gMap || !window.GIS || !GIS.features || !GIS.features.getInBBox) return;
+  if (window.gMap.getZoom() < HOVER_MIN_ZOOM) return;
   var layers = Object.keys(active).map(function (id) { return active[id]; });
   if (!layers.length) return;
+  var b = window.gMap.getBounds();
+  var bbox = { minLng: b.getWest(), minLat: b.getSouth(), maxLng: b.getEast(), maxLat: b.getNorth() };
+  var acc = [];
+  Promise.all(layers.map(function (layer) {
+    return GIS.features.getInBBox(layer.id, bbox, 3000).then(function (fc) {
+      (fc && fc.features || []).forEach(function (f) { if (f.geometry) acc.push({ f: f, layer: layer }); });
+    }).catch(function () {});
+  })).then(function () { _vpFeats = acc; });
+}
 
-  var ll = e.latlng, click = [ll.lng, ll.lat], sc = _scaleAt(ll.lat);
-  var cp = window.gMap.latLngToContainerPoint(ll);
-  var tolM = Math.max(1, ll.distanceTo(window.gMap.containerPointToLatLng(L.point(cp.x + TOL_PX, cp.y))));
+// Nearest cached feature to a latlng within the pixel tolerance (local, instant).
+function nearestVpFeature(ll) {
+  if (!_vpFeats.length) return null;
+  var pt = [ll.lng, ll.lat], sc = _scaleAt(ll.lat), tolM = _tolMeters(ll), best = null;
+  for (var i = 0; i < _vpFeats.length; i++) {
+    var d = _featDistM(_vpFeats[i].f.geometry, pt, sc);
+    if (d <= tolM && (!best || d < best.d)) best = { d: d, f: _vpFeats[i].f, layer: _vpFeats[i].layer };
+  }
+  return best;
+}
+
+// On-demand nearest feature (used when the cache is empty — e.g. low zoom).
+async function nearestFeatureAt(ll) {
+  if (!window.GIS || !GIS.features || !GIS.features.getInBBox) return null;
+  var layers = Object.keys(active).map(function (id) { return active[id]; });
+  if (!layers.length) return null;
+  var pt = [ll.lng, ll.lat], sc = _scaleAt(ll.lat), tolM = _tolMeters(ll);
   var dLng = tolM / sc.x, dLat = tolM / sc.y;
   var bbox = { minLng: ll.lng - dLng, minLat: ll.lat - dLat, maxLng: ll.lng + dLng, maxLat: ll.lat + dLat };
-
   var best = null;
   await Promise.all(layers.map(function (layer) {
     return GIS.features.getInBBox(layer.id, bbox, 400).then(function (fc) {
       (fc && fc.features || []).forEach(function (f) {
-        var g = f.geometry; if (!g) return;
-        var d = Infinity;
-        if (g.type === 'Point') d = _distM(click, g.coordinates, sc);
-        else if (g.type === 'MultiPoint') g.coordinates.forEach(function (c) { d = Math.min(d, _distM(click, c, sc)); });
-        else _partsOf(g).forEach(function (coords) { for (var k = 1; k < coords.length; k++) { var dd = _segDistM(click, coords[k - 1], coords[k], sc); if (dd < d) d = dd; } });
+        var d = _featDistM(f.geometry, pt, sc);
         if (isFinite(d) && (!best || d < best.d)) best = { d: d, f: f, layer: layer };
       });
     }).catch(function () {});
   }));
+  return (best && best.d <= tolM) ? best : null;
+}
 
-  if (best && best.d <= tolM) {
-    if (best.f.properties && !best.f.properties.__layer_id) best.f.properties.__layer_id = best.layer.id;
-    openPanelFor(best.f, best.layer);
-  }
+async function onMapClickPick(e) {
+  // _mvtMode = probe result: 'edge'/'rpc' (MVT) | false (GeoJSON, native clicks) | null (unprobed).
+  if (!_mvtMode || _toolArmed()) return;
+  var best = nearestVpFeature(e.latlng) || await nearestFeatureAt(e.latlng);
+  if (!best) return;
+  if (best.f.properties && !best.f.properties.__layer_id) best.f.properties.__layer_id = best.layer.id;
+  openPanelFor(best.f, best.layer);
+}
+
+// Hover → pointer cursor over a clickable feature (so the user sees it's clickable).
+var _hoverRaf = null;
+function onMapHover(e) {
+  if (!_mvtMode) return;
+  if (e.originalEvent && e.originalEvent.buttons) return;   // mid-drag (pan) → leave the grab cursor
+  if (_hoverRaf) return;
+  var ll = e.latlng;
+  _hoverRaf = requestAnimationFrame(function () {
+    _hoverRaf = null;
+    if (_toolArmed()) return;                               // don't fight a tool's cursor
+    var c = window.gMap.getContainer();
+    if (c.style.cursor !== '' && c.style.cursor !== 'pointer') return;  // only own the default/pointer state
+    c.style.cursor = nearestVpFeature(ll) ? 'pointer' : '';
+  });
 }
 
 var clickFallbackWired = false;
@@ -285,6 +344,9 @@ function wireClickFallback() {
   if (clickFallbackWired || !window.gMap) return;
   clickFallbackWired = true;
   window.gMap.on('click', onMapClickPick);
+  window.gMap.on('mousemove', onMapHover);
+  window.gMap.on('moveend', scheduleVpCache);
+  scheduleVpCache();
 }
 
 // Build the Leaflet layer for an engine layer. NO clustering — points render
@@ -462,6 +524,7 @@ function row(layer) {
       if (loaded[layer.id]) { loaded[layer.id].destroy(); delete loaded[layer.id]; }
       cnt.textContent = '';
     }
+    scheduleVpCache();   // refresh the hover/click feature cache for the new active set
   };
   return el;
 }
