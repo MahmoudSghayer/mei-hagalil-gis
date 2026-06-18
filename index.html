@@ -9,6 +9,8 @@
   <!-- PWA: installable mobile field app (L1c) -->
   <link rel="manifest" href="/manifest.webmanifest"/>
   <meta name="theme-color" content="#0d3b5e"/>
+  <!-- Standard PWA flag (replaces the deprecated apple-* one); keep both for older iOS Safari -->
+  <meta name="mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-title" content="מי הגליל"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -220,7 +222,7 @@
   </div>
 </div>
 
-<div id="toast"></div>
+<div id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
