@@ -109,15 +109,16 @@
 
   function clearArrows() { if (layerGroup) { try { gMap.removeLayer(layerGroup); } catch (e) {} layerGroup = null; } }
 
-  // coords = one line part; forward=true keeps coords (arrow points coords[0]→last),
-  // up/down = the higher/lower-invert endpoint manholes (for the tooltip).
+  // coords = one line part; forward=true keeps coords (flow = coords[0]→last).
+  // The arrow is placed AT THE DOWNSTREAM MANHOLE (the pipe's lower-invert end),
+  // oriented along the incoming segment — so direction reads on the שוחות, not
+  // scattered mid-pipe. up/down = higher/lower-invert endpoint manholes (tooltip).
   function drawArrow(coords, forward, up, down) {
     var seq = forward ? coords : coords.slice().reverse();   // oriented downstream
     if (seq.length < 2) return;
-    var mi = Math.max(1, Math.floor(seq.length / 2));
-    var a = seq[mi - 1], b = seq[mi];
-    var mid = [(a[1] + b[1]) / 2, (a[0] + b[0]) / 2];         // [lat,lng]
-    var m = L.marker(mid, { icon: arrowIcon(bearing(a, b) - 90), keyboard: false });
+    var b = seq[seq.length - 1];                              // downstream end = at the manhole
+    var a = seq[seq.length - 2];
+    var m = L.marker([b[1], b[0]], { icon: arrowIcon(bearing(a, b) - 90), keyboard: false, zIndexOffset: 500 });
     var nums = (up.num || down.num) ? ' · שוחות ' + (up.num || '?') + ' → ' + (down.num || '?') : '';
     m.bindTooltip('כיוון זרימה · מפלס תחתית ' + up.inv.toFixed(2) + ' → ' + down.inv.toFixed(2) + nums,
       { direction: 'top' });
