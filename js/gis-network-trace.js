@@ -395,11 +395,12 @@
       '</div>' +
       (isol ? '<div class="gtc-vlist-h">מגופים לסגירה (מהקרוב לתקלה כלפי חוץ)</div><div class="gtc-vlist">' + valveRows + '</div>' : '') +
       (info.unsnapped ? '<div class="gtc-warn">⚠ ' + info.unsnapped + ' מגופים לא חוברו לרשת (מרחק > ' + VALVE_SNAP_M + ' מ׳) — ייתכן בידוד חלקי.</div>' : '') +
-      '<div class="gtc-actions"><button class="gtc-clear">נקה תוצאה</button></div>';
+      '<div class="gtc-actions">' + (isol ? '<button class="gtc-wo">🧾 פקודת עבודה</button>' : '') + '<button class="gtc-clear">נקה תוצאה</button></div>';
 
     document.body.appendChild(el);
     el.querySelector('.gtc-x').onclick = clearAll;
     el.querySelector('.gtc-clear').onclick = clearAll;
+    var woBtn = el.querySelector('.gtc-wo'); if (woBtn) woBtn.onclick = function () { workOrder(res, info); };
     // click a valve row → zoom to it
     el.querySelectorAll('.gtc-valve').forEach(function (row) {
       row.onclick = function () {
@@ -409,6 +410,41 @@
     });
   }
   function stat(n, l) { return '<div class="gtc-stat"><div class="gtc-n">' + n + '</div><div class="gtc-l">' + l + '</div></div>'; }
+
+  // Printable work-order sheet from an isolation result (valves + affected counts).
+  function workOrder(res, info) {
+    var metersTxt = (document.getElementById('gtc-meters') || {}).textContent || '—';
+    var d = new Date().toLocaleString('he-IL');
+    var rows = res.valves.map(function (v, i) {
+      return '<tr><td>' + (i + 1) + '</td><td>' + esc(v.num) + '</td><td>' + esc(v.type == null ? '' : v.type) +
+        '</td><td>' + esc(v.normalPos == null ? '' : v.normalPos) + '</td><td>' + esc(v.operable == null ? '' : v.operable) +
+        '</td><td>' + esc(v.status == null ? '' : v.status) + '</td></tr>';
+    }).join('') || '<tr><td colspan="6">לא נמצאו מגופים תוחמים</td></tr>';
+    var html = '<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><title>פקודת עבודה — בידוד</title>' +
+      '<style>body{font-family:Arial,sans-serif;direction:rtl;color:#111;padding:24px}h1{color:#0d3b5e;margin:0 0 4px;font-size:22px}' +
+      '.sub{color:#555;font-size:13px;margin-bottom:16px}.kpis{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0}' +
+      '.kpi{border:1px solid #cbd5e1;border-radius:8px;padding:8px 14px}.kpi b{display:block;font-size:20px;color:#0d3b5e}.kpi span{font-size:11px;color:#555}' +
+      'table{width:100%;border-collapse:collapse;margin-top:10px}th,td{border:1px solid #cbd5e1;padding:6px 8px;font-size:13px;text-align:right}th{background:#eef2f6;color:#0d3b5e}' +
+      '.sig{margin-top:30px;display:flex;gap:40px}.sig div{flex:1;border-top:1px solid #111;padding-top:6px;font-size:12px;color:#555}@media print{button{display:none}}</style></head><body>' +
+      '<h1>🚰 פקודת עבודה — בידוד רשת מים</h1>' +
+      '<div class="sub">' + esc(info.meta.village) + ' · רשת ' + (info.meta.netType === 'water' ? 'מים' : 'ביוב') + ' · הופק ' + d + ' · מי הגליל GIS</div>' +
+      '<div class="kpis">' +
+        '<div class="kpi"><b>' + res.valves.length + '</b><span>מגופים לסגירה</span></div>' +
+        '<div class="kpi"><b>' + res.edges.size + '</b><span>קטעי צינור</span></div>' +
+        '<div class="kpi"><b>' + Math.round(info.totalM).toLocaleString('he-IL') + '</b><span>מ׳ אורך</span></div>' +
+        '<div class="kpi"><b>' + esc(metersTxt) + '</b><span>מדי מים מושפעים</span></div>' +
+        '<div class="kpi"><b>' + info.affected.hydrants.length + '</b><span>הידרנטים</span></div>' +
+      '</div>' +
+      '<h3>מגופים לסגירה (מהקרוב לתקלה כלפי חוץ)</h3>' +
+      '<table><thead><tr><th>#</th><th>מספר מגוף</th><th>סוג</th><th>מצב נורמלי</th><th>ניתן להפעלה</th><th>סטטוס</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+      (info.affected.hydrants.length ? '<h3>הידרנטים מושפעים</h3><div>' + info.affected.hydrants.map(esc).join(', ') + '</div>' : '') +
+      '<div class="sig"><div>שם המבצע / חתימה</div><div>תאריך וביצוע בפועל</div></div>' +
+      '<button onclick="window.print()" style="margin-top:20px;padding:10px 16px;background:#0d3b5e;color:#fff;border:none;border-radius:8px;cursor:pointer">🖨️ הדפס</button>' +
+      '</body></html>';
+    var w = window.open('', '_blank');
+    if (!w) { toast('חסום חלון קופץ — אפשר חלונות קופצים ונסה שוב'); return; }
+    w.document.open(); w.document.write(html); w.document.close();
+  }
 
   // ── teardown ────────────────────────────────────────────────────────────────
   function clearLayers() {
