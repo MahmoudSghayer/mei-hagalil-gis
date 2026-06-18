@@ -10,8 +10,10 @@
 //  a limiter outage must never take the API down. Enforcement turns on the
 //  moment the KV_* vars are present.
 // ════════════════════════════════════════════════════════════════════════
-const KV_URL = process.env.KV_REST_API_URL;
-const KV_TOKEN = process.env.KV_REST_API_TOKEN;
+// Accept either the Vercel KV (KV_REST_API_*) or Upstash (UPSTASH_REDIS_REST_*)
+// variable names — both point at the same Upstash Redis REST endpoint.
+const KV_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
 // Best-effort client IP from Vercel's x-forwarded-for (first hop = real client).
 function clientIp(req) {
