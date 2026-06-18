@@ -91,7 +91,8 @@
         { ic: 'trash', lb: 'נקה', size: 'lg', act: measureClear }
       ] },
       { label: 'סטטיסטיקה', cmds: [
-        { ic: 'chart', lb: 'לוח נתונים', size: 'lg', act: function () { clickFab('stats-fab'); } }
+        { ic: 'chart', lb: 'לוח נתונים', size: 'lg', act: function () { clickFab('stats-fab'); } },
+        { ic: 'chart', lb: 'סקירת מערכת', size: 'lg', act: openDashboard }
       ] },
       { label: 'ניתוח מרחבי', cmds: [
         { ic: 'select', lb: 'בחירה לפי תכונה', size: 'lg', act: anlyAttr },
@@ -175,6 +176,7 @@
   function toggleBookmarks() { if (window.GISBookmarks) { window.GISBookmarks.toggle(); } else { toast('הסימניות עדיין נטענות…'); } }
   function toggleFind() { if (window.GISFind) { window.GISFind.toggle(); } else { toast('כלי האיתור עדיין נטען…'); } }
   function printMap() { if (window.GISPrint) { window.GISPrint.open(); } else { toast('כלי ההדפסה עדיין נטען…'); } }
+  function openDashboard() { if (window.GISDashboard) { window.GISDashboard.open(); } else { toast('הסקירה עדיין נטענת…'); } }
   function focusSearch() {
     var inp = document.querySelector('#search-bar input');
     if (inp) { inp.focus(); inp.select && inp.select(); }
