@@ -308,9 +308,93 @@ def _grow_bounds(b: list[float], x: float, y: float) -> None:
 
 # ── main builder ─────────────────────────────────────────────────────────────
 
+# ── Flow direction (sewer): derive from manhole inverts, like the live map ────
+def _invert(props: dict) -> float | None:
+    """Representative invert of a manhole (mirrors gis-flow.js manholeInvert):
+    LowIL → invert_level → HighIL (a finite 0 is a placeholder → skip), else TL − Depth."""
+    for key in ("LowIL", "invert_level", "HighIL"):
+        v = _as_float(props.get(key))
+        if v is not None and v != 0.0:
+            return v
+    tl = _as_float(props.get("TL")) or _as_float(props.get("top_level")) or _as_float(props.get("TopLevel"))
+    depth = _as_float(props.get("Depth"))
+    if tl is not None and depth is not None:
+        return tl - depth
+    return None
+
+
+def _compute_flow(features: list[dict], t: Transformer) -> list[tuple[float, float, float]]:
+    """Stamp FlowFrom/FlowTo/FlowDir on each sewer pipe (→ ride into XDATA) and
+    return arrowhead placements (x_itm, y_itm, angle_deg) at each downstream end.
+    Defensive: any failure returns the arrows gathered so far (never breaks export)."""
+    arrows: list[tuple[float, float, float]] = []
+    try:
+        manholes: list[tuple[float, float, float | None, Any]] = []
+        for f in features:
+            p = f.get("properties") or {}
+            if p.get("_category") in MANHOLE_CATS:
+                g = f.get("geometry") or {}
+                if g.get("type") == "Point" and len(g.get("coordinates") or []) >= 2:
+                    c = g["coordinates"]
+                    manholes.append((c[0], c[1], _invert(p), p.get("ManholeNum")))
+        if not manholes:
+            return arrows
+
+        def nearest(lng: float, lat: float):
+            best = None
+            for (mlng, mlat, inv, num) in manholes:
+                d = math.hypot((mlng - lng) * 93000.0, (mlat - lat) * 111000.0)
+                if d <= 8.0 and (best is None or d < best[0]):
+                    best = (d, inv, num)
+            return (best[1], best[2]) if best else (None, None)
+
+        for f in features:
+            p = f.get("properties") or {}
+            if p.get("_category") not in SEWAGE_PIPE_CATS:
+                continue
+            g = f.get("geometry") or {}
+            gt = g.get("type")
+            coords = g.get("coordinates") or []
+            line = coords if gt == "LineString" else (coords[0] if gt == "MultiLineString" and coords else None)
+            if not line or len(line) < 2:
+                continue
+            inv0, num0 = nearest(line[0][0], line[0][1])
+            inv1, num1 = nearest(line[-1][0], line[-1][1])
+            if inv0 is None or inv1 is None or inv0 == inv1:
+                continue
+            forward = inv0 > inv1                       # flow toward the lower invert
+            up_num, down_num = (num0, num1) if forward else (num1, num0)
+            if up_num is not None:
+                p["FlowFrom"] = str(up_num)
+            if down_num is not None:
+                p["FlowTo"] = str(down_num)
+            p["FlowDir"] = "downstream"
+            seq = line if forward else list(reversed(line))
+            ax, ay = _to_itm(seq[-2][0], seq[-2][1], t)
+            bx, by = _to_itm(seq[-1][0], seq[-1][1], t)
+            arrows.append((bx, by, math.degrees(math.atan2(by - ay, bx - ax))))
+    except Exception:
+        pass
+    return arrows
+
+
+def _add_flow_arrow(msp: Any, x: float, y: float, ang_deg: float) -> None:
+    """A small open arrowhead at the downstream manhole, on the FLOW layer."""
+    a = math.radians(ang_deg)
+    size = 1.4
+    p_tip = (x, y)
+    p_l = (x - size * math.cos(a - 0.45), y - size * math.sin(a - 0.45))
+    p_r = (x - size * math.cos(a + 0.45), y - size * math.sin(a + 0.45))
+    msp.add_lwpolyline([p_l, p_tip, p_r], dxfattribs={"layer": "FLOW"})
+
+
 def build_dxf(features: list[dict]) -> Drawing:
     t = _make_transformer()
     features = _deduplicate(features)
+
+    # Flow direction (sewer): stamp FlowFrom/FlowTo on pipes BEFORE XDATA is
+    # attached in the loop below, and collect arrowheads to draw on a FLOW layer.
+    flow_arrows = _compute_flow(features, t)
 
     # Collect categories present in this export
     seen_cats: set[str] = set()
@@ -333,6 +417,8 @@ def build_dxf(features: list[dict]) -> Drawing:
     for cat in seen_cats:
         doc.layers.new(cat, dxfattribs={"color": COLORS.get(cat, 7),
                                         "linetype": "Continuous"})
+    if "FLOW" not in doc.layers:
+        doc.layers.new("FLOW", dxfattribs={"color": 4, "linetype": "Continuous"})  # cyan
 
     _ensure_manhole_block(doc)
     msp = doc.modelspace()
@@ -396,6 +482,11 @@ def build_dxf(features: list[dict]) -> Drawing:
         # Pipe diameter labels (water = inch, sewage = mm)
         if label_pt and layer in PIPE_CATS:
             _add_pipe_label(msp, props, label_pt[0], label_pt[1])
+
+    # Flow-direction arrows at the downstream manholes (FLOW layer)
+    for (ax, ay, ang) in flow_arrows:
+        _add_flow_arrow(msp, ax, ay, ang)
+        _grow_bounds(bounds, ax, ay)
 
     _set_initial_view(doc, bounds)
     return doc
