@@ -22,14 +22,14 @@
   <link rel="preconnect" href="https://server.arcgisonline.com"/>
   <link rel="dns-prefetch" href="https://basemaps.cartocdn.com"/>
   <link rel="dns-prefetch" href="https://mt0.google.com"/>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css"/>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css"/>
-  <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.3/dist/leaflet-geoman.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha384-c6Rcwz4e4CITMbu/NBmnNS8yN2sC3cUElMEMfP3vqqKFp7GOYaaBBCqmaWBjmkjb" crossorigin="anonymous"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css" integrity="sha384-pmjIAcz2bAn0xukfxADbZIb3t8oRT9Sv0rvO+BR5Csr6Dhqq+nZs59P0pPKQJkEV" crossorigin="anonymous"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css" integrity="sha384-wgw+aLYNQ7dlhK47ZPK7FRACiq7ROZwgFNg0m04avm4CaXS+Z9Y7nMu8yNjBKYC+" crossorigin="anonymous"/>
+  <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.3/dist/leaflet-geoman.css" integrity="sha384-gSVA7ZQriVGEfOMW54uY96acRPyZy0cleKq9KVWNxYYR+GWzYmr/o51k9iA5pfQA" crossorigin="anonymous"/>
   <link rel="stylesheet" href="css/shared.css"/>
   <link rel="stylesheet" href="css/pages/index.css"/>
   <link rel="stylesheet" href="css/pages/arcgis-pro.css?v=15"/>
-  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2/dist/umd/supabase.js" integrity="sha384-nD3dwv4+ZqdYnmZKe/249ImlV04om7xTCcsoSeQYI+RO+XlKPoqAWaJR1M5SJH9p" crossorigin="anonymous"></script>
   <script defer src="js/auth.js"></script>
   <script defer src="js/pwa.js?v=1"></script>
   <script>window.GIS_VAPID_PUBLIC='BCIxYFtCQoo2A58Sz3q0vLcy9cZpTGZ9q_vNog4Shqm5zQnDnqQSqtD93xS7_SUhQ0vNnNJv9dBVisvk2XgWzw4';</script>
@@ -224,11 +224,11 @@
 
 <div id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" integrity="sha384-NElt3Op+9NBMCYaef5HxeJmU4Xeard/Lku8ek6hoPTvYkQPh3zLIrJP7KiRocsxO" crossorigin="anonymous"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js" integrity="sha384-eXVCORTRlv4FUUgS/xmOyr66XBVraen8ATNLMESp92FKXLAMiKkerixTiBvXriZr" crossorigin="anonymous"></script>
 <!-- Leaflet-Geoman (free): on-map editing — must load before index.js so map.pm auto-attaches -->
-<script defer src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.3/dist/leaflet-geoman.min.js"></script>
-<script defer src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js"></script>
+<script defer src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.3/dist/leaflet-geoman.min.js" integrity="sha384-poTDWI/tmUEt0KLQICK55no+TBavCdngfb6kTay+hdEmU0SkVrXiYpu8OBDmAHf3" crossorigin="anonymous"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js" integrity="sha384-BIsA8GBrihzaRmijjpqTCihj8D5Vox3hyBFg9sJiTGAEOv6KusZ8QOCKbTFEAfhm" crossorigin="anonymous"></script>
 <!-- Turf is lazy-loaded by gis-analysis.js on first buffer/location-select use (perf) -->
 <script defer src="js/motion-utils.js"></script>
 <script defer src="js/pages/index.js?v=10"></script>
@@ -255,7 +255,7 @@
 <script defer src="js/gis-tile-loader.js?v=3"></script>
 <!-- VectorGrid: MUST be eager — it powers the MVT fast path; idle-loading it risks
      the MVT probe caching "off" on an early layer toggle (→ heavy per-feature render). -->
-<script defer src="https://unpkg.com/leaflet.vectorgrid@1.3.0/dist/Leaflet.VectorGrid.bundled.js"></script>
+<script defer src="https://unpkg.com/leaflet.vectorgrid@1.3.0/dist/Leaflet.VectorGrid.bundled.js" integrity="sha384-FON5fTjCTtPuBgUS1r2H/PGXstH0Rk23YKjZmB6qITkbFqBcqtey/rPo9eXwOWpx" crossorigin="anonymous"></script>
 <script defer src="js/gis-mvt-layer.js?v=2"></script>
 <!-- Identify highlight: click a feature → white casing + cyan line (no endpoint dots) -->
 <script defer src="js/gis-identify.js?v=2"></script>
