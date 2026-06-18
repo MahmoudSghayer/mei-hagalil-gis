@@ -10,8 +10,7 @@
   'use strict';
 
   var ON = false, layerGroup = null, deb = null;
-  var WATER_CATS = { water_pipes: 1, supply_pipe: 1, main_water: 1 };
-  var MIN_ZOOM = 16;          // arrows only when zoomed in (perf + legibility)
+  var MIN_ZOOM = 15;          // arrows only when zoomed in (perf + legibility)
   var MAX_FEATURES = 4000;    // safety cap per layer
 
   function sb() { return window.GIS ? GIS.sb() : window.gSb; }
@@ -56,26 +55,38 @@
   async function render() {
     if (!ON || !window.gMap || !window.GIS || !GIS.features) return;
     clearArrows();
-    if (gMap.getZoom() < MIN_ZOOM) { toast('התקרב כדי לראות כיווני זרימה'); return; }
+    if (gMap.getZoom() < MIN_ZOOM) { toast('התקרב (זום ' + MIN_ZOOM + '+) כדי לראות כיווני זרימה'); return; }
+    var layers = (window.GISEngineSidebar && GISEngineSidebar.activeLayers) ? GISEngineSidebar.activeLayers() : [];
+    if (!layers.length) { toast('הפעל שכבת קווי מים במפה (✓ בתיבת השכבה) ואז נסה שוב'); return; }
     layerGroup = L.layerGroup().addTo(gMap);
     var bnd = gMap.getBounds();
     var bbox = { minLng: bnd.getWest(), minLat: bnd.getSouth(), maxLng: bnd.getEast(), maxLat: bnd.getNorth() };
-    var layers = (window.GISEngineSidebar && GISEngineSidebar.activeLayers) ? GISEngineSidebar.activeLayers() : [];
     var fcs = await Promise.all(layers.map(function (l) {
       return GIS.features.getInBBox(l.id, bbox, MAX_FEATURES).catch(function () { return null; });
     }));
     if (!ON) { clearArrows(); return; }   // toggled off while loading
+    // Draw on ANY line that carries the end-heights (water + sewer pipes both do) —
+    // the height fields, not a guessed category, are what make direction derivable.
+    var arrows = 0, lines = 0, withH = 0;
     fcs.forEach(function (fc) {
       if (!fc || !fc.features) return;
       fc.features.forEach(function (f) {
         if (!f.geometry || f.geometry.type !== 'LineString') return;
+        lines++;
         var p = f.properties || {};
-        if (!WATER_CATS[p._category]) return;
         var sh = parseFloat(p.StartHeigh), eh = parseFloat(p.EndHeight);
-        if (!isFinite(sh) || !isFinite(eh) || sh === eh) return;
-        drawArrow(f.geometry.coordinates, sh > eh, p);   // downstream = lower end
+        if (!isFinite(sh) || !isFinite(eh)) return;
+        withH++;
+        if (sh === eh) return;                                  // flat — direction unknown
+        drawArrow(f.geometry.coordinates, sh > eh, p);          // downstream = lower end
+        arrows++;
       });
     });
+    if (arrows === 0) {
+      toast(lines === 0 ? 'אין קווים בתצוגה — הפעל שכבה והתקרב'
+        : withH === 0 ? 'לקווים בתצוגה אין נתוני גובה (StartHeigh/EndHeight)'
+        : 'נתוני הגובה שווים בקצוות — לא ניתן לקבוע כיוון');
+    } else { toast(arrows + ' חיצי כיוון'); }
   }
 
   function scheduleRender() { if (!ON) return; clearTimeout(deb); deb = setTimeout(render, 300); }
@@ -83,6 +94,7 @@
   function toggle() {
     ON = !ON;
     var b = document.getElementById('flow-toggle'); if (b) b.classList.toggle('active', ON);
+    toast(ON ? 'כיווני זרימה: פעיל' : 'כיווני זרימה: כבוי');
     if (ON) { gMap.on('moveend', scheduleRender); render(); }
     else { gMap.off('moveend', scheduleRender); clearArrows(); }
   }
