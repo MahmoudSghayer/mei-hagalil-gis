@@ -219,14 +219,24 @@
   function doPrint() {
     var m = document.getElementById('map'); if (!m || !window.gMap) { window.print(); return; }
     var orient = (document.getElementById('glb-orient') || {}).value || 'landscape';
-    var base = 1120, ratio = 1.41421;
-    var W = orient === 'landscape' ? Math.round(base * ratio) : base;
-    var H = orient === 'landscape' ? base : Math.round(base * ratio);
-
+    var ratio = 1.41421, LONG = 1580;
     var target = printBounds || window.gMap.getBounds();   // drawn area, else current view
-    if (printRectLayer) { window.gMap.removeLayer(printRectLayer); printRectLayer = null; }
-
     var center = window.gMap.getCenter(), zoom = window.gMap.getZoom(), snap = window.gMap.options.zoomSnap;
+
+    // Canvas aspect = the DRAWN rectangle's own aspect → pixel-exact crop to the
+    // selection (letterboxes on the paper). With no rectangle, use the paper
+    // aspect and print the current view.
+    var aspect;
+    if (printBounds) {
+      var ne = window.gMap.project(printBounds.getNorthEast(), zoom);
+      var sw = window.gMap.project(printBounds.getSouthWest(), zoom);
+      aspect = Math.abs(ne.x - sw.x) / Math.max(1, Math.abs(ne.y - sw.y));
+    } else {
+      aspect = orient === 'landscape' ? ratio : 1 / ratio;
+    }
+    var W = aspect >= 1 ? LONG : Math.round(LONG * aspect);
+    var H = aspect >= 1 ? Math.round(LONG / aspect) : LONG;
+    if (printRectLayer) { window.gMap.removeLayer(printRectLayer); printRectLayer = null; }
     var saved = { position: m.style.position, top: m.style.top, left: m.style.left, width: m.style.width, height: m.style.height, zIndex: m.style.zIndex };
 
     // capture each overlay's position as a fraction of the map, and its inline
