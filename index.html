@@ -283,7 +283,7 @@
     'js/gis-print.js?v=10',
     'js/gis-meter-connect.js?v=5',
     'js/gis-dashboard.js?v=1',
-    'js/gis-tasks.js?v=4'
+    'js/gis-tasks.js?v=5'
   ];
   function load() { LAZY.forEach(function (src) { var s = document.createElement('script'); s.src = src; s.defer = true; document.body.appendChild(s); }); }
   function go() { if ('requestIdleCallback' in window) requestIdleCallback(load, { timeout: 2500 }); else setTimeout(load, 1200); }

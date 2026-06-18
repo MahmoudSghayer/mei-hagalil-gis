@@ -89,8 +89,9 @@
     try { var d = new Date(s); return d.toLocaleDateString('he-IL') + ' ' + d.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' }); }
     catch (e) { return String(s); }
   }
-  function taskCard(t, who, i) {
-    var done = t.status === 'done';
+  var _tasks = [], _profs = {};
+  function taskCard(t) {
+    var who = _profs[t.assigned_to] || '—', done = t.status === 'done';
     return '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:11px;padding:12px;margin-bottom:10px">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">' +
         '<div style="font-weight:700;color:#1e293b">' + esc(t.title) + '</div>' +
@@ -100,11 +101,14 @@
         '👤 ' + esc(who) + '<br>🕒 נוצר: ' + fmtDate(t.created_at) + '<br>' +
         (done ? '✅ הושלם: ' + fmtDate(t.done_at) : '⏳ טרם הושלם') + '</div>' +
       (t.completion_note ? '<div style="margin-top:8px;background:#f1f5f9;border-radius:8px;padding:8px;font-size:12.5px;color:#1e293b"><b>תיאור הביצוע:</b><br>' + esc(t.completion_note) + '</div>' : '') +
-      '<div data-ph="' + i + '" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"></div>' +
-      '<button data-fly="' + i + '" style="margin-top:8px;padding:7px 12px;border:1px solid #cbd5e1;border-radius:8px;background:#eef4fb;color:#0d3b5e;cursor:pointer;font:inherit">🎯 הצג במפה</button>' +
-      '</div>';
+      '<div id="gtl-ph-' + t.id + '" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"></div>' +
+      '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">' +
+        '<button data-fly="' + t.lat + ',' + t.lng + '" style="padding:7px 12px;border:1px solid #cbd5e1;border-radius:8px;background:#eef4fb;color:#0d3b5e;cursor:pointer;font:inherit">🎯 הצג במפה</button>' +
+        (done ? '<button data-reopen="' + t.id + '" style="padding:7px 12px;border:1px solid #fdba74;border-radius:8px;background:#fff7ed;color:#b45309;cursor:pointer;font:inherit">↩ פתח מחדש</button>' : '') +
+      '</div></div>';
   }
-  async function loadTaskPhotos(t, box) {
+  async function loadTaskPhotos(t) {
+    var box = document.getElementById('gtl-ph-' + t.id);
     if (!box || !t.completion_media) return;
     for (var i = 0; i < t.completion_media.length; i++) {
       var path = t.completion_media[i], u = null;
@@ -113,13 +117,40 @@
       if (u) box.insertAdjacentHTML('beforeend', '<a href="' + u + '" target="_blank" rel="noopener"><img src="' + u + '" loading="lazy" style="width:78px;height:78px;object-fit:cover;border-radius:8px;border:1px solid #e2e8f0"></a>');
     }
   }
+  function renderList() {
+    var list = document.getElementById('gtl-list'); if (!list) return;
+    var st = (document.getElementById('gtl-fstatus') || {}).value || '';
+    var vw = (document.getElementById('gtl-fviewer') || {}).value || '';
+    var rows = _tasks.filter(function (t) { return (!st || t.status === st) && (!vw || t.assigned_to === vw); });
+    if (!rows.length) { list.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px">אין משימות תואמות לסינון</div>'; return; }
+    list.innerHTML = rows.map(taskCard).join('');
+    Array.prototype.forEach.call(list.querySelectorAll('[data-fly]'), function (b) {
+      b.onclick = function () { var c = b.getAttribute('data-fly').split(','); if (window.gMap) window.gMap.setView([+c[0], +c[1]], 18); var pp = document.getElementById('gtl-panel'); if (pp) pp.remove(); };
+    });
+    Array.prototype.forEach.call(list.querySelectorAll('[data-reopen]'), function (b) {
+      b.onclick = async function () {
+        var id = b.getAttribute('data-reopen');
+        var r = await sb().from('field_tasks').update({ status: 'open', done_at: null }).eq('id', id);
+        if (r.error) { toast('שגיאה: ' + r.error.message, 'error'); return; }
+        var t = _tasks.find(function (x) { return String(x.id) === String(id); }); if (t) { t.status = 'open'; t.done_at = null; }
+        toast('המשימה נפתחה מחדש'); renderList();
+      };
+    });
+    rows.forEach(loadTaskPhotos);
+  }
   async function openList() {
     var role = window.GIS ? await GIS.currentRole() : null;
     if (role !== 'admin' && role !== 'engineer') { toast('רשימת המשימות למהנדס/מנהל בלבד'); return; }
     var ex = document.getElementById('gtl-panel'); if (ex) { ex.remove(); return; }  // toggle
     var p = document.createElement('div'); p.id = 'gtl-panel';
     p.style.cssText = 'position:fixed;top:0;left:0;bottom:0;width:min(460px,100%);z-index:1700;background:#f8fafc;box-shadow:4px 0 24px rgba(0,0,0,.2);direction:rtl;font-family:Rubik,sans-serif;display:flex;flex-direction:column';
-    p.innerHTML = '<div style="padding:13px 16px;background:#0d3b5e;color:#fff;display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700">📋 המשימות שיצרתי</span><button id="gtl-x" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer">✕</button></div><div id="gtl-list" style="flex:1;overflow:auto;padding:12px"></div>';
+    p.innerHTML =
+      '<div style="padding:13px 16px;background:#0d3b5e;color:#fff;display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700">📋 המשימות שיצרתי</span><button id="gtl-x" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer">✕</button></div>' +
+      '<div style="display:flex;gap:8px;padding:10px 12px;background:#eef2f6;border-bottom:1px solid #e2e8f0">' +
+        '<select id="gtl-fstatus" style="flex:1;padding:6px;border:1px solid #cbd5e1;border-radius:7px;font:inherit;direction:rtl"><option value="">כל הסטטוסים</option><option value="open">פתוח</option><option value="done">בוצע</option></select>' +
+        '<select id="gtl-fviewer" style="flex:1;padding:6px;border:1px solid #cbd5e1;border-radius:7px;font:inherit;direction:rtl"><option value="">כל הצופים</option></select>' +
+      '</div>' +
+      '<div id="gtl-list" style="flex:1;overflow:auto;padding:12px"></div>';
     document.body.appendChild(p);
     p.querySelector('#gtl-x').onclick = function () { p.remove(); };
     var list = p.querySelector('#gtl-list');
@@ -128,16 +159,16 @@
       var me = (await sb().auth.getUser()).data.user;
       var res = await sb().from('field_tasks').select('*').eq('created_by', me.id).order('created_at', { ascending: false });
       if (res.error) { list.innerHTML = '<div style="color:#b91c1c;padding:16px">שגיאה: ' + esc(res.error.message) + ' (הרץ tasks.sql?)</div>'; return; }
-      var rows = res.data || [];
-      if (!rows.length) { list.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px">עדיין לא יצרת משימות</div>'; return; }
-      var ids = []; rows.forEach(function (t) { if (t.assigned_to && ids.indexOf(t.assigned_to) < 0) ids.push(t.assigned_to); });
-      var profs = {};
-      if (ids.length) { var pr = await sb().from('profiles').select('id,full_name,email').in('id', ids); (pr.data || []).forEach(function (x) { profs[x.id] = x.full_name || x.email; }); }
-      list.innerHTML = rows.map(function (t, i) { return taskCard(t, profs[t.assigned_to] || '—', i); }).join('');
-      rows.forEach(function (t, i) {
-        var fly = list.querySelector('[data-fly="' + i + '"]'); if (fly && window.gMap) fly.onclick = function () { window.gMap.setView([t.lat, t.lng], 18); p.remove(); };
-        loadTaskPhotos(t, list.querySelector('[data-ph="' + i + '"]'));
-      });
+      _tasks = res.data || [];
+      if (!_tasks.length) { list.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px">עדיין לא יצרת משימות</div>'; return; }
+      var ids = []; _tasks.forEach(function (t) { if (t.assigned_to && ids.indexOf(t.assigned_to) < 0) ids.push(t.assigned_to); });
+      _profs = {};
+      if (ids.length) { var pr = await sb().from('profiles').select('id,full_name,email').in('id', ids); (pr.data || []).forEach(function (x) { _profs[x.id] = x.full_name || x.email; }); }
+      var vsel = document.getElementById('gtl-fviewer');
+      if (vsel) vsel.innerHTML = '<option value="">כל הצופים</option>' + ids.map(function (id) { return '<option value="' + id + '">' + esc(_profs[id] || id) + '</option>'; }).join('');
+      var ssel = document.getElementById('gtl-fstatus'); if (ssel) ssel.onchange = renderList;
+      if (vsel) vsel.onchange = renderList;
+      renderList();
     } catch (e) { list.innerHTML = '<div style="color:#b91c1c;padding:16px">' + esc(String(e)) + '</div>'; }
   }
 
