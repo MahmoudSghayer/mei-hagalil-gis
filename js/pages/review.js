@@ -200,6 +200,7 @@
     var btn = document.getElementById('rv-do-approve'); btn.disabled = true; btn.textContent = '⏳ מאשר...';
     var r = await gSb.rpc('approve_submission', args);
     if (r.error) { btn.disabled = false; btn.textContent = '✔ אשר ופרסם'; toast('שגיאה: ' + r.error.message); return; }
+    try { gSb.functions.invoke('send-push', { body: { user_id: s.submitted_by, title: 'ההגשה אושרה ✅', body: (s.kind === 'issue' ? 'התקלה שדיווחת אושרה' : 'הישות שהגשת פורסמה'), url: '/' } }); } catch (e) {}
     toast('✅ אושר ופורסם');
     await loadQueue();
     document.getElementById('rv-detail').innerHTML = '<div class="rv-empty">בחר הגשה מהרשימה</div>';
@@ -212,6 +213,7 @@
     var btn = document.getElementById('rv-do-reject'); btn.disabled = true; btn.textContent = '⏳...';
     var r = await gSb.rpc('reject_submission', { p_id: s.id, p_reason: reason });
     if (r.error) { btn.disabled = false; btn.textContent = '✕ דחה'; toast('שגיאה: ' + r.error.message); return; }
+    try { gSb.functions.invoke('send-push', { body: { user_id: s.submitted_by, title: 'ההגשה נדחתה', body: reason || 'ההגשה שלך נדחתה — ראה פרטים באפליקציה', url: '/' } }); } catch (e) {}
     toast('הדחייה נשלחה');
     await loadQueue();
     document.getElementById('rv-detail').innerHTML = '<div class="rv-empty">בחר הגשה מהרשימה</div>';

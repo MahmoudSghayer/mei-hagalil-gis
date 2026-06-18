@@ -50,6 +50,7 @@
       var btn = bg.querySelector('#gtsk-save'); btn.disabled = true; btn.textContent = '⏳ שומר…';
       var r = await sb().from('field_tasks').insert([{ title: title, description: (bg.querySelector('#gtsk-desc').value || '').trim() || null, lat: ctr.lat, lng: ctr.lng, assigned_to: whoEl.value }]);
       if (r.error) { btn.disabled = false; btn.textContent = 'שמור והקצה'; toast('שגיאה: ' + r.error.message + ' (הרץ tasks.sql?)'); return; }
+      try { sb().functions.invoke('send-push', { body: { user_id: whoEl.value, title: 'משימת שטח חדשה', body: title, url: '/' } }); } catch (e) {}
       close(); toast('📌 המשימה הוקצתה');
     };
   }
