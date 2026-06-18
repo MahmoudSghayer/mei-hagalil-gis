@@ -134,6 +134,9 @@
       ] },
       { label: 'פריסת הדפסה', cmds: [
         { ic: 'print', lb: 'גיליון מפה', size: 'lg', act: printMap }
+      ] },
+      { label: 'התראות', cmds: [
+        { ic: 'alert', lb: 'הפעל התראות', size: 'lg', act: enablePush }
       ] }
     ]
   };
@@ -183,6 +186,7 @@
   function openDashboard() { if (window.GISDashboard) { window.GISDashboard.open(); } else { toast('הסקירה עדיין נטענת…'); } }
   function openDomains() { if (window.GISDomains && window.GISDomains.openEditor) { window.GISDomains.openEditor(); } else { toast('עורך הקודים עדיין נטען…'); } }
   function createTask() { if (window.GISTasks) { window.GISTasks.openCreate(); } else { toast('כלי המשימות עדיין נטען…'); } }
+  function enablePush() { if (window.GISPush) { window.GISPush.enable(); } else { toast('מנוע ההתראות עדיין נטען…'); } }
   function focusSearch() {
     var inp = document.querySelector('#search-bar input');
     if (inp) { inp.focus(); inp.select && inp.select(); }

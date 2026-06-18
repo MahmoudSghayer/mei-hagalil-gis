@@ -168,9 +168,10 @@
     var p = document.getElementById('fld-mine');
     if (!p) {
       p = document.createElement('div'); p.id = 'fld-mine';
-      p.innerHTML = '<div class="h"><span>ההגשות שלי</span><button id="fld-mine-x">✕</button></div><div class="list" id="fld-mine-list"></div>';
+      p.innerHTML = '<div class="h"><span>ההגשות שלי</span><span><button id="fld-push" title="הפעל התראות" style="background:none;border:none;color:#fff;font-size:17px;cursor:pointer">🔔</button><button id="fld-mine-x">✕</button></span></div><div class="list" id="fld-mine-list"></div>';
       document.body.appendChild(p);
       p.querySelector('#fld-mine-x').onclick = function () { p.classList.remove('open'); };
+      p.querySelector('#fld-push').onclick = function () { if (window.GISPush) GISPush.enable(); };
     }
     p.classList.add('open');
     var list = document.getElementById('fld-mine-list');

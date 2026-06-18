@@ -42,3 +42,20 @@ self.addEventListener('fetch', function (e) {
     }));
   }
 });
+
+// ── Web Push (C4) — show the notification + focus/open the app on click ───────
+self.addEventListener('push', function (e) {
+  var data = {};
+  try { data = e.data ? e.data.json() : {}; } catch (err) { data = { body: e.data && e.data.text() }; }
+  e.waitUntil(self.registration.showNotification(data.title || 'מי הגליל GIS', {
+    body: data.body || '', icon: '/icon.svg', badge: '/icon.svg', dir: 'rtl', data: data.url || '/'
+  }));
+});
+self.addEventListener('notificationclick', function (e) {
+  e.notification.close();
+  var url = e.notification.data || '/';
+  e.waitUntil(self.clients.matchAll({ type: 'window' }).then(function (ws) {
+    for (var i = 0; i < ws.length; i++) { if (ws[i].url.indexOf(url) >= 0 && 'focus' in ws[i]) return ws[i].focus(); }
+    if (self.clients.openWindow) return self.clients.openWindow(url);
+  }));
+});
