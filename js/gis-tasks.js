@@ -145,7 +145,7 @@
     var p = document.createElement('div'); p.id = 'gtl-panel';
     p.style.cssText = 'position:fixed;top:0;left:0;bottom:0;width:min(460px,100%);z-index:1700;background:#f8fafc;box-shadow:4px 0 24px rgba(0,0,0,.2);direction:rtl;font-family:Rubik,sans-serif;display:flex;flex-direction:column';
     p.innerHTML =
-      '<div style="padding:13px 16px;background:#0d3b5e;color:#fff;display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700">📋 המשימות שיצרתי</span><button id="gtl-x" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer">✕</button></div>' +
+      '<div style="padding:13px 16px;background:#0d3b5e;color:#fff;display:flex;justify-content:space-between;align-items:center"><span style="font-weight:700">📋 ' + (role === 'admin' ? 'כל המשימות' : 'המשימות שיצרתי') + '</span><button id="gtl-x" style="background:none;border:none;color:#fff;font-size:18px;cursor:pointer">✕</button></div>' +
       '<div style="display:flex;gap:8px;padding:10px 12px;background:#eef2f6;border-bottom:1px solid #e2e8f0">' +
         '<select id="gtl-fstatus" style="flex:1;padding:6px;border:1px solid #cbd5e1;border-radius:7px;font:inherit;direction:rtl"><option value="">כל הסטטוסים</option><option value="open">פתוח</option><option value="done">בוצע</option></select>' +
         '<select id="gtl-fviewer" style="flex:1;padding:6px;border:1px solid #cbd5e1;border-radius:7px;font:inherit;direction:rtl"><option value="">כל הצופים</option></select>' +
@@ -157,10 +157,12 @@
     list.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:20px">טוען…</div>';
     try {
       var me = (await sb().auth.getUser()).data.user;
-      var res = await sb().from('field_tasks').select('*').eq('created_by', me.id).order('created_at', { ascending: false });
+      var q = sb().from('field_tasks').select('*').order('created_at', { ascending: false });
+      if (role !== 'admin') q = q.eq('created_by', me.id);   // admin oversees ALL tasks; engineer sees own
+      var res = await q;
       if (res.error) { list.innerHTML = '<div style="color:#b91c1c;padding:16px">שגיאה: ' + esc(res.error.message) + ' (הרץ tasks.sql?)</div>'; return; }
       _tasks = res.data || [];
-      if (!_tasks.length) { list.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px">עדיין לא יצרת משימות</div>'; return; }
+      if (!_tasks.length) { list.innerHTML = '<div style="text-align:center;color:#94a3b8;padding:24px">' + (role === 'admin' ? 'אין משימות במערכת' : 'עדיין לא יצרת משימות') + '</div>'; return; }
       var ids = []; _tasks.forEach(function (t) { if (t.assigned_to && ids.indexOf(t.assigned_to) < 0) ids.push(t.assigned_to); });
       _profs = {};
       if (ids.length) { var pr = await sb().from('profiles').select('id,full_name,email').in('id', ids); (pr.data || []).forEach(function (x) { _profs[x.id] = x.full_name || x.email; }); }

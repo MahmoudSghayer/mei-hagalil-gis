@@ -58,18 +58,20 @@ function renderAssignments() {
   var wrap = document.getElementById('assign-wrap');
   if (!wrap) return;
   var viewers = gUsers.filter(function (u) { return u.role === 'viewer'; });
-  var engineers = gUsers.filter(function (u) { return u.role === 'engineer'; });
-  if (!viewers.length || !engineers.length) {
-    wrap.innerHTML = '<div class="empty" style="padding:14px">צריך לפחות צופה אחד ומהנדס אחד כדי לשייך.</div>';
+  // Admins are a superset of engineers, so they can be reviewers too.
+  var reviewers = gUsers.filter(function (u) { return u.role === 'engineer' || u.role === 'admin'; });
+  if (!viewers.length || !reviewers.length) {
+    wrap.innerHTML = '<div class="empty" style="padding:14px">צריך לפחות צופה אחד ומהנדס/מנהל אחד כדי לשייך.</div>';
     return;
   }
   var on = {};
   gAssignments.forEach(function (a) { on[a.viewer_id + '|' + a.engineer_id] = true; });
   wrap.innerHTML = viewers.map(function (v) {
-    var chips = engineers.map(function (e) {
+    var chips = reviewers.map(function (e) {
       var isOn = !!on[v.id + '|' + e.id];
+      var tag = e.role === 'admin' ? ' (מנהל)' : '';
       return '<button class="assign-chip' + (isOn ? ' on' : '') + '" onclick="toggleAssignment(\'' + v.id + '\',\'' + e.id + '\',' + isOn + ')">' +
-        esc(e.full_name || e.email) + (isOn ? ' ✓' : '') + '</button>';
+        esc(e.full_name || e.email) + tag + (isOn ? ' ✓' : '') + '</button>';
     }).join('');
     return '<div class="assign-row"><div class="assign-viewer">👁 ' + esc(v.full_name || v.email) + '</div><div class="assign-chips">' + chips + '</div></div>';
   }).join('');
