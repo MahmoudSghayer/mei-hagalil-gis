@@ -77,6 +77,9 @@
           { ic: 'snap',  lb: 'הצמדה',     act: editSnap },
           { ic: 'trash', lb: 'מחק',       act: editDelete }
         ] }
+      ] },
+      { label: 'נתונים', cmds: [
+        { ic: 'edit', lb: 'עורך קודים', size: 'lg', act: openDomains }
       ] }
     ],
 
@@ -177,6 +180,7 @@
   function toggleFind() { if (window.GISFind) { window.GISFind.toggle(); } else { toast('כלי האיתור עדיין נטען…'); } }
   function printMap() { if (window.GISPrint) { window.GISPrint.open(); } else { toast('כלי ההדפסה עדיין נטען…'); } }
   function openDashboard() { if (window.GISDashboard) { window.GISDashboard.open(); } else { toast('הסקירה עדיין נטענת…'); } }
+  function openDomains() { if (window.GISDomains && window.GISDomains.openEditor) { window.GISDomains.openEditor(); } else { toast('עורך הקודים עדיין נטען…'); } }
   function focusSearch() {
     var inp = document.querySelector('#search-bar input');
     if (inp) { inp.focus(); inp.select && inp.select(); }
