@@ -20,7 +20,7 @@ import urllib.request
 from typing import Any
 
 import jwt
-from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
@@ -49,6 +49,24 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["X-Fallback-Format", "X-Fallback-Reason"],
 )
+
+# Reject oversized request bodies BEFORE they are read into memory — a DoS guard
+# for the JSON export payload and the DWG file uploads (both otherwise unbounded).
+# Override with MAX_BODY_BYTES on Render.
+MAX_BODY_BYTES: int = int(os.getenv("MAX_BODY_BYTES", str(32 * 1024 * 1024)))  # 32 MB
+
+
+@app.middleware("http")
+async def _limit_body_size(request: Request, call_next):
+    cl = request.headers.get("content-length")
+    if cl:
+        try:
+            if int(cl) > MAX_BODY_BYTES:
+                return JSONResponse({"detail": "payload too large"}, status_code=413)
+        except ValueError:
+            pass
+    return await call_next(request)
+
 
 # Above this feature count, skip the memory-heavy ODA DWG conversion and return
 # DXF instead — large exports OOM-crash the converter on small instances (502).
@@ -114,11 +132,13 @@ def _caller_identity(authorization: str | None) -> tuple[str | None, str | None]
             )
             with urllib.request.urlopen(req2, timeout=8) as resp:
                 rows = json.loads(resp.read().decode())
-            if rows and rows[0].get("is_active", True):
-                return (uid, rows[0].get("role"))
         except Exception:
-            pass
-        return (uid, None)
+            # Fail closed: if we cannot verify the caller's role/status, deny.
+            return (None, None)
+        if not rows or rows[0].get("is_active") is not True:
+            # No profile row, or a suspended account → not authorized.
+            return (None, None)
+        return (uid, rows[0].get("role"))
 
     # Fallback: local HS256 verification (no role info available).
     if SUPABASE_JWT_SECRET:
@@ -138,9 +158,11 @@ def _require_auth(authorization: str | None = None) -> None:
     uid, role = _caller_identity(authorization)
     if not uid:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    # If the role is known it must be editor/admin; if it couldn't be resolved
-    # (HS256 fallback path carries no profile), a valid token still passes.
-    if role is None or role in ("admin", "editor"):
+    # If the role is known it must be admin/editor/engineer (the DB stores the
+    # edit-capable role as 'engineer'; 'editor' kept for back-compat). If it
+    # couldn't be resolved (HS256 dev fallback carries no profile), a valid token
+    # still passes — in production the remote path always resolves a role or 401s.
+    if role is None or role in ("admin", "editor", "engineer"):
         return
     raise HTTPException(status_code=403, detail="Forbidden: export requires editor or admin role")
 
