@@ -6,8 +6,9 @@
 
 ## Targets
 - **RTO (time to restore service): ≤ 4 hours.**
-- **RPO (acceptable data loss): ≤ 1 hour.** Requires Supabase **Pro + Point-in-Time
-  Recovery (PITR)**. On the Free tier, realistic RPO is **hours-to-days** — see Gaps.
+- **RPO (acceptable data loss): ≤ 1 hour.** Project is on **Supabase Pro** (confirmed
+  2026-06-18) → daily backups + Point-in-Time Recovery (PITR) available. **Enable PITR**
+  (Database → Backups) to reach minute-level RPO; daily-only backups give RPO ≈ 24 h.
 
 ## Systems & where state lives
 | System | Holds | Backup mechanism |
@@ -51,7 +52,8 @@
   that has never been restored is not a backup.
 
 ## Gaps to close (tracked from the production-readiness audit, layer 13)
-- [ ] Confirm/upgrade to **Supabase Pro + PITR** (sets the real RPO).
+- [x] On **Supabase Pro** (confirmed 2026-06-18). Remaining: **enable PITR** (Database →
+      Backups) so RPO is minutes, not 24 h.
 - [ ] Add a scheduled **Storage bucket export** (both buckets) to off-Supabase storage.
 - [ ] Store all env/edge secrets in a **password manager / vault** (today they live only
       in provider dashboards — a project deletion loses them).
