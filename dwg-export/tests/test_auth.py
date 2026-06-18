@@ -55,7 +55,7 @@ def _routes_for(role):
 def test_viewer_is_forbidden(monkeypatch):
     monkeypatch.setattr(urllib.request, "urlopen", make_urlopen(_routes_for("viewer")))
     with pytest.raises(main.HTTPException) as e:
-        main._require_auth(None, "Bearer tok")
+        main._require_auth("Bearer tok")
     assert e.value.status_code == 403
 
 
