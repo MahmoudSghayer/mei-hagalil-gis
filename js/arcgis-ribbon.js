@@ -80,7 +80,10 @@
       ] },
       { label: 'נתונים', cmds: [
         { ic: 'edit', lb: 'עורך קודים', size: 'lg', act: openDomains },
-        { ic: 'plus', lb: 'משימת שטח', size: 'lg', act: createTask }
+        { col: [
+          { ic: 'plus', lb: 'משימת שטח', act: createTask },
+          { ic: 'legend', lb: 'רשימת משימות', act: listTasks }
+        ] }
       ] }
     ],
 
@@ -186,6 +189,7 @@
   function openDashboard() { if (window.GISDashboard) { window.GISDashboard.open(); } else { toast('הסקירה עדיין נטענת…'); } }
   function openDomains() { if (window.GISDomains && window.GISDomains.openEditor) { window.GISDomains.openEditor(); } else { toast('עורך הקודים עדיין נטען…'); } }
   function createTask() { if (window.GISTasks) { window.GISTasks.openCreate(); } else { toast('כלי המשימות עדיין נטען…'); } }
+  function listTasks() { if (window.GISTasks) { window.GISTasks.openList(); } else { toast('כלי המשימות עדיין נטען…'); } }
   function enablePush() { if (window.GISPush) { window.GISPush.enable(); } else { toast('מנוע ההתראות עדיין נטען…'); } }
   function focusSearch() {
     var inp = document.querySelector('#search-bar input');

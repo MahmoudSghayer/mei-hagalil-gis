@@ -506,12 +506,16 @@
       list.innerHTML = rows.map(function (t) {
         return '<div class="fld-sub"><div class="t">📌 ' + esc(t.title) + '</div>' +
           (t.description ? '<div class="m">' + esc(t.description) + '</div>' : '') +
-          '<div style="display:flex;gap:8px;margin-top:8px">' +
-          '<button class="fld-media-btn" data-nav="' + t.lat + ',' + t.lng + '">🧭 נווט (Waze)</button>' +
+          '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">' +
+          '<button class="fld-media-btn" data-waze="' + t.lat + ',' + t.lng + '">🧭 Waze</button>' +
+          '<button class="fld-media-btn" data-gmap="' + t.lat + ',' + t.lng + '">🗺️ Google</button>' +
           '<button class="fld-media-btn" data-done="' + t.id + '">✓ בוצע</button></div></div>';
       }).join('');
-      Array.prototype.forEach.call(list.querySelectorAll('[data-nav]'), function (b) {
-        b.onclick = function () { var c = b.getAttribute('data-nav').split(','); window.open('https://www.waze.com/ul?ll=' + c[0] + '%2C' + c[1] + '&navigate=yes', '_blank'); };
+      Array.prototype.forEach.call(list.querySelectorAll('[data-waze]'), function (b) {
+        b.onclick = function () { var c = b.getAttribute('data-waze').split(','); window.open('https://www.waze.com/ul?ll=' + c[0] + '%2C' + c[1] + '&navigate=yes', '_blank'); };
+      });
+      Array.prototype.forEach.call(list.querySelectorAll('[data-gmap]'), function (b) {
+        b.onclick = function () { var c = b.getAttribute('data-gmap').split(','); window.open('https://www.google.com/maps/dir/?api=1&destination=' + c[0] + ',' + c[1], '_blank'); };
       });
       Array.prototype.forEach.call(list.querySelectorAll('[data-done]'), function (b) {
         b.onclick = function () { var id = b.getAttribute('data-done'); var t = rows.find(function (x) { return String(x.id) === String(id); }); if (t) completeTask(t); };

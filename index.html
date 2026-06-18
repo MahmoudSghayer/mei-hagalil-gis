@@ -259,9 +259,9 @@
 <!-- On-map editing (Edit tab): Geoman-driven add / move-geometry / delete / snap -->
 <script defer src="js/gis-edit.js?v=5"></script>
 <!-- ArcGIS Pro UI shell (Phase 1): ribbon + Contents pane + scale status bar -->
-<script defer src="js/arcgis-ribbon.js?v=19"></script>
+<script defer src="js/arcgis-ribbon.js?v=20"></script>
 <!-- Field mode (F3/F4): viewer-only minimal shell — create/submit entities + issues -->
-<script defer src="js/gis-field.js?v=7"></script>
+<script defer src="js/gis-field.js?v=8"></script>
 <!-- In-app notifications (F6): topbar bell + Realtime feed -->
 <script defer src="js/gis-notifications.js?v=1"></script>
 <!-- Flow-direction arrows (L4a): sewer arrows from manhole invert levels (lower invert = downstream) -->
@@ -283,7 +283,7 @@
     'js/gis-print.js?v=10',
     'js/gis-meter-connect.js?v=5',
     'js/gis-dashboard.js?v=1',
-    'js/gis-tasks.js?v=3'
+    'js/gis-tasks.js?v=4'
   ];
   function load() { LAZY.forEach(function (src) { var s = document.createElement('script'); s.src = src; s.defer = true; document.body.appendChild(s); }); }
   function go() { if ('requestIdleCallback' in window) requestIdleCallback(load, { timeout: 2500 }); else setTimeout(load, 1200); }
