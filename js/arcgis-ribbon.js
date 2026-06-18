@@ -108,7 +108,8 @@
         { ic: 'valve', lb: 'בידוד מגופים', size: 'lg', act: traceIsolation }
       ] },
       { label: 'מעקב זרימה', cmds: [
-        { ic: 'link', lb: 'מחוברים',    size: 'lg', act: traceConnected }
+        { ic: 'link', lb: 'מחוברים',    size: 'lg', act: traceConnected },
+        { ic: 'arrow-down', lb: 'כיוון זרימה', act: function () { if (window.GISFlow) GISFlow.toggle(); else if (window.showToast) showToast('עדיין נטען…'); } }
       ] },
       { label: 'מונים', cmds: [
         { ic: 'link', lb: 'חיבור אוטומטי', size: 'lg', act: meterAutoConnect },

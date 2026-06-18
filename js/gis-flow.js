@@ -87,19 +87,13 @@
     else { gMap.off('moveend', scheduleRender); clearArrows(); }
   }
 
-  function buildToggle() {
-    var host = document.getElementById('layer-toggles');
-    if (!host || document.getElementById('flow-toggle')) return;
-    var btn = document.createElement('button');
-    btn.id = 'flow-toggle'; btn.className = 'layer-toggle-btn'; btn.title = 'הצג/הסתר כיווני זרימה על קווי מים';
-    btn.innerHTML = '<span class="lt-icon">➤</span><span class="lt-label">כיוון זרימה</span>';
-    btn.onclick = toggle;
-    host.appendChild(btn);
-  }
+  // Entry point is the ribbon (the floating #layer-toggles panel is hidden by the
+  // ArcGIS-Pro theme). The ribbon's "כיוון זרימה" command calls GISFlow.toggle().
+  window.GISFlow = { toggle: toggle, isOn: function () { return ON; } };
 
   var tries = 0;
   var timer = setInterval(function () {
-    if (window.gMap && window.GIS && document.getElementById('layer-toggles')) { clearInterval(timer); injectStyles(); buildToggle(); }
+    if (window.gMap && window.GIS) { clearInterval(timer); injectStyles(); }
     else if (++tries > 100) clearInterval(timer);
   }, 200);
 })();
