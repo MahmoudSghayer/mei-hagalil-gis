@@ -288,7 +288,7 @@
       '<div class="fld-row"><label>סגנון קו</label><select id="fld-style">' + styleOptions() + '</select></div>' +
       '<div class="fld-row"><label>מפלס עליון · Top Level (מ׳)</label><input id="fld-top" type="number" step="0.01" inputmode="decimal" placeholder="לדוגמה: 245.30"></div>' +
       '<div class="fld-row"><label>מפלס תחתית · Invert (מ׳)</label><input id="fld-invert" type="number" step="0.01" inputmode="decimal" placeholder="לדוגמה: 243.10"></div>' +
-      '<div class="fld-row"><label>קוד נכס (לא חובה)</label><input id="fld-code"></div>' +
+      '<div class="fld-row"><label>קוד נכס / מספר מונה (לא חובה)</label><div style="display:flex;gap:6px"><input id="fld-code" style="flex:1"><button type="button" id="fld-scan" class="fld-media-btn" title="סרוק ברקוד/QR">📷 סרוק</button></div></div>' +
       '<div class="fld-row"><label>הערות</label><textarea id="fld-notes" rows="2"></textarea></div>' +
       '<div class="fld-row"><label>מדיה (תמונות / וידאו)</label>' +
       '<div style="display:flex;gap:8px"><button type="button" class="fld-media-btn" id="cap-ap">📷 תמונה</button>' +
@@ -319,6 +319,8 @@
     var pin = bg.querySelector('#cap-pin'), vin = bg.querySelector('#cap-vin');
     bg.querySelector('#cap-ap').onclick = function () { pin.click(); };
     bg.querySelector('#cap-av').onclick = function () { vin.click(); };
+    var scanBtn = bg.querySelector('#fld-scan');
+    if (scanBtn) scanBtn.onclick = function () { scanBarcode(function (code) { var inp = bg.querySelector('#fld-code'); if (inp) inp.value = code; toast('נסרק: ' + code, 'success'); }); };
     pin.onchange = function () { Array.prototype.forEach.call(pin.files, function (f) { capFiles.push(f); }); renderThumbs(thumbs); };
     vin.onchange = function () { if (vin.files[0]) capFiles.push(vin.files[0]); renderThumbs(thumbs); };
   }
@@ -340,6 +342,34 @@
       } catch (e) { /* skip a failed file */ }
     }
     return n;
+  }
+
+  // ── QR / barcode scan (C2) — fills the asset/meter code from the camera ───────
+  function scanBarcode(onCode) {
+    if (!('BarcodeDetector' in window)) { toast('סריקת ברקוד אינה נתמכת בדפדפן זה — הקלד ידנית', 'error'); return; }
+    var det;
+    try { det = new window.BarcodeDetector({ formats: ['qr_code', 'code_128', 'code_39', 'ean_13', 'ean_8', 'itf', 'codabar', 'upc_a', 'upc_e', 'data_matrix'] }); }
+    catch (e) { try { det = new window.BarcodeDetector(); } catch (e2) { toast('סריקה לא זמינה', 'error'); return; } }
+    var ov = document.createElement('div');
+    ov.style.cssText = 'position:fixed;inset:0;z-index:3000;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center';
+    ov.innerHTML = '<video id="scan-v" playsinline style="max-width:100%;max-height:78%"></video>' +
+      '<div style="color:#fff;margin-top:12px;font-family:Rubik,sans-serif">כוון את המצלמה לברקוד / QR של המונה</div>' +
+      '<button id="scan-x" style="margin-top:14px;padding:10px 22px;border:none;border-radius:10px;background:#dc2626;color:#fff;font:inherit;cursor:pointer">ביטול</button>';
+    document.body.appendChild(ov);
+    var v = ov.querySelector('#scan-v'), stream = null, raf = null, stopped = false;
+    function stop() { stopped = true; if (raf) cancelAnimationFrame(raf); if (stream) stream.getTracks().forEach(function (t) { t.stop(); }); ov.remove(); }
+    ov.querySelector('#scan-x').onclick = stop;
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }).then(function (s) {
+      stream = s; v.srcObject = s; v.play();
+      function tick() {
+        if (stopped) return;
+        det.detect(v).then(function (codes) {
+          if (codes && codes.length) { var val = codes[0].rawValue; stop(); if (val && onCode) onCode(String(val).trim()); return; }
+          raf = requestAnimationFrame(tick);
+        }).catch(function () { raf = requestAnimationFrame(tick); });
+      }
+      raf = requestAnimationFrame(tick);
+    }).catch(function () { toast('אין גישה למצלמה', 'error'); stop(); });
   }
 
   // ── Offline-first queue (C1) — IndexedDB; flushed by pwa.js on reconnect ──────
