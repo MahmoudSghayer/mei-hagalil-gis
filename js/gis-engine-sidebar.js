@@ -182,6 +182,7 @@ function wireMoveend() {
   if (moveendWired || !window.gMap) return;
   moveendWired = true;
   window.gMap.on('moveend', function () { clearTimeout(_mt); _mt = setTimeout(reloadActive, 250); });
+  wireClickFallback();
 }
 function reloadActive() { Object.keys(loaded).forEach(function (id) { try { loaded[id].update(); } catch (e) {} }); }
 
@@ -189,7 +190,7 @@ var tries = 0;
 var t = setInterval(function () {
   tries++;
   if (window.GIS && window.gMap && document.getElementById('layers-scroll-area')) {
-    clearInterval(t); build().catch(function (e) { console.error('[GISEngineSidebar]', e); });
+    clearInterval(t); wireClickFallback(); build().catch(function (e) { console.error('[GISEngineSidebar]', e); });
   } else if (tries > 80) { clearInterval(t); }
 }, 200);
 
@@ -203,6 +204,87 @@ function openPanelFor(f, layer) {
   if (window.GISIdentify) GISIdentify.highlight(f);
   if (window.GISPanel) window.GISPanel.open(f, { layerId: layer.id, sub: layer.name.split(' · ')[0] });
   else if (window.GISTable) GISTable.openLayer(layer.id, f.properties && f.properties.asset_code, { title: '📋 ' + catLabel(layer._cat), sub: layer.name.split(' · ')[0] });
+}
+
+// ── Map-click "Identify" fallback ─────────────────────────────────────────
+// In MVT mode the features render on stacked CANVAS tiles (L.canvas.tile). The
+// topmost tile canvas (pointer-events:auto) covers the layers beneath it and
+// VectorGrid's per-feature canvas hit-testing is unreliable, so vg.on('click')
+// often never fires — clicking a pipe/point does nothing (no pointer cursor, no
+// panel). Map-level clicks DO still fire (that's how trace/measure/pick work),
+// so on a plain click we find the nearest visible feature within a pixel
+// tolerance and open its panel — the same approach gis-find/gis-network-trace use.
+var TOL_PX = 9;
+function _scaleAt(lat) { return { x: 111320 * Math.cos(lat * Math.PI / 180), y: 110540 }; }
+function _distM(a, b, sc) { var dx = (a[0] - b[0]) * sc.x, dy = (a[1] - b[1]) * sc.y; return Math.hypot(dx, dy); }
+function _segDistM(p, a, b, sc) {
+  var ax = a[0] * sc.x, ay = a[1] * sc.y, bx = b[0] * sc.x, by = b[1] * sc.y, px = p[0] * sc.x, py = p[1] * sc.y;
+  var dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy;
+  var t = l2 ? ((px - ax) * dx + (py - ay) * dy) / l2 : 0; t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+function _partsOf(g) {
+  if (!g) return [];
+  if (g.type === 'LineString') return [g.coordinates];
+  if (g.type === 'MultiLineString' || g.type === 'Polygon') return g.coordinates;
+  if (g.type === 'MultiPolygon') { var o = []; g.coordinates.forEach(function (poly) { poly.forEach(function (r) { o.push(r); }); }); return o; }
+  return [];
+}
+// Yield to any armed tool that owns map clicks, so we never hijack them.
+function _toolArmed() {
+  try {
+    var c = window.gMap.getContainer();
+    if (c.style.cursor === 'crosshair') return true;          // incident / trace / field / edit pick
+    if (c.classList.contains('mt-cursor')) return true;       // measure tool
+    if (window.GISTrace && GISTrace._state) return true;      // network trace
+    var pm = window.gMap.pm;                                  // Leaflet-Geoman (on-map editing)
+    if (pm && ((pm.globalDrawModeEnabled && pm.globalDrawModeEnabled()) ||
+               (pm.globalEditModeEnabled && pm.globalEditModeEnabled()) ||
+               (pm.globalRemovalModeEnabled && pm.globalRemovalModeEnabled()))) return true;
+  } catch (e) {}
+  return false;
+}
+
+async function onMapClickPick(e) {
+  // _mvtMode is the probe result: 'edge'/'rpc' (MVT active) | false (GeoJSON) | null (not probed).
+  // Only the MVT canvas path needs this fallback; GeoJSON layers have working feature clicks.
+  if (!_mvtMode) return;
+  if (_toolArmed()) return;
+  if (!window.GIS || !GIS.features || !GIS.features.getInBBox) return;
+  var layers = Object.keys(active).map(function (id) { return active[id]; });
+  if (!layers.length) return;
+
+  var ll = e.latlng, click = [ll.lng, ll.lat], sc = _scaleAt(ll.lat);
+  var cp = window.gMap.latLngToContainerPoint(ll);
+  var tolM = Math.max(1, ll.distanceTo(window.gMap.containerPointToLatLng(L.point(cp.x + TOL_PX, cp.y))));
+  var dLng = tolM / sc.x, dLat = tolM / sc.y;
+  var bbox = { minLng: ll.lng - dLng, minLat: ll.lat - dLat, maxLng: ll.lng + dLng, maxLat: ll.lat + dLat };
+
+  var best = null;
+  await Promise.all(layers.map(function (layer) {
+    return GIS.features.getInBBox(layer.id, bbox, 400).then(function (fc) {
+      (fc && fc.features || []).forEach(function (f) {
+        var g = f.geometry; if (!g) return;
+        var d = Infinity;
+        if (g.type === 'Point') d = _distM(click, g.coordinates, sc);
+        else if (g.type === 'MultiPoint') g.coordinates.forEach(function (c) { d = Math.min(d, _distM(click, c, sc)); });
+        else _partsOf(g).forEach(function (coords) { for (var k = 1; k < coords.length; k++) { var dd = _segDistM(click, coords[k - 1], coords[k], sc); if (dd < d) d = dd; } });
+        if (isFinite(d) && (!best || d < best.d)) best = { d: d, f: f, layer: layer };
+      });
+    }).catch(function () {});
+  }));
+
+  if (best && best.d <= tolM) {
+    if (best.f.properties && !best.f.properties.__layer_id) best.f.properties.__layer_id = best.layer.id;
+    openPanelFor(best.f, best.layer);
+  }
+}
+
+var clickFallbackWired = false;
+function wireClickFallback() {
+  if (clickFallbackWired || !window.gMap) return;
+  clickFallbackWired = true;
+  window.gMap.on('click', onMapClickPick);
 }
 
 // Build the Leaflet layer for an engine layer. NO clustering — points render
