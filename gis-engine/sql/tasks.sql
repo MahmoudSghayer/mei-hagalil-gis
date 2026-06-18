@@ -16,6 +16,11 @@ create table if not exists public.field_tasks (
   done_at     timestamptz
 );
 
+-- completion evidence (added later): a note and/or photo paths the viewer must
+-- attach when marking the task done. Idempotent — safe to re-run.
+alter table public.field_tasks add column if not exists completion_note  text;
+alter table public.field_tasks add column if not exists completion_media jsonb;
+
 alter table public.field_tasks enable row level security;
 
 -- viewer sees tasks assigned to them; engineer/admin see all

@@ -373,6 +373,47 @@
     }).catch(function () { toast('אין גישה למצלמה', 'error'); stop(); });
   }
 
+  // ── Task completion (must attach a note and/or at least one photo) ────────────
+  function completeTask(t) {
+    var files = [];
+    var body =
+      '<div class="fld-row"><label>תיאור הביצוע <span style="color:#b45309">(טקסט או תמונה — לפחות אחד חובה)</span></label><textarea id="ct-note" rows="3" placeholder="מה בוצע בפועל…"></textarea></div>' +
+      '<div class="fld-row"><label>תמונות</label><div style="display:flex;gap:8px"><button type="button" class="fld-media-btn" id="ct-cam">📷 צלם / העלה</button></div>' +
+      '<div id="ct-thumbs" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"></div></div>' +
+      '<input type="file" accept="image/*" capture="environment" multiple id="ct-pin" style="display:none">';
+    var bg = dialog('סיום משימה: ' + esc(t.title), body, function (bgEl, close) {
+      var note = bgEl.querySelector('#ct-note').value.trim();
+      if (!note && !files.length) { toast('חובה לצרף טקסט או תמונה אחת לפחות', 'error'); return; }
+      var ok = bgEl.querySelector('.fld-ok'); ok.disabled = true; ok.textContent = '⏳ שומר...';
+      finishTask(t, note, files)
+        .then(function () { close(); toast('✅ המשימה הושלמה ונשלחה', 'success'); openTasks(); })
+        .catch(function (e) { ok.disabled = false; ok.textContent = 'שמור והגש'; toast('שגיאה: ' + (e.message || e), 'error'); });
+    });
+    var pin = bg.querySelector('#ct-pin'), thumbs = bg.querySelector('#ct-thumbs');
+    bg.querySelector('#ct-cam').onclick = function () { pin.click(); };
+    pin.onchange = function () { Array.prototype.forEach.call(pin.files, function (f) { files.push(f); }); renderCtThumbs(thumbs, files); };
+  }
+  function renderCtThumbs(box, files) {
+    box.innerHTML = files.map(function (f, i) { return '<span class="cap-thumb">🖼 ' + esc(f.name || ('image' + i)) + ' <span class="cap-rm" data-i="' + i + '">✕</span></span>'; }).join('');
+    Array.prototype.forEach.call(box.querySelectorAll('.cap-rm'), function (x) { x.onclick = function () { files.splice(+x.getAttribute('data-i'), 1); renderCtThumbs(box, files); }; });
+  }
+  async function finishTask(t, note, files) {
+    var media = [];
+    for (var i = 0; i < files.length; i++) {
+      var f = files[i];
+      var ext = (f.name && f.name.lastIndexOf('.') >= 0) ? f.name.slice(f.name.lastIndexOf('.')) : '.jpg';
+      var path = 'tasks/' + t.id + '/' + Date.now() + '-' + i + ext;
+      try { var up = await sb().storage.from('submissions').upload(path, f, { contentType: f.type || undefined }); if (!up.error) media.push(path); } catch (e) { /* skip failed file */ }
+    }
+    if (!note && !media.length) throw new Error('העלאת התמונות נכשלה — צרף טקסט או נסה שוב');
+    var r = await sb().from('field_tasks').update({
+      status: 'done', done_at: new Date().toISOString(),
+      completion_note: note || null, completion_media: media.length ? media : null
+    }).eq('id', t.id);
+    if (r.error) throw r.error;
+    try { if (t.created_by) sb().functions.invoke('send-push', { body: { user_id: t.created_by, title: 'משימה הושלמה ✅', body: t.title, url: '/' } }); } catch (e) {}
+  }
+
   // ── Offline-first queue (C1) — IndexedDB; flushed by pwa.js on reconnect ──────
   var IDB_DB = 'mhg-field', IDB_STORE = 'pending';
   function idb() {
@@ -473,11 +514,7 @@
         b.onclick = function () { var c = b.getAttribute('data-nav').split(','); window.open('https://www.waze.com/ul?ll=' + c[0] + '%2C' + c[1] + '&navigate=yes', '_blank'); };
       });
       Array.prototype.forEach.call(list.querySelectorAll('[data-done]'), function (b) {
-        b.onclick = async function () {
-          var r = await sb().from('field_tasks').update({ status: 'done', done_at: new Date().toISOString() }).eq('id', b.getAttribute('data-done'));
-          if (r.error) { toast('שגיאה: ' + r.error.message, 'error'); return; }
-          toast('המשימה סומנה כבוצעה', 'success'); openTasks();
-        };
+        b.onclick = function () { var id = b.getAttribute('data-done'); var t = rows.find(function (x) { return String(x.id) === String(id); }); if (t) completeTask(t); };
       });
     });
   }
