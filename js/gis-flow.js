@@ -1,10 +1,11 @@
 // ════════════════════════════════════════════════════════════════════════
-//  Mei HaGalil GIS — Flow-direction arrows (L4a)
-//  Toggle "כיוון זרימה": overlays downstream arrows on WATER lines, derived from
-//  the pipe's own end elevations (StartHeigh / EndHeight) — water flows from the
-//  higher end to the lower. Height-based (gravity / elevation gradient); pipes
-//  without both heights are left unmarked. Refreshes on pan/zoom.
-//  L4b/L4c (manhole TopoHeight/LowIL + terrain DEM fallback) come later.
+//  Mei HaGalil GIS — Flow-direction arrows (L4a, manhole-invert edition)
+//  Toggle "כיוון זרימה": overlays gravity-flow arrows on SEWER lines. Direction
+//  is derived from the שוחות ביוב (sewage manholes) at each pipe's endpoints —
+//  water flows toward the manhole with the LOWER invert level. Per manhole the
+//  invert is read as LowIL (outlet) → invert_level → HighIL → (TL − Depth).
+//  Manholes without any invert leave their pipe unmarked (sparse data is fine —
+//  only the few that have inverts get arrows). Refreshes on pan/zoom.
 // ════════════════════════════════════════════════════════════════════════
 (function () {
   'use strict';
@@ -12,8 +13,12 @@
   var ON = false, layerGroup = null, deb = null;
   var MIN_ZOOM = 15;          // arrows only when zoomed in (perf + legibility)
   var MAX_FEATURES = 4000;    // safety cap per layer
+  var SNAP_M = 6;             // manhole ↔ pipe-endpoint snap tolerance (m)
 
-  function sb() { return window.GIS ? GIS.sb() : window.gSb; }
+  // category key (after " · " in the engine layer name) → role
+  var SEWER_CATS   = { sewage_pipes: 1, main_sewer: 1, sewage_pipe: 1 };
+  var MANHOLE_CATS = { sewage_manholes: 1, manhole: 1 };
+
   function toast(m) { if (window.showToast) showToast(m); }
 
   function injectStyles() {
@@ -26,6 +31,70 @@
     document.head.appendChild(s);
   }
 
+  // ── geo helpers (WGS84 lng/lat, metric via local scale) ────────────────────
+  function scaleAt(lat) { return { x: 111320 * Math.cos(lat * Math.PI / 180), y: 110540 }; }
+  function distM(a, b, sc) { var dx = (a[0] - b[0]) * sc.x, dy = (a[1] - b[1]) * sc.y; return Math.hypot(dx, dy); }
+
+  // spatial hash for nearest-manhole lookup (cell = SNAP_M, so a candidate within
+  // SNAP_M is at most one cell away → a 3×3 neighbourhood scan is exhaustive).
+  function makeHash(sc, cellM) {
+    var grid = new Map();
+    return {
+      add: function (lng, lat, val) {
+        var gx = Math.round(lng * sc.x / cellM), gy = Math.round(lat * sc.y / cellM), k = gx + '_' + gy;
+        var a = grid.get(k); if (!a) { a = []; grid.set(k, a); } a.push({ lng: lng, lat: lat, val: val });
+      },
+      nearest: function (lng, lat, r) {
+        var gx = Math.round(lng * sc.x / cellM), gy = Math.round(lat * sc.y / cellM), best = null;
+        for (var dx = -1; dx <= 1; dx++) for (var dy = -1; dy <= 1; dy++) {
+          var a = grid.get((gx + dx) + '_' + (gy + dy)); if (!a) continue;
+          for (var i = 0; i < a.length; i++) {
+            var d = distM([lng, lat], [a[i].lng, a[i].lat], sc);
+            if (d <= r && (!best || d < best.d)) best = { d: d, val: a[i].val };
+          }
+        }
+        return best ? best.val : null;
+      }
+    };
+  }
+
+  function num(v) { var n = parseFloat(v); return isFinite(n) ? n : NaN; }
+
+  // representative invert of a manhole — LowIL (outlet) first, then fallbacks.
+  // NOTE: in the source data LowIL is the placeholder 0.00 for EVERY manhole
+  // (and HighIL is often absent), so a finite 0 is treated as "missing" and the
+  // real invert is derived from TL − Depth (the CEO-confirmed IL2 derivation).
+  // A genuine 0 m invert is impossible here (Galilee elevations are ~200 m).
+  function manholeInvert(p) {
+    if (!p) return NaN;
+    var v;
+    v = num(p.LowIL);        if (isFinite(v) && v !== 0) return v;
+    v = num(p.invert_level); if (isFinite(v) && v !== 0) return v;
+    v = num(p.HighIL);       if (isFinite(v) && v !== 0) return v;
+    var tl = num(p.TL);
+    if (!isFinite(tl)) tl = num(p.top_level);
+    if (!isFinite(tl)) tl = num(p.TopLevel);
+    var d = num(p.Depth);
+    if (isFinite(tl) && isFinite(d)) return tl - d;   // invert = top level − depth
+    return NaN;
+  }
+
+  // engine layer name → { id, village, cat }
+  function parseLayer(l) {
+    var i = l.name.indexOf(' · ');
+    var cat = i >= 0 ? l.name.slice(i + 3) : l.name;
+    return { id: l.id, village: i >= 0 ? l.name.slice(0, i) : l.name, cat: cat };
+  }
+
+  // (Multi)LineString → array of coord arrays
+  function partsOf(geom) {
+    if (!geom) return [];
+    if (geom.type === 'LineString') return [geom.coordinates];
+    if (geom.type === 'MultiLineString') return geom.coordinates;
+    return [];
+  }
+
+  // ── arrows ─────────────────────────────────────────────────────────────────
   // Compass bearing a→b (deg, 0=N,90=E); a,b = [lng,lat].
   function bearing(a, b) {
     var t = Math.PI / 180;
@@ -40,53 +109,86 @@
 
   function clearArrows() { if (layerGroup) { try { gMap.removeLayer(layerGroup); } catch (e) {} layerGroup = null; } }
 
-  function drawArrow(coords, forward, p) {
+  // coords = one line part; forward=true keeps coords (arrow points coords[0]→last),
+  // up/down = the higher/lower-invert endpoint manholes (for the tooltip).
+  function drawArrow(coords, forward, up, down) {
     var seq = forward ? coords : coords.slice().reverse();   // oriented downstream
     if (seq.length < 2) return;
     var mi = Math.max(1, Math.floor(seq.length / 2));
     var a = seq[mi - 1], b = seq[mi];
     var mid = [(a[1] + b[1]) / 2, (a[0] + b[0]) / 2];         // [lat,lng]
     var m = L.marker(mid, { icon: arrowIcon(bearing(a, b) - 90), keyboard: false });
-    m.bindTooltip('כיוון זרימה · גובה ' + p.StartHeigh + ' → ' + p.EndHeight +
-      (p.PressureAr ? ' · אזור לחץ ' + p.PressureAr : ''), { direction: 'top' });
+    var nums = (up.num || down.num) ? ' · שוחות ' + (up.num || '?') + ' → ' + (down.num || '?') : '';
+    m.bindTooltip('כיוון זרימה · מפלס תחתית ' + up.inv.toFixed(2) + ' → ' + down.inv.toFixed(2) + nums,
+      { direction: 'top' });
     m.addTo(layerGroup);
   }
 
   async function render() {
-    if (!ON || !window.gMap || !window.GIS || !GIS.features) return;
+    if (!ON || !window.gMap || !window.GIS || !GIS.features || !GIS.layers) return;
     clearArrows();
     if (gMap.getZoom() < MIN_ZOOM) { toast('התקרב (זום ' + MIN_ZOOM + '+) כדי לראות כיווני זרימה'); return; }
-    var layers = (window.GISEngineSidebar && GISEngineSidebar.activeLayers) ? GISEngineSidebar.activeLayers() : [];
-    if (!layers.length) { toast('הפעל שכבת קווי מים במפה (✓ בתיבת השכבה) ואז נסה שוב'); return; }
-    layerGroup = L.layerGroup().addTo(gMap);
+
+    var all = (await GIS.layers.getLayers().catch(function () { return []; })).map(parseLayer);
+    var sewerLayers   = all.filter(function (l) { return SEWER_CATS[l.cat]; });
+    var manholeLayers = all.filter(function (l) { return MANHOLE_CATS[l.cat]; });
+    if (!sewerLayers.length) { toast('אין שכבות ביוב במנוע'); return; }
+
     var bnd = gMap.getBounds();
     var bbox = { minLng: bnd.getWest(), minLat: bnd.getSouth(), maxLng: bnd.getEast(), maxLat: bnd.getNorth() };
-    var fcs = await Promise.all(layers.map(function (l) {
+    var sc = scaleAt((bbox.minLat + bbox.maxLat) / 2);
+
+    // 1) manholes in view → spatial hash keyed by location, carrying their invert.
+    var mhFcs = await Promise.all(manholeLayers.map(function (l) {
       return GIS.features.getInBBox(l.id, bbox, MAX_FEATURES).catch(function () { return null; });
     }));
-    if (!ON) { clearArrows(); return; }   // toggled off while loading
-    // Draw on ANY line that carries the end-heights (water + sewer pipes both do) —
-    // the height fields, not a guessed category, are what make direction derivable.
-    var arrows = 0, lines = 0, withH = 0;
-    fcs.forEach(function (fc) {
+    if (!ON) { clearArrows(); return; }
+    var mhHash = makeHash(sc, SNAP_M);
+    mhFcs.forEach(function (fc) {
       if (!fc || !fc.features) return;
       fc.features.forEach(function (f) {
-        if (!f.geometry || f.geometry.type !== 'LineString') return;
-        lines++;
-        var p = f.properties || {};
-        var sh = parseFloat(p.StartHeigh), eh = parseFloat(p.EndHeight);
-        if (!isFinite(sh) || !isFinite(eh)) return;
-        withH++;
-        if (sh === eh) return;                                  // flat — direction unknown
-        drawArrow(f.geometry.coordinates, sh > eh, p);          // downstream = lower end
-        arrows++;
+        if (!f.geometry || f.geometry.type !== 'Point') return;
+        var c = f.geometry.coordinates, p = f.properties || {};
+        mhHash.add(c[0], c[1], { inv: manholeInvert(p), num: p.ManholeNum });
       });
     });
+
+    // 2) sewer pipes in view → arrow per part from its endpoint manholes' inverts.
+    var pipeFcs = await Promise.all(sewerLayers.map(function (l) {
+      return GIS.features.getInBBox(l.id, bbox, MAX_FEATURES).catch(function () { return null; });
+    }));
+    if (!ON) { clearArrows(); return; }
+    layerGroup = L.layerGroup().addTo(gMap);
+
+    var arrows = 0, parts = 0, mhPairs = 0, invPairs = 0;
+    pipeFcs.forEach(function (fc) {
+      if (!fc || !fc.features) return;
+      fc.features.forEach(function (f) {
+        partsOf(f.geometry).forEach(function (coords) {
+          if (coords.length < 2) return;
+          parts++;
+          var e0 = coords[0], e1 = coords[coords.length - 1];
+          var m0 = mhHash.nearest(e0[0], e0[1], SNAP_M);
+          var m1 = mhHash.nearest(e1[0], e1[1], SNAP_M);
+          if (!m0 || !m1 || m0 === m1) return;
+          mhPairs++;
+          if (!isFinite(m0.inv) || !isFinite(m1.inv)) return;
+          invPairs++;
+          if (m0.inv === m1.inv) return;                 // flat — direction unknown
+          var forward = m0.inv > m1.inv;                 // arrow aims at lower invert
+          var up = forward ? m0 : m1, down = forward ? m1 : m0;
+          drawArrow(coords, forward, up, down);
+          arrows++;
+        });
+      });
+    });
+
     if (arrows === 0) {
-      toast(lines === 0 ? 'אין קווים בתצוגה — הפעל שכבה והתקרב'
-        : withH === 0 ? 'לקווים בתצוגה אין נתוני גובה (StartHeigh/EndHeight)'
-        : 'נתוני הגובה שווים בקצוות — לא ניתן לקבוע כיוון');
-    } else { toast(arrows + ' חיצי כיוון'); }
+      toast(parts === 0 ? 'אין קווי ביוב בתצוגה — התקרב/הפעל שכבת ביוב'
+        : mhPairs === 0 ? 'לא נמצאו שוחות בקצוות הקווים'
+        : invPairs === 0 ? 'לשוחות בקצוות אין מפלס תחתית (LowIL וכו׳)'
+        : 'מפלסי התחתית שווים בקצוות — לא ניתן לקבוע כיוון');
+    } else { toast(arrows + ' חיצי כיוון (לפי מפלס שוחות)'); }
   }
 
   function scheduleRender() { if (!ON) return; clearTimeout(deb); deb = setTimeout(render, 300); }
