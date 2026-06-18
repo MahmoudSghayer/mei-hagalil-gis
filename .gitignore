@@ -13,3 +13,7 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# Confidential security audit / roadmap docs — never push (attacker-useful)
+AUDIT.md
+EXECUTION-ROADMAP.md
