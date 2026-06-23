@@ -159,7 +159,9 @@ async function openLayer(layerId, selectAssetCode, meta) {
   meta = meta || {};
   el.classList.add('open'); invalidateMap();
   footer('טוען…');
-  var fc = await GIS.features.getFeatures(layerId);
+  // Fetch ALL features (not the 5000 default) so big layers (e.g. 18k pipes) are
+  // never silently truncated; the load-more bar paginates the RENDER (500/page).
+  var fc = await GIS.features.getFeatures(layerId, 1000000);
   var defs = await GIS.fields.getFields(layerId);
   state.fieldDefs = {}; defs.forEach(function (d) { state.fieldDefs[d.name] = d; });
 
