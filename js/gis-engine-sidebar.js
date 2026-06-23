@@ -353,14 +353,39 @@ async function nearestFeatureAt(ll) {
   return (best && best.d <= tolM) ? best : null;
 }
 
+// Nearest loaded water-meter to a latlng — hit-tested IN MEMORY (no DB query).
+// Meters render as markers UNDER the MVT canvas, which swallows their own click,
+// so a map-level click is the only reliable way to open them.
+function nearestMeterAt(ll) {
+  if (!window.gMap) return null;
+  var pt = [ll.lng, ll.lat], sc = _scaleAt(ll.lat), tolM = _tolMeters(ll), best = null;
+  Object.keys(meterLayers).forEach(function (v) {
+    var grp = meterLayers[v];
+    if (!grp || !grp._feats || !window.gMap.hasLayer(grp)) return;
+    for (var i = 0; i < grp._feats.length; i++) {
+      var c = grp._feats[i].geometry && grp._feats[i].geometry.coordinates;
+      if (!c) continue;
+      var d = _distM(pt, c, sc);
+      if (d <= tolM && (!best || d < best.d)) best = { d: d, f: grp._feats[i] };
+    }
+  });
+  return best;
+}
+
 async function onMapClickPick(e) {
-  // Runs in EVERY renderer mode so a click ALWAYS opens the nearest feature:
+  // Runs in EVERY renderer mode so a click ALWAYS opens something:
   //  • MVT: native VectorGrid canvas clicks are unreliable → this is THE path.
-  //  • GeoJSON: native per-feature clicks also fire, but openPanelFor de-dupes
-  //    the double-open; this still rescues near-misses (within tolerance).
-  //  • probe still unresolved (_mvtMode === null): also works, instead of dying.
+  //  • GeoJSON: native per-feature clicks also fire, but openPanelFor de-dupes.
   // Only yields to a tool that owns map clicks (pick / measure / trace / Geoman).
   if (_toolArmed()) return;
+  // 1) Meters first — in-memory hit-test (no DB), reliable under the MVT canvas.
+  var m = nearestMeterAt(e.latlng);
+  if (m) {
+    if (window.GISPanel && GISPanel.openMeter) GISPanel.openMeter(m.f);
+    else if (window.GISIdentify) GISIdentify.highlight(m.f);
+    return;
+  }
+  // 2) Engine features — cached if available, else an on-demand per-click query.
   var best = nearestVpFeature(e.latlng) || await nearestFeatureAt(e.latlng);
   if (!best) return;
   if (best.f.properties && !best.f.properties.__layer_id) best.f.properties.__layer_id = best.layer.id;
@@ -678,6 +703,7 @@ function buildMeterLayer(feats) {
     });
     mk.addTo(grp);
   });
+  grp._feats = feats || [];   // kept for the map-level click hit-test (markers sit under the MVT canvas)
   return grp;
 }
 
