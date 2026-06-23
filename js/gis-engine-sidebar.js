@@ -40,7 +40,7 @@ css.textContent = `
 #gis-eng-panel .ge-vcount{font-size:10.5px;color:#94a3b8;font-weight:600;}
 #gis-eng-panel .ge-vbody{padding:4px 8px 6px;}
 #gis-eng-panel .ge-village.collapsed .ge-vbody{display:none;}
-#gis-eng-panel .ge-row{display:flex;align-items:center;gap:8px;padding:5px 4px;border-radius:6px;cursor:pointer;font-size:12.5px;color:#1e293b;}
+#gis-eng-panel .ge-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:5px 4px;border-radius:6px;cursor:pointer;font-size:12.5px;color:#1e293b;}
 #gis-eng-panel .ge-row:hover{background:#f1f5f9;}
 #gis-eng-panel .ge-row input{accent-color:#0d3b5e;width:14px;height:14px;cursor:pointer;flex-shrink:0;}
 #gis-eng-panel .ge-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
@@ -59,6 +59,11 @@ css.textContent = `
 @keyframes ge-spin{to{transform:rotate(360deg);}}
 #gis-eng-panel .ge-empty{font-size:11px;color:#94a3b8;padding:8px 2px;line-height:1.5;}
 #gis-eng-panel .ge-refresh{background:none;border:none;cursor:pointer;color:#64748b;font-size:13px;}
+#gis-eng-panel .ge-lc{display:none;flex-basis:100%;align-items:center;gap:8px;padding:0 24px 6px 6px;}
+#gis-eng-panel .ge-lc.on{display:flex;}
+#gis-eng-panel .ge-lc-btn{background:none;border:none;cursor:pointer;color:#64748b;font-size:12px;line-height:1;padding:0 2px;}
+#gis-eng-panel .ge-lc-btn:hover{color:#1a7fc1;}
+#gis-eng-panel .ge-lc .ge-op{flex:1;width:96px;max-width:120px;height:4px;accent-color:#0d3b5e;cursor:pointer;}
 #gis-eng-panel.collapsed .ge-body{display:none;}`;
 document.head.appendChild(css);
 
@@ -466,6 +471,14 @@ function flyToVillage(layers, village) {
   }).catch(function (e) { console.warn('[GISEngineSidebar] flyTo', e); });
 }
 
+// Fly to a single layer's extent ("zoom to layer", ESRI-style TOC action).
+function zoomToLayer(layer) {
+  if (!window.gMap || !layer) return;
+  GIS.layers.extent([layer.id]).then(function (bb) {
+    if (bb) gMap.flyToBounds([[bb[1], bb[0]], [bb[3], bb[2]]], { padding: [40, 40], duration: .8, maxZoom: 18 });
+  }).catch(function (e) { console.warn('[GISEngineSidebar] zoomToLayer', e); });
+}
+
 // Delete an entire village (all its engine layers + their features). Admin only.
 async function deleteVillage(village, layers) {
   if (!window.confirm('למחוק את כל שכבות "' + village + '" מהמנוע? כולל כל הפיצ\'רים. פעולה בלתי הפיכה.')) return;
@@ -510,17 +523,42 @@ function row(layer) {
     if (loaded[layer.id]) loaded[layer.id].invalidate();
   };
 
+  // Per-layer controls (zoom-to / bring-front / send-back / opacity) — ESRI-style
+  // TOC. Shown only while the layer is active; act on its live controller.
+  var lc = document.createElement('div');
+  lc.className = 'ge-lc';
+  lc.innerHTML =
+    '<button class="ge-lc-btn ge-zoom" title="התמקד בשכבה" aria-label="התמקד בשכבה">🔍</button>' +
+    '<button class="ge-lc-btn ge-front" title="הבא לחזית" aria-label="הבא שכבה לחזית">▲</button>' +
+    '<button class="ge-lc-btn ge-back" title="שלח לאחור" aria-label="שלח שכבה לאחור">▼</button>' +
+    '<input type="range" class="ge-op" min="0" max="100" value="' + Math.round((layer._opacity != null ? layer._opacity : 1) * 100) + '" title="שקיפות שכבה" aria-label="שקיפות שכבה">';
+  el.appendChild(lc);
+  lc.querySelector('.ge-zoom').onclick = function (e) { e.stopPropagation(); zoomToLayer(layer); };
+  lc.querySelector('.ge-front').onclick = function (e) { e.stopPropagation(); var c = loaded[layer.id]; if (c && c.toFront) c.toFront(); };
+  lc.querySelector('.ge-back').onclick = function (e) { e.stopPropagation(); var c = loaded[layer.id]; if (c && c.toBack) c.toBack(); };
+  var opSlider = lc.querySelector('.ge-op');
+  opSlider.onclick = function (e) { e.stopPropagation(); };
+  opSlider.oninput = function (e) {
+    e.stopPropagation();
+    layer._opacity = (parseInt(opSlider.value, 10) || 0) / 100;
+    var c = loaded[layer.id]; if (c && c.setOpacity) c.setOpacity(layer._opacity);
+  };
+
   cb.onchange = function () {
     if (cb.checked) {
       cnt.textContent = '…';
+      lc.classList.add('on');
       active[layer.id] = layer; wireMoveend();
       if (loaded[layer.id]) { loaded[layer.id].destroy(); delete loaded[layer.id]; }
       buildController(layer).then(function (ctrl) {
-        if (active[layer.id]) loaded[layer.id] = ctrl;   // still wanted → keep it
-        else ctrl.destroy();                              // toggled off mid-build → drop
-      }).catch(function (e) { cb.checked = false; delete active[layer.id]; cnt.textContent = '✕'; alert('שגיאה: ' + (e && e.message || e)); });
+        if (active[layer.id]) {
+          loaded[layer.id] = ctrl;                       // still wanted → keep it
+          if (layer._opacity != null && layer._opacity !== 1 && ctrl.setOpacity) ctrl.setOpacity(layer._opacity);
+        } else { ctrl.destroy(); }                        // toggled off mid-build → drop
+      }).catch(function (e) { cb.checked = false; lc.classList.remove('on'); delete active[layer.id]; cnt.textContent = '✕'; alert('שגיאה: ' + (e && e.message || e)); });
     } else {
       delete active[layer.id];
+      lc.classList.remove('on');
       if (loaded[layer.id]) { loaded[layer.id].destroy(); delete loaded[layer.id]; }
       cnt.textContent = '';
     }

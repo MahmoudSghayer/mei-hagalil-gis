@@ -77,7 +77,7 @@
   function create(opts) {
     var map = opts.map;
     var group = L.layerGroup().addTo(map);
-    var vg = null, dead = false, ver = 0;
+    var vg = null, dead = false, ver = 0, _op = 1;
 
     function tileUrl() {
       var v = ver ? '&v=' + ver : '';
@@ -104,6 +104,7 @@
         vg.on('load',    function () { opts.onStatus({ loading: false }); });
       }
       group.addLayer(vg);
+      if (_op !== 1 && vg.setOpacity) { try { vg.setOpacity(_op); } catch (e) {} }
     }
 
     function start() { authToken().then(build); }
@@ -121,6 +122,9 @@
       restyle: rebuild,
       destroy: function () { dead = true; if (map.hasLayer(group)) map.removeLayer(group); group.clearLayers(); vg = null; },
       group: group,
+      setOpacity: function (v) { _op = v < 0 ? 0 : v > 1 ? 1 : v; if (vg && vg.setOpacity) { try { vg.setOpacity(_op); } catch (e) {} } },
+      toFront: function () { if (vg && vg.bringToFront) { try { vg.bringToFront(); } catch (e) {} } },
+      toBack: function () { if (vg && vg.bringToBack) { try { vg.bringToBack(); } catch (e) {} } },
       count: function () { return null; },
       isMvt: true
     };

@@ -90,6 +90,14 @@
     var truncCount = 0;         // cached tiles that hit the per-tile cap
     var dead     = false;
     var lastDesired = new Set();
+    var _opacity = 1;   // per-layer opacity (0..1), applied to every feature layer
+
+    // Apply the current layer opacity to one feature layer (vector path or sublayer).
+    function applyOp(l) {
+      if (!l) return;
+      if (l.setStyle) { try { l.setStyle({ opacity: _opacity, fillOpacity: _opacity }); } catch (e) {} }
+      else if (l.setOpacity) { try { l.setOpacity(_opacity); } catch (e) {} }
+    }
 
     function tileZoom() { return clamp(Math.round(map.getZoom()), MIN_TZ, MAX_TZ); }
     function report() {
@@ -128,7 +136,7 @@
         if (ref) { ref.count++; }
         else {
           var ls = opts.makeLayers(f) || [];
-          for (var j = 0; j < ls.length; j++) group.addLayer(ls[j]);
+          for (var j = 0; j < ls.length; j++) { group.addLayer(ls[j]); if (_opacity !== 1) applyOp(ls[j]); }
           refs.set(id, { layers: ls, count: 1 });
         }
       }
@@ -255,6 +263,9 @@
       restyle: restyle,
       destroy: destroy,
       group: group,
+      setOpacity: function (v) { _opacity = clamp(v, 0, 1); group.eachLayer(applyOp); },
+      toFront: function () { try { group.bringToFront(); } catch (e) {} },
+      toBack: function () { try { group.bringToBack(); } catch (e) {} },
       count: function () { return refs.size; },
       tileLimit: TILE_LIMIT
     };
