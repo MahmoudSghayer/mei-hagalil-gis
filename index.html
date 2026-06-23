@@ -37,6 +37,8 @@
   <!-- Error monitoring — inert until a Sentry DSN is pasted below (see js/monitoring.js) -->
   <script>window.GIS_SENTRY_DSN='https://4e3e898b60753c8bcd830f0652568559@o4511586332246016.ingest.de.sentry.io/4511586381398096';</script>
   <script defer src="js/monitoring.js?v=2"></script>
+  <!-- A11y (WCAG 2.1 AA): skip link, modal focus-trap + dialog roles, label associations -->
+  <script defer src="js/a11y.js?v=1"></script>
 </head>
 <body>
 <div id="app">
@@ -50,8 +52,8 @@
         <div class="l">📍 קואורדינטות עכבר</div>
       </div>
     </div>
-    <div style="display:flex;align-items:center;gap:10px">
-      <div id="realtime-dot"></div>
+    <div style="display:flex;align-items:center;gap:10px" role="navigation" aria-label="ניווט וחשבון">
+      <div id="realtime-dot" aria-hidden="true"></div>
       <a href="pages/upload.html" id="upload-link" class="admin-link" style="display:none">
         <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="M8 8l4-4 4 4"/><path d="M5 19h14"/></svg>
         <span>העלאה</span></a>
@@ -94,9 +96,9 @@
   </div>
 
   <div id="main">
-    <div id="map-wrap">
-      <div id="map"></div>
-      <button id="sidebar-collapse-btn" onclick="toggleSidebar()" title="הסתר/הצג סרגל">‹</button>
+    <div id="map-wrap" role="main" aria-label="מפת תשתיות מים וביוב">
+      <div id="map" role="region" aria-label="מפת המערכת — גרור לניווט, גלגל לשינוי זום"></div>
+      <button id="sidebar-collapse-btn" onclick="toggleSidebar()" title="הסתר/הצג סרגל" aria-label="הסתר או הצג את סרגל הצד">‹</button>
       <div id="layer-toggles">
         <button id="cadastral-toggle" class="layer-toggle-btn" onclick="toggleCadastralLayer()">
           <span class="lt-icon">📐</span><span class="lt-label">חלקות</span>
@@ -118,7 +120,7 @@
       </div>
     </div>
 
-    <div id="sidebar">
+    <div id="sidebar" role="complementary" aria-label="שכבות תשתית ותקלות">
       <div class="panel panel-sticky my-incidents-panel" id="my-panel" style="display:none">
         <div class="panel-title"><span class="pt-label"><svg class="pt-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4h6v3H9z"/><path d="M9 13l2 2 4-4"/></svg>תקלות בטיפול שלי</span><span class="count-pill" id="my-count">0</span></div>
         <div id="my-list"></div>
@@ -129,8 +131,8 @@
           <div class="panel-title">
             <span class="pt-label"><svg class="pt-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 8l10 5 10-5-10-5z"/><path d="M2 13l10 5 10-5"/></svg>שכבות תשתית</span>
             <span style="display:flex;align-items:center;gap:6px">
-              <button class="collapse-all-btn" onclick="collapseAll()" title="כווץ הכל"><svg class="cab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 12h8"/></svg></button>
-              <button class="collapse-all-btn" onclick="expandAll()" title="הרחב הכל"><svg class="cab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M12 8v8M8 12h8"/></svg></button>
+              <button class="collapse-all-btn" onclick="collapseAll()" title="כווץ הכל" aria-label="כווץ את כל השכבות"><svg class="cab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 12h8"/></svg></button>
+              <button class="collapse-all-btn" onclick="expandAll()" title="הרחב הכל" aria-label="הרחב את כל השכבות"><svg class="cab-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M12 8v8M8 12h8"/></svg></button>
               <span class="count-pill" id="layer-count">0</span>
             </span>
           </div>
@@ -142,7 +144,7 @@
 
       <div class="panel panel-sticky">
         <div class="panel-title">סינון תקלות לפי ישוב</div>
-        <select id="village-filter" onchange="filterByVillage(this.value)">
+        <select id="village-filter" onchange="filterByVillage(this.value)" aria-label="סינון תקלות לפי ישוב">
           <option value="">כל הישובים</option>
           <option>מגד אל-כרום</option><option>בענה</option><option>דיר אל-אסד</option>
           <option>נחף</option><option>סחנין</option><option>דיר חנא</option><option>עראבה</option>
@@ -163,7 +165,7 @@
     </div>
   </div>
 
-  <div id="statusbar">
+  <div id="statusbar" role="contentinfo">
     <span id="coords">לחץ על המפה</span><span>|</span>
     <span>זום: <span id="zoom-level">11</span></span><span>|</span>
     <span id="basemap-name">Google היברידי HD</span><span>|</span><span>מי הגליל © 2025</span>
@@ -264,7 +266,7 @@
 <!-- On-map editing (Edit tab): Geoman-driven add / move-geometry / delete / snap -->
 <script defer src="js/gis-edit.js?v=5"></script>
 <!-- ArcGIS Pro UI shell (Phase 1): ribbon + Contents pane + scale status bar -->
-<script defer src="js/arcgis-ribbon.js?v=20"></script>
+<script defer src="js/arcgis-ribbon.js?v=21"></script>
 <!-- Field mode (F3/F4): viewer-only minimal shell — create/submit entities + issues -->
 <script defer src="js/gis-field.js?v=8"></script>
 <!-- In-app notifications (F6): topbar bell + Realtime feed -->

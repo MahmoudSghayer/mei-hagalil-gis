@@ -8,10 +8,11 @@
   <link rel="stylesheet" href="../css/pages/login.css"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2/dist/umd/supabase.js" integrity="sha384-nD3dwv4+ZqdYnmZKe/249ImlV04om7xTCcsoSeQYI+RO+XlKPoqAWaJR1M5SJH9p" crossorigin="anonymous"></script>
   <script src="../js/auth.js"></script>
+  <script defer src="../js/a11y.js?v=1"></script>
 </head>
 <body>
 <div class="bg-grid"></div>
-<div class="card">
+<div class="card" role="main">
   <div class="logo-wrap">
     <div class="logo-icon">💧</div>
     <div class="logo-text">מי <span>הגליל</span></div>
@@ -26,7 +27,7 @@
     <label>סיסמה</label>
     <div class="input-wrap">
       <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
-      <button class="eye-btn" onclick="togglePass()" id="eye-btn">👁</button>
+      <button class="eye-btn" onclick="togglePass()" id="eye-btn" type="button" aria-label="הצג או הסתר סיסמה">👁</button>
     </div>
     <a href="#" class="forgot-link" onclick="openFP(event)">שכחתי סיסמה</a>
   </div>

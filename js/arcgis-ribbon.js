@@ -275,7 +275,8 @@
     var b = document.createElement('button');
     // every command renders as a uniform icon-over-label tile (ArcGIS-Pro look)
     b.className = 'ags-cmd ags-cmd-' + (c.size === 'sm' ? 'sm' : 'lg');
-    b.innerHTML = '<span class="ags-ic">' + svgIcon(c.ic) + '</span><span class="ags-lb">' + c.lb + '</span>';
+    b.innerHTML = '<span class="ags-ic" aria-hidden="true">' + svgIcon(c.ic) + '</span><span class="ags-lb">' + c.lb + '</span>';
+    if (!b.getAttribute('aria-label')) b.setAttribute('aria-label', c.lb || c.title || '');
     if (c.disabled) { b.disabled = true; }
     if (c.group) { b.setAttribute('data-group', c.group); }
     b.addEventListener('click', function () { c.act(c, b); });
