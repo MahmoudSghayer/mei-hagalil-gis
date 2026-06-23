@@ -123,20 +123,25 @@ CREATE TRIGGER trg_audit_fields
   FOR EACH ROW EXECUTE FUNCTION public.audit_fields();
 
 -- ── read RPCs now surface __edited_by / __edited_at ──────────────────────
+-- SECURITY DEFINER + one-time auth guard: features RLS (auth.uid() IS NOT NULL)
+-- is otherwise evaluated PER ROW over the whole bbox → statement timeout → HTTP
+-- 500. DEFINER skips per-row RLS; the guard keeps it signed-in-only (identical
+-- access). Mirrors meters_in_bbox. (See gis-engine/sql/fix-features-bbox-timeout.sql)
 CREATE OR REPLACE FUNCTION public.features_in_bbox(
   p_layer_id UUID, p_minlng FLOAT, p_minlat FLOAT, p_maxlng FLOAT, p_maxlat FLOAT,
   p_limit INT DEFAULT 4000)
-RETURNS JSONB LANGUAGE sql STABLE AS $$
+RETURNS JSONB LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT jsonb_build_object('type','FeatureCollection','features',
     COALESCE(jsonb_agg(jsonb_build_object(
       'type','Feature','id',f.id,
       'geometry', ST_AsGeoJSON(f.geometry)::jsonb,
-      'properties', f.properties || jsonb_build_object(
+      'properties', COALESCE(f.properties,'{}'::jsonb) || jsonb_build_object(
         'asset_code',f.asset_code,'__id',f.id,'__layer_id',f.layer_id,
         '__edited_by', COALESCE(p.full_name, p.email), '__edited_at', f.edited_at))), '[]'::jsonb))
   FROM (
     SELECT * FROM public.features
     WHERE layer_id = p_layer_id
+      AND (SELECT auth.uid()) IS NOT NULL
       AND geometry && ST_MakeEnvelope(p_minlng, p_minlat, p_maxlng, p_maxlat, 4326)
     LIMIT p_limit
   ) f
@@ -144,15 +149,20 @@ RETURNS JSONB LANGUAGE sql STABLE AS $$
 $$;
 
 CREATE OR REPLACE FUNCTION public.features_geojson(p_layer_id UUID, p_limit INT DEFAULT 5000)
-RETURNS JSONB LANGUAGE sql STABLE AS $$
+RETURNS JSONB LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   SELECT jsonb_build_object('type','FeatureCollection','features',
     COALESCE(jsonb_agg(jsonb_build_object(
       'type','Feature','id',f.id,
       'geometry', ST_AsGeoJSON(f.geometry)::jsonb,
-      'properties', f.properties || jsonb_build_object(
+      'properties', COALESCE(f.properties,'{}'::jsonb) || jsonb_build_object(
         'asset_code',f.asset_code,'__id',f.id,'__layer_id',f.layer_id,
         '__edited_by', COALESCE(p.full_name, p.email), '__edited_at', f.edited_at))), '[]'::jsonb))
-  FROM (SELECT * FROM public.features WHERE layer_id = p_layer_id LIMIT p_limit) f
+  FROM (
+    SELECT * FROM public.features
+    WHERE layer_id = p_layer_id
+      AND (SELECT auth.uid()) IS NOT NULL
+    LIMIT p_limit
+  ) f
   LEFT JOIN public.profiles p ON p.id = f.edited_by;
 $$;
 
