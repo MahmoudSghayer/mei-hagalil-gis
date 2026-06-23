@@ -232,9 +232,10 @@ function openPanelFor(f, layer) {
 // Tools that own map clicks (crosshair pick, measure, trace, Geoman) are
 // detected and left alone.
 var TOL_PX = 12;           // click / hover pixel tolerance (a bit generous so thin pipes are easy to hit)
-var HOVER_MIN_ZOOM = 15;   // build the hover cache only when zoomed in (low feature counts)
+var HOVER_MIN_ZOOM = 16;   // build the hover cache only when zoomed in close (low feature counts, low DB load)
 var _vpFeats = [];         // [{f, layer}] features currently in view (MVT only)
 var _vpTimer = null;
+var _vpAbort = null;        // AbortController for the in-flight hover-cache build
 
 function _scaleAt(lat) { return { x: 111320 * Math.cos(lat * Math.PI / 180), y: 110540 }; }
 function _distM(a, b, sc) { var dx = (a[0] - b[0]) * sc.x, dy = (a[1] - b[1]) * sc.y; return Math.hypot(dx, dy); }
@@ -280,22 +281,29 @@ function _toolArmed() {
   return false;
 }
 
-// Refresh the viewport feature cache (MVT mode, zoomed in). Debounced.
-function scheduleVpCache() { clearTimeout(_vpTimer); _vpTimer = setTimeout(buildVpCache, 200); }
+// Refresh the viewport feature cache (MVT mode, zoomed in). HEAVILY throttled so
+// rapid pan/zoom can't storm the DB: debounced, ABORTS the prior in-flight build,
+// capped fetch size, and skipped when many layers are on. This cache only powers
+// the hover pointer-cursor + an instant click; the click itself always falls back
+// to a cheap on-demand per-click query, so throttling this never breaks clicking.
+function scheduleVpCache() { clearTimeout(_vpTimer); _vpTimer = setTimeout(buildVpCache, 400); }
 function buildVpCache() {
+  if (_vpAbort) { try { _vpAbort.abort(); } catch (e) {} _vpAbort = null; }  // cancel a prior build (rapid pan/zoom)
   _vpFeats = [];
   if (!_mvtMode || !window.gMap || !window.GIS || !GIS.features || !GIS.features.getInBBox) return;
   if (window.gMap.getZoom() < HOVER_MIN_ZOOM) return;
   var layers = Object.keys(active).map(function (id) { return active[id]; });
-  if (!layers.length) return;
+  if (!layers.length || layers.length > 6) return;   // bound concurrency — skip the hover cache when many layers are on
   var b = window.gMap.getBounds();
   var bbox = { minLng: b.getWest(), minLat: b.getSouth(), maxLng: b.getEast(), maxLat: b.getNorth() };
+  var ac = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+  _vpAbort = ac;
   var acc = [];
   Promise.all(layers.map(function (layer) {
-    return GIS.features.getInBBox(layer.id, bbox, 3000).then(function (fc) {
+    return GIS.features.getInBBox(layer.id, bbox, 1200, ac && ac.signal).then(function (fc) {
       (fc && fc.features || []).forEach(function (f) { if (f.geometry) acc.push({ f: f, layer: layer }); });
     }).catch(function () {});
-  })).then(function () { _vpFeats = acc; });
+  })).then(function () { if (_vpAbort === ac) { _vpFeats = acc; _vpAbort = null; } });
 }
 
 // Nearest cached feature to a latlng within the pixel tolerance (local, instant).
