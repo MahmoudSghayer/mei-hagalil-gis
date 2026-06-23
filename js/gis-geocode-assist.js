@@ -19,27 +19,58 @@
   function key() { return window.GIS_ARCGIS_KEY || ''; }
   function esc(x) { return String(x == null ? '' : x).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
 
-  // Spelling-tolerant Hebrew normaliser (mirrors GIS.meters.normHe): strips
-  // geresh/quotes/hyphens, collapses doubled yod/vav, normalises spaces. So
-  // "מג׳ד אל-כרום" / "מגד אלכרום" / "דייר חנא" all reduce to one comparable form.
-  function normHe(s) {
+  // Letters-only Hebrew normaliser: keep only Hebrew letters (drops spaces,
+  // hyphens, the ASCII apostrophe ArcGIS uses in "מג'ד", bidi/zero-width marks,
+  // geresh/gershayim…), then collapse doubled yod/vav. This makes the dropdown
+  // labels (hyphenated, e.g. "מגד אל-כרום") match ArcGIS City strings (which use
+  // an apostrophe + spaces, e.g. "מג'ד אל כרום") — verified across all 7 villages.
+  function normVillage(s) {
     return String(s == null ? '' : s)
-      .replace(/['"׳״’`\-]/g, '')
+      .replace(/[^א-ת]/g, '')
       .replace(/יי/g, 'י')
-      .replace(/וו/g, 'ו')
-      .replace(/\s+/g, ' ')
-      .trim();
+      .replace(/וו/g, 'ו');
   }
 
-  // First village option that appears in any of the given strings, or null.
+  // First village option whose letters appear in any of the given strings, or null.
   function villageFromText() {
     for (var a = 0; a < arguments.length; a++) {
-      var hay = normHe(arguments[a]); if (!hay) continue;
+      var hay = normVillage(arguments[a]); if (!hay) continue;
       for (var i = 0; i < VILLAGE_OPTS.length; i++) {
-        if (hay.indexOf(normHe(VILLAGE_OPTS[i])) !== -1) return VILLAGE_OPTS[i];
+        var nv = normVillage(VILLAGE_OPTS[i]);
+        if (nv && hay.indexOf(nv) !== -1) return VILLAGE_OPTS[i];
       }
     }
     return null;
+  }
+
+  // Town centres (WGS84) — fallback when reverse-geocode can't name the village
+  // (e.g. a point that resolves only to a highway, as בענה/נחף centres do). Every
+  // incident in this utility's area sits in one of these 7 towns, so nearest-centre
+  // is a strong default the dispatcher can still override. Coords mirror VILLAGES
+  // in js/pages/index.js. Labels match the f-village <option> text exactly (ASCII hyphen).
+  var VILLAGE_CENTERS = [
+    { n: 'מגד אל-כרום', lat: 32.9189, lng: 35.2456 },
+    { n: 'בענה', lat: 32.9485, lng: 35.2617 },
+    { n: 'דיר אל-אסד', lat: 32.9356, lng: 35.2697 },
+    { n: 'נחף', lat: 32.9344, lng: 35.3025 },
+    { n: 'סחנין', lat: 32.8650, lng: 35.2978 },
+    { n: 'דיר חנא', lat: 32.8631, lng: 35.3589 },
+    { n: 'עראבה', lat: 32.8514, lng: 35.3339 }
+  ];
+  function nearestVillage(lng, lat) {
+    var best = null, bd = Infinity;
+    for (var i = 0; i < VILLAGE_CENTERS.length; i++) {
+      var c = VILLAGE_CENTERS[i];
+      var dy = lat - c.lat, dx = (lng - c.lng) * Math.cos(lat * Math.PI / 180);
+      var d = dx * dx + dy * dy;
+      if (d < bd) { bd = d; best = c.n; }
+    }
+    return best;
+  }
+  // Village label for a point: prefer the reverse-geocoded name, else nearest centre.
+  function villageForPoint(lng, lat, info) {
+    var byName = info ? villageFromText(info.city, info.long, info.match) : null;
+    return byName || nearestVillage(lng, lat);
   }
 
   // Reverse-geocode (lng,lat) → { long, match, city } or null on any failure
@@ -67,15 +98,22 @@
 
   // ── incident-modal hook (called from finishIncPick in index.js) ───────────
   async function fillIncident(lat, lng) {
+    // Village can be set with NO network call (nearest centre) — do it immediately
+    // so the form is right even if the key/geocoder is unavailable. Only when the
+    // user hasn't already chosen one.
+    var sel = document.getElementById('f-village');
+    var ours = null;
+    if (sel && !sel.value) { ours = nearestVillage(lng, lat); if (ours) sel.value = ours; }
+
     showHint('🔎 מאתר כתובת…', null);
     var info = await reverseGeocode(lng, lat);
     if (!info) { showHint(null); return; }
 
-    // auto-select the village only if the user hasn't already chosen one
-    var sel = document.getElementById('f-village');
-    if (sel && !sel.value) {
-      var v = villageFromText(info.city, info.long, info.match);
-      if (v) sel.value = v;
+    // Refine to the exact reverse-geocoded village — but never clobber a manual
+    // choice (only overwrite our own nearest-centre default or an empty field).
+    if (sel && (sel.value === '' || sel.value === ours)) {
+      var byName = villageFromText(info.city, info.long, info.match);
+      if (byName) sel.value = byName;
     }
     showHint(info.long || info.match, info.long || info.match);
   }
@@ -108,6 +146,8 @@
   window.GISGeoAssist = {
     reverseGeocode: reverseGeocode,
     villageFromText: villageFromText,
+    villageForPoint: villageForPoint,
+    nearestVillage: nearestVillage,
     fillIncident: fillIncident
   };
 })();
