@@ -236,7 +236,7 @@
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js" integrity="sha384-BIsA8GBrihzaRmijjpqTCihj8D5Vox3hyBFg9sJiTGAEOv6KusZ8QOCKbTFEAfhm" crossorigin="anonymous"></script>
 <!-- Turf is lazy-loaded by gis-analysis.js on first buffer/location-select use (perf) -->
 <script defer src="js/motion-utils.js"></script>
-<script defer src="js/pages/index.js?v=12"></script>
+<script defer src="js/pages/index.js?v=13"></script>
 <script defer src="js/search-feature.js?v=1"></script>
 <!-- GIS Engine layer (UI → GIS.* → Supabase) + attribute panel + map control -->
 <script defer src="gis-engine/core.js?v=2"></script>
@@ -276,6 +276,8 @@
 <script defer src="js/gis-notifications.js?v=1"></script>
 <!-- Flow-direction arrows (L4a): sewer arrows from manhole invert levels (lower invert = downstream) -->
 <script defer src="js/gis-flow.js?v=3"></script>
+<!-- Geocode assist (Phase 3): ArcGIS reverse-geocode on incident pick → auto-village + address hint -->
+<script defer src="js/gis-geocode-assist.js?v=1"></script>
 <!-- PERF: ribbon-only tools load AFTER first paint (idle). The ribbon already
      guards every action ("עדיין נטען"), so a click in the first ~1s degrades
      gracefully, then works. Keeps ~200KB of JS off the critical load path. -->

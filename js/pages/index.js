@@ -917,6 +917,8 @@ function finishIncPick(lat,lng){
   document.getElementById('f-lat').value=lat.toFixed(5);
   document.getElementById('f-lng').value=lng.toFixed(5);
   document.getElementById('inc-modal-bg').classList.add('open');
+  // Phase 3: ArcGIS reverse-geocode the picked point → auto-select village + address hint (graceful if module/key absent).
+  if(window.GISGeoAssist && GISGeoAssist.fillIncident) GISGeoAssist.fillIncident(lat,lng);
 }
 function cancelIncPick(){ if(!gIncPicking)return; _exitIncPick(); }
 function _exitIncPick(){
@@ -939,7 +941,7 @@ function showIncPickHint(){
 function hideIncPickHint(){ var h=document.getElementById('inc-pick-hint'); if(h)h.style.display='none'; }
 // Kept for compatibility / programmatic opening with the last clicked point.
 function openIncModal(){ startIncPick(); }
-function closeIncModal(){document.getElementById('inc-modal-bg').classList.remove('open');}
+function closeIncModal(){document.getElementById('inc-modal-bg').classList.remove('open');var h=document.getElementById('inc-addr-hint');if(h)h.remove();}
 
 async function submitIncident(){var title=document.getElementById('f-title').value.trim(),village=document.getElementById('f-village').value,priority=document.getElementById('f-priority').value,desc=document.getElementById('f-desc').value.trim(),lat=parseFloat(document.getElementById('f-lat').value),lng=parseFloat(document.getElementById('f-lng').value);if(!title||!village||isNaN(lat)||isNaN(lng)){showToast('אנא מלא את כל השדות');return;}var rec={title:title,village:village,priority:priority,description:desc,lat:lat,lng:lng,status:'open',created_by:gUser.id};var res=await gSb.from('incidents').insert([rec]).select().single();if(res.error){showToast('שגיאה: '+res.error.message);return;}await logAction(res.data.id,'created',null,res.data);closeIncModal();['f-title','f-village','f-desc','f-lat','f-lng'].forEach(function(id){document.getElementById(id).value='';});document.getElementById('f-priority').value='medium';showToast('✅ נפתחה');}
 
