@@ -205,7 +205,17 @@ function hideOldPanel() {
   if (oldList) { var p = oldList.closest('.panel'); if (p) p.style.display = 'none'; }
 }
 
+var _lastPanelKey = null, _lastPanelTs = 0;
 function openPanelFor(f, layer) {
+  // De-dupe a double-open when BOTH the native feature click and the map-level
+  // identify fire for the same physical click (GeoJSON mode). A genuine re-click
+  // of the same feature later (>350ms) still opens normally.
+  var idp = f && f.properties && (f.properties.__id != null ? f.properties.__id : f.properties.asset_code);
+  if (idp != null && layer) {
+    var key = layer.id + ':' + idp, now = Date.now();
+    if (key === _lastPanelKey && now - _lastPanelTs < 350) return;
+    _lastPanelKey = key; _lastPanelTs = now;
+  }
   if (window.GISIdentify) GISIdentify.highlight(f);
   if (window.GISPanel) window.GISPanel.open(f, { layerId: layer.id, sub: layer.name.split(' · ')[0] });
   else if (window.GISTable) GISTable.openLayer(layer.id, f.properties && f.properties.asset_code, { title: '📋 ' + catLabel(layer._cat), sub: layer.name.split(' · ')[0] });
@@ -221,7 +231,7 @@ function openPanelFor(f, layer) {
 // feature's panel. Same nearest-feature math as gis-find / gis-network-trace.
 // Tools that own map clicks (crosshair pick, measure, trace, Geoman) are
 // detected and left alone.
-var TOL_PX = 9;            // click / hover pixel tolerance
+var TOL_PX = 12;           // click / hover pixel tolerance (a bit generous so thin pipes are easy to hit)
 var HOVER_MIN_ZOOM = 15;   // build the hover cache only when zoomed in (low feature counts)
 var _vpFeats = [];         // [{f, layer}] features currently in view (MVT only)
 var _vpTimer = null;
@@ -305,11 +315,13 @@ async function nearestFeatureAt(ll) {
   var layers = Object.keys(active).map(function (id) { return active[id]; });
   if (!layers.length) return null;
   var pt = [ll.lng, ll.lat], sc = _scaleAt(ll.lat), tolM = _tolMeters(ll);
-  var dLng = tolM / sc.x, dLat = tolM / sc.y;
+  // Fetch a wider box than the tolerance so a feature whose nearest point sits just
+  // past the click is still a candidate; acceptance is still gated by tolM below.
+  var fetchM = tolM * 2.5, dLng = fetchM / sc.x, dLat = fetchM / sc.y;
   var bbox = { minLng: ll.lng - dLng, minLat: ll.lat - dLat, maxLng: ll.lng + dLng, maxLat: ll.lat + dLat };
   var best = null;
   await Promise.all(layers.map(function (layer) {
-    return GIS.features.getInBBox(layer.id, bbox, 400).then(function (fc) {
+    return GIS.features.getInBBox(layer.id, bbox, 1500).then(function (fc) {
       (fc && fc.features || []).forEach(function (f) {
         var d = _featDistM(f.geometry, pt, sc);
         if (isFinite(d) && (!best || d < best.d)) best = { d: d, f: f, layer: layer };
@@ -320,8 +332,13 @@ async function nearestFeatureAt(ll) {
 }
 
 async function onMapClickPick(e) {
-  // _mvtMode = probe result: 'edge'/'rpc' (MVT) | false (GeoJSON, native clicks) | null (unprobed).
-  if (!_mvtMode || _toolArmed()) return;
+  // Runs in EVERY renderer mode so a click ALWAYS opens the nearest feature:
+  //  • MVT: native VectorGrid canvas clicks are unreliable → this is THE path.
+  //  • GeoJSON: native per-feature clicks also fire, but openPanelFor de-dupes
+  //    the double-open; this still rescues near-misses (within tolerance).
+  //  • probe still unresolved (_mvtMode === null): also works, instead of dying.
+  // Only yields to a tool that owns map clicks (pick / measure / trace / Geoman).
+  if (_toolArmed()) return;
   var best = nearestVpFeature(e.latlng) || await nearestFeatureAt(e.latlng);
   if (!best) return;
   if (best.f.properties && !best.f.properties.__layer_id) best.f.properties.__layer_id = best.layer.id;
@@ -461,14 +478,16 @@ function villageBlock(village, layers) {
 
 function flyToVillage(layers, village) {
   if (!window.gMap) return;
-  if (!layers || !layers.length) {
-    var c = VILLAGE_CENTERS[village];
-    if (c) gMap.flyTo([c.lat, c.lng], 15, { duration: .8 });
-    return;
+  // INSTANT: fly straight to the known village centre — no slow extent RPC. All 7
+  // utility villages are in VILLAGE_CENTERS; only an unknown village (rare) falls
+  // back to the layer-extent query.
+  var c = VILLAGE_CENTERS[village];
+  if (c) { gMap.flyTo([c.lat, c.lng], 15, { duration: .6 }); return; }
+  if (layers && layers.length) {
+    GIS.layers.extent(layers.map(function (l) { return l.id; })).then(function (bb) {
+      if (bb) gMap.flyToBounds([[bb[1], bb[0]], [bb[3], bb[2]]], { padding: [40, 40], duration: .6, maxZoom: 17 });
+    }).catch(function (e) { console.warn('[GISEngineSidebar] flyTo', e); });
   }
-  GIS.layers.extent(layers.map(function (l) { return l.id; })).then(function (bb) {
-    if (bb) gMap.flyToBounds([[bb[1], bb[0]], [bb[3], bb[2]]], { padding: [40, 40], duration: .8, maxZoom: 17 });
-  }).catch(function (e) { console.warn('[GISEngineSidebar] flyTo', e); });
 }
 
 // Fly to a single layer's extent ("zoom to layer", ESRI-style TOC action).
