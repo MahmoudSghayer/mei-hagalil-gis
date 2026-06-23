@@ -101,7 +101,7 @@
     try {
       var url = 'https://geocode-api.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates' +
         '?f=json&singleLine=' + encodeURIComponent(q) +
-        '&countryCode=ISL&maxLocations=' + ADDR_MAX +
+        '&countryCode=ISR&maxLocations=' + ADDR_MAX +
         '&location=35.30,32.92&outFields=Match_addr&langCode=he&token=' + encodeURIComponent(key);
       var resp = await fetch(url, { signal: ctrl.signal });
       clearTimeout(to);

@@ -303,13 +303,23 @@ function applyBasemap(key) {
     ];
   } else if (key === 'arcgis') {
     // ArcGIS Static Basemap Tiles (Esri cartography, Hebrew labels) — 512px raster, no extra libs.
-    // Needs window.GIS_ARCGIS_KEY; degrades to Google streets if the key is absent.
+    // Needs window.GIS_ARCGIS_KEY AND the "Static basemap tiles" privilege on the key. If the key is
+    // absent, or the tiles 403/fail (missing privilege / expired key), self-heal back to Google streets.
     if (!window.GIS_ARCGIS_KEY) { applyBasemap('streets'); return; }
     name = 'Esri רחוב'; isDark = false;
-    gActiveBasemapLayers = [
-      L.tileLayer('https://static-map-tiles-api.arcgis.com/arcgis/rest/services/static-basemap-tiles-service/v1/arcgis/navigation/static/tile/{z}/{y}/{x}?language=he&token=' + window.GIS_ARCGIS_KEY,
-        { tileSize:512, zoomOffset:-1, maxZoom:20, maxNativeZoom:19, attribution:'Powered by Esri' })
-    ];
+    var esriLayer = L.tileLayer('https://static-map-tiles-api.arcgis.com/arcgis/rest/services/static-basemap-tiles-service/v1/arcgis/navigation/static/tile/{z}/{y}/{x}?language=he&token=' + window.GIS_ARCGIS_KEY,
+      { tileSize:512, zoomOffset:-1, maxZoom:20, maxNativeZoom:19, attribution:'Powered by Esri' });
+    var esriOk = false, esriErrs = 0;
+    esriLayer.on('tileload', function() { esriOk = true; });
+    esriLayer.on('tileerror', function() {
+      if (esriOk || gCurrentBasemap !== 'arcgis') return;     // a real tile loaded, or user already switched away
+      if (++esriErrs >= 3) {                                   // none loaded → service unavailable for this key
+        esriLayer.off('tileerror');
+        if (typeof showToast === 'function') showToast('מפת Esri אינה זמינה (חסרה הרשאת Static basemap tiles במפתח) — חזרה לרחובות');
+        applyBasemap('streets');
+      }
+    });
+    gActiveBasemapLayers = [esriLayer];
   }
   gActiveBasemapLayers.forEach(function(l) { l.addTo(gMap); l.bringToBack(); });
   document.body.classList.toggle('dark-basemap', !!isDark);
