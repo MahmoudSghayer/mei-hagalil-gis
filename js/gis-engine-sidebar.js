@@ -245,6 +245,11 @@ var HOVER_MIN_ZOOM = 16;   // build the hover cache only when zoomed in close (l
 var _vpFeats = [];         // [{f, layer}] features currently in view (MVT only)
 var _vpTimer = null;
 var _vpAbort = null;        // AbortController for the in-flight hover-cache build
+// OFF by default: pre-fetching features on every pan starves Postgres (so the MVT
+// tile generator slows → blurry tiles → 525). Clicks still work via an on-demand
+// per-click query (nearestFeatureAt). Flip to true only if you want the hover
+// pointer-cursor back AND your DB has headroom.
+var HOVER_CACHE = false;
 
 function _scaleAt(lat) { return { x: 111320 * Math.cos(lat * Math.PI / 180), y: 110540 }; }
 function _distM(a, b, sc) { var dx = (a[0] - b[0]) * sc.x, dy = (a[1] - b[1]) * sc.y; return Math.hypot(dx, dy); }
@@ -299,7 +304,7 @@ function scheduleVpCache() { clearTimeout(_vpTimer); _vpTimer = setTimeout(build
 function buildVpCache() {
   if (_vpAbort) { try { _vpAbort.abort(); } catch (e) {} _vpAbort = null; }  // cancel a prior build (rapid pan/zoom)
   _vpFeats = [];
-  if (!_mvtMode || !window.gMap || !window.GIS || !GIS.features || !GIS.features.getInBBox) return;
+  if (!HOVER_CACHE || !_mvtMode || !window.gMap || !window.GIS || !GIS.features || !GIS.features.getInBBox) return;
   if (window.gMap.getZoom() < HOVER_MIN_ZOOM) return;
   var layers = Object.keys(active).map(function (id) { return active[id]; });
   if (!layers.length || layers.length > 6) return;   // bound concurrency — skip the hover cache when many layers are on
