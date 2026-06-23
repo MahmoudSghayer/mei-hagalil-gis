@@ -92,6 +92,8 @@
       vg = L.vectorGrid.protobuf(tileUrl(), {
         rendererFactory: L.canvas.tile,
         interactive: true,
+        maxNativeZoom: 19,   // deepest tiles we fetch; VectorGrid OVERZOOMS (scales) these beyond it
+        maxZoom: 22,         // keep the layer attached past z18 (it was vanishing) — vectors scale cleanly
         fetchOptions: fetchOptions,
         getFeatureId: function (f) { return opts.getFeatureId ? opts.getFeatureId(f.properties) : f.properties.__id; },
         vectorTileLayerStyles: {
