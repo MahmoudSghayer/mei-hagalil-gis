@@ -127,6 +127,10 @@
           { ic: 'node', lb: 'הצג חיבורים', act: meterShowConnectors }
         ] }
       ] },
+      { label: 'ניתוב', cmds: [
+        { ic: 'locate', lb: 'אזור שירות', size: 'lg', act: function () { if (window.GISRouting) GISRouting.startServiceArea(); else toast('מנוע הניתוב עדיין נטען…'); } },
+        { ic: 'street', lb: 'מסלול נסיעה', act: function () { if (window.GISRouting) GISRouting.startDirections(); else toast('מנוע הניתוב עדיין נטען…'); } }
+      ] },
       { label: 'ניקוי', cmds: [
         { ic: 'clear', lb: 'נקה תוצאה', size: 'lg', act: traceClearAll }
       ] }
@@ -161,7 +165,7 @@
   function traceIsolation() { if (window.GISTrace) { window.GISTrace.startIsolation(); } else { toast('מנוע הרשת עדיין נטען…'); } }
   function traceConnected() { if (window.GISTrace) { window.GISTrace.startConnected(); } else { toast('מנוע הרשת עדיין נטען…'); } }
   function traceClear() { if (window.GISTrace) { window.GISTrace.clear(); } }
-  function traceClearAll() { if (window.GISTrace) { window.GISTrace.clear(); } if (window.GISMeterConnect) { window.GISMeterConnect.clear(); } if (window.GISEdit) { window.GISEdit.disarm(); } }
+  function traceClearAll() { if (window.GISTrace) { window.GISTrace.clear(); } if (window.GISMeterConnect) { window.GISMeterConnect.clear(); } if (window.GISEdit) { window.GISEdit.disarm(); } if (window.GISRouting) { window.GISRouting.clear(); } }
   function meterAutoConnect() { if (window.GISMeterConnect) { window.GISMeterConnect.run(); } else { toast('מנוע חיבור המונים עדיין נטען…'); } }
   function meterEditConnect() { if (window.GISMeterConnect) { window.GISMeterConnect.editArm(); } else { toast('מנוע חיבור המונים עדיין נטען…'); } }
   function meterShowConnectors() { if (window.GISMeterConnect) { window.GISMeterConnect.toggleConnectors(); } else { toast('מנוע חיבור המונים עדיין נטען…'); } }
