@@ -15,6 +15,11 @@
 const KV_URL = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
 const KV_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
+// Surface mis-configuration loudly (once each) instead of silently disabling
+// protection — a "rate limiting is off" outage should be visible in logs.
+let _warnedNoKv = false;
+let _warnedKvErr = false;
+
 // Best-effort client IP from Vercel's x-forwarded-for (first hop = real client).
 function clientIp(req) {
   const xff = req.headers && req.headers['x-forwarded-for'];
@@ -34,7 +39,13 @@ async function kv(cmd) {
 
 // Fixed-window counter. Returns { ok:true } or { ok:false, retryAfter:<seconds> }.
 async function check(bucket, id, limit, windowSec) {
-  if (!KV_URL || !KV_TOKEN) return { ok: true };
+  if (!KV_URL || !KV_TOKEN) {
+    if (!_warnedNoKv) {
+      _warnedNoKv = true;
+      console.warn('[ratelimit] KV not configured (KV_REST_API_URL/TOKEN absent) — rate limiting is DISABLED (fail-open). Attach a Vercel KV / Upstash Redis store to enable enforcement.');
+    }
+    return { ok: true };
+  }
   const key = `rl:${bucket}:${id}`;
   try {
     const n = await kv(['INCR', key]);
@@ -45,7 +56,11 @@ async function check(bucket, id, limit, windowSec) {
     }
     return { ok: true };
   } catch (e) {
-    return { ok: true }; // fail open
+    if (!_warnedKvErr) {
+      _warnedKvErr = true;
+      console.warn('[ratelimit] KV check failed (' + (e && e.message || e) + ') — failing OPEN for this request. Verify the KV store is reachable.');
+    }
+    return { ok: true }; // fail open — a limiter outage must never take the API down
   }
 }
 

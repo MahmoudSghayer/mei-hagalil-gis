@@ -1,0 +1,27 @@
+name: E2E (Playwright)
+
+# Runs against the deployed app. Manual + weekly so it never blocks per-push CI
+# or deploys. RBAC specs auto-skip unless the MGIS_VIEWER_* secrets are set.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'   # Mondays 06:00 UTC
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install Playwright
+        run: |
+          npm i -D @playwright/test@^1.49
+          npx playwright install --with-deps chromium
+      - name: Run E2E
+        env:
+          BASE_URL: https://mei-hagalil-gis.vercel.app
+          MGIS_VIEWER_EMAIL: ${{ secrets.MGIS_VIEWER_EMAIL }}
+          MGIS_VIEWER_PASSWORD: ${{ secrets.MGIS_VIEWER_PASSWORD }}
+        run: npx playwright test
