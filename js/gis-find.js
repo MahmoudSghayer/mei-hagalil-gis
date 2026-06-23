@@ -208,6 +208,17 @@
   function clearHighlight() {
     if (_hi) { try { window.gMap.removeLayer(_hi); } catch (e) {} _hi = null; }
     if (_addrMarker) { try { window.gMap.removeLayer(_addrMarker); } catch (e) {} _addrMarker = null; }
+    var chip = document.getElementById('gis-find-clearchip'); if (chip) chip.remove();
+  }
+  // Always-visible "remove mark" chip so a located highlight can be cleared at any
+  // time — even after the search card is closed (the bug: the mark used to stick).
+  function showClearChip() {
+    if (document.getElementById('gis-find-clearchip')) return;
+    var chip = document.createElement('button');
+    chip.id = 'gis-find-clearchip'; chip.type = 'button';
+    chip.textContent = '✕ הסר סימון'; chip.title = 'הסר את הסימון מהמפה';
+    chip.onclick = clearHighlight;
+    document.body.appendChild(chip);
   }
   // Bold, pulsing, distinct-colour marker so the picked feature pops out from the
   // small same-colour dots around it. Persists until the next pick (or clear).
@@ -226,6 +237,7 @@
         pointToLayer: function (f, ll) { return L.circleMarker(ll, { pane: pane, radius: 11, color: '#7c3aed', weight: 4, fillColor: '#a855f7', fillOpacity: 0.9 }); }
       }).addTo(window.gMap);
     }
+    showClearChip();
   }
 
   function pick(r) {
@@ -237,6 +249,7 @@
       _addrMarker = L.circleMarker([r.lat, r.lng], { pane: pane, radius: 10, color: '#dc2626', weight: 3, fillColor: '#fff', fillOpacity: 1 })
         .bindTooltip('📍 ' + esc(r.label), { permanent: false, direction: 'top' });
       _addrMarker.addTo(window.gMap);
+      showClearChip();
       return;
     }
     var g = r.f.geometry; if (!g) { toast('לפריט אין גאומטריה'); return; }
@@ -277,7 +290,9 @@
       '.gis-find-pulse{width:28px;height:28px;border-radius:50%;background:rgba(124,58,237,.35);border:3px solid #7c3aed;animation:gis-find-pulse 1.4s infinite}' +
       '@keyframes gis-find-pulse{0%{box-shadow:0 0 0 0 rgba(124,58,237,.55)}70%{box-shadow:0 0 0 18px rgba(124,58,237,0)}100%{box-shadow:0 0 0 0 rgba(124,58,237,0)}}' +
       '.gis-find-hilabel{background:#7c3aed;color:#fff;border:none;font-weight:700;font-size:11px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.25)}' +
-      '.gis-find-hilabel:before{border-top-color:#7c3aed}';
+      '.gis-find-hilabel:before{border-top-color:#7c3aed}' +
+      '#gis-find-clearchip{position:fixed;bottom:48px;left:50%;transform:translateX(-50%);z-index:1250;background:#7c3aed;color:#fff;border:none;border-radius:999px;padding:7px 16px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(124,58,237,.45);font-family:inherit;direction:rtl}' +
+      '#gis-find-clearchip:hover{background:#6d28d9}';
     document.head.appendChild(s);
   })();
 

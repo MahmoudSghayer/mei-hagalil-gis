@@ -165,7 +165,7 @@
   function traceIsolation() { if (window.GISTrace) { window.GISTrace.startIsolation(); } else { toast('מנוע הרשת עדיין נטען…'); } }
   function traceConnected() { if (window.GISTrace) { window.GISTrace.startConnected(); } else { toast('מנוע הרשת עדיין נטען…'); } }
   function traceClear() { if (window.GISTrace) { window.GISTrace.clear(); } }
-  function traceClearAll() { if (window.GISTrace) { window.GISTrace.clear(); } if (window.GISMeterConnect) { window.GISMeterConnect.clear(); } if (window.GISEdit) { window.GISEdit.disarm(); } if (window.GISRouting) { window.GISRouting.clear(); } }
+  function traceClearAll() { if (window.GISTrace) { window.GISTrace.clear(); } if (window.GISMeterConnect) { window.GISMeterConnect.clear(); } if (window.GISEdit) { window.GISEdit.disarm(); } if (window.GISRouting) { window.GISRouting.clear(); } if (window.GISFind && window.GISFind.clearHighlight) { window.GISFind.clearHighlight(); } }
   function meterAutoConnect() { if (window.GISMeterConnect) { window.GISMeterConnect.run(); } else { toast('מנוע חיבור המונים עדיין נטען…'); } }
   function meterEditConnect() { if (window.GISMeterConnect) { window.GISMeterConnect.editArm(); } else { toast('מנוע חיבור המונים עדיין נטען…'); } }
   function meterShowConnectors() { if (window.GISMeterConnect) { window.GISMeterConnect.toggleConnectors(); } else { toast('מנוע חיבור המונים עדיין נטען…'); } }
