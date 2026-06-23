@@ -22,6 +22,7 @@
     var c = window.gMap.getCenter();
     var picked = { lat: c.lat, lng: c.lng };   // default = map center; updated by map pick
     var marker = null;
+    var _addrToken = 0;
     var opts = viewers.length
       ? viewers.map(function (v) { return '<option value="' + v.id + '">' + esc(v.full_name || v.email) + '</option>'; }).join('')
       : '';
@@ -43,6 +44,7 @@
         '<button id="gtsk-pick" style="white-space:nowrap;padding:8px 10px;border:1px solid #0d3b5e;border-radius:8px;background:#eef4fb;color:#0d3b5e;cursor:pointer;font-weight:600">📍 בחר על המפה</button>' +
       '</div>' +
       '<div style="font-size:11px;color:#94a3b8;margin-top:4px">ברירת מחדל: מרכז המפה. לחץ "בחר על המפה" ואז לחץ על הנקודה המדויקת.</div>' +
+      '<div id="gtsk-addr" style="margin-top:6px"></div>' +
       '<div style="display:flex;gap:8px;margin-top:14px"><button id="gtsk-save" style="flex:1;padding:10px;border:none;border-radius:9px;background:#0d3b5e;color:#fff;font-weight:700;cursor:pointer">שמור והקצה</button>' +
       '<button id="gtsk-cancel" style="padding:10px 16px;border:1px solid #cbd5e1;border-radius:9px;background:#f1f5f9;cursor:pointer">ביטול</button></div></div></div>';
     document.body.appendChild(bg);
@@ -50,6 +52,30 @@
     function close() { if (marker) { try { window.gMap.removeLayer(marker); } catch (e) {} marker = null; } bg.remove(); }
     bg.querySelector('#gtsk-x').onclick = close; bg.querySelector('#gtsk-cancel').onclick = close;
     bg.onclick = function (e) { if (e.target === bg) close(); };
+
+    // Phase 3: reverse-geocode the picked point → street address + an opt-in
+    // "add to description" so the assigned field crew gets a navigable address.
+    // Token-guarded so a slow response for an old point can't overwrite a newer pick.
+    async function refreshAddr() {
+      var my = ++_addrToken;
+      var host = bg.querySelector('#gtsk-addr'); if (!host) return;
+      if (!window.GISGeoAssist || !window.GISGeoAssist.reverseGeocode) { host.innerHTML = ''; return; }
+      host.innerHTML = '<span style="font-size:11px;color:#94a3b8">🔎 מאתר כתובת…</span>';
+      var info = await window.GISGeoAssist.reverseGeocode(picked.lng, picked.lat);
+      if (my !== _addrToken || !host.isConnected) return;
+      var addr = (info && (info.long || info.match)) || '';
+      if (!addr) { host.innerHTML = ''; return; }
+      host.innerHTML = '<div style="padding:7px 10px;background:#eff4ff;border:1px solid #c7d7fe;border-radius:7px;font-size:12px;color:#1e3a8a;display:flex;align-items:center;gap:8px">' +
+        '<span style="flex:1">📍 ' + esc(addr) + '</span>' +
+        '<button type="button" id="gtsk-addr-add" style="background:#2563eb;color:#fff;border:none;border-radius:5px;padding:3px 9px;cursor:pointer;font-size:12px;flex:none">➕ הוסף לתיאור</button></div>';
+      var ab = bg.querySelector('#gtsk-addr-add');
+      if (ab) ab.onclick = function () {
+        var d = bg.querySelector('#gtsk-desc'); var cur = (d.value || '').trim();
+        if (cur.indexOf(addr) === -1) d.value = cur ? (cur + ' · 📍 ' + addr) : ('📍 ' + addr);
+        ab.disabled = true; ab.textContent = '✓ נוסף';
+      };
+    }
+    refreshAddr();
 
     // map-click location picker — hides the dialog, lets the engineer click the
     // exact spot, drops a marker, then reopens. Esc cancels.
@@ -64,6 +90,7 @@
         marker = L.marker(e.latlng).addTo(window.gMap);
         var loc = bg.querySelector('#gtsk-loc'); if (loc) loc.value = picked.lat.toFixed(5) + ', ' + picked.lng.toFixed(5);
         cleanup();
+        refreshAddr();
       }
       function onEsc(ev) { if (ev.key === 'Escape') cleanup(); }
       window.gMap.on('click', onPick);
