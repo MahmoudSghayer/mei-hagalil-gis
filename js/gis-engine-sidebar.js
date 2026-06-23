@@ -67,6 +67,15 @@ css.textContent = `
 #gis-eng-panel.collapsed .ge-body{display:none;}`;
 document.head.appendChild(css);
 
+// Non-blocking error toast — NEVER a blocking alert() (a backend hiccup must not
+// spam modal "OK" dialogs). Uses the app toast if present, else the #toast node.
+function geToast(msg, type) {
+  if (typeof window.showToast === 'function') { try { window.showToast(msg, type || 'error'); return; } catch (e) {} }
+  var t = document.getElementById('toast');
+  if (t) { t.textContent = msg; t.className = (type || 'error') + ' show'; clearTimeout(geToast._t); geToast._t = setTimeout(function () { t.className = t.className.replace('show', '').trim(); }, 6000); return; }
+  if (window.console) console.error('[GISEngineSidebar]', msg);
+}
+
 var loaded = {};        // layerId → GISTileLoader controller (on the map)
 var active = {};        // layerId → layer (toggled on → reload on pan/zoom)
 var openVillages = {};  // villageName → bool (expanded)
@@ -514,7 +523,7 @@ async function deleteVillage(village, layers) {
     if (loaded[id]) { loaded[id].destroy(); delete loaded[id]; }
     delete active[id];
     try { await GIS.layers.deleteLayer(id); }
-    catch (e) { alert('שגיאה במחיקה: ' + e.message); break; }
+    catch (e) { geToast('שגיאה במחיקה: ' + (e && e.message || e)); break; }
   }
   render();
 }
@@ -544,7 +553,7 @@ function row(layer) {
     var newColor = picker.value;
     layer.color = newColor;
     try { await GIS.layers.setColor(layer.id, newColor); }
-    catch (e) { alert('שגיאה בשמירת צבע: ' + e.message); return; }
+    catch (e) { geToast('שגיאה בשמירת צבע: ' + (e && e.message || e)); return; }
     // Re-render the live tiles with the new colour (no network round-trip is
     // possible from cached layers, so invalidate refetches the current view).
     if (loaded[layer.id]) loaded[layer.id].invalidate();
@@ -582,7 +591,7 @@ function row(layer) {
           loaded[layer.id] = ctrl;                       // still wanted → keep it
           if (layer._opacity != null && layer._opacity !== 1 && ctrl.setOpacity) ctrl.setOpacity(layer._opacity);
         } else { ctrl.destroy(); }                        // toggled off mid-build → drop
-      }).catch(function (e) { cb.checked = false; lc.classList.remove('on'); delete active[layer.id]; cnt.textContent = '✕'; alert('שגיאה: ' + (e && e.message || e)); });
+      }).catch(function (e) { cb.checked = false; lc.classList.remove('on'); delete active[layer.id]; cnt.textContent = '✕'; geToast('שגיאה בטעינת שכבה: ' + (e && e.message || e)); });
     } else {
       delete active[layer.id];
       lc.classList.remove('on');
@@ -712,7 +721,7 @@ function meterVillageRow(village) {
         cnt.textContent = meterLayers[village]._count;
       } catch (e) {
         cb.checked = false; cnt.textContent = '✕';
-        alert('שגיאה בטעינת מדי מים: ' + e.message);
+        geToast('שגיאה בטעינת מדי מים — ייתכן עומס זמני בשרת, נסה שוב: ' + (e && e.message || e));
       } finally { cb.disabled = false; }
     } else {
       if (meterLayers[village]) window.gMap.removeLayer(meterLayers[village]);
