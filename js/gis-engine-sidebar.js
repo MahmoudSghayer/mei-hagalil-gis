@@ -138,12 +138,15 @@ function createLoader(layer) {
 // Tiles are SLIM: they carry only the symbology inputs (LineDiamet/Status/
 // ValveDiame) + __id/asset_code. The full attribute row is loaded on click.
 function createMvtLayer(layer) {
-  var color = colorFor(layer);
   return GISMvtLayer.create({
     map: window.gMap,
     layerId: layer.id,
     getFeatureId: function (p) { return p.__id; },
     style: function (p, zoom) {
+      // Read the colour LIVE per render. Capturing it once at create-time meant a
+      // recolour (layer.color mutated → invalidate→rebuild) had no visible effect
+      // in MVT mode — the rebuilt tiles re-ran this closure with the OLD colour.
+      var color = colorFor(layer);
       var f = { properties: p };   // p already has LineDiamet/Status/ValveDiame
       var base = (window.GISSymbology && GISSymbology.lineStyle) ? GISSymbology.lineStyle(layer, f, color) : { color: color, weight: 3, opacity: .9 };
       // Zoom-scaled point radius so dense layers don't blob at low zoom (lines are
