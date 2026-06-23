@@ -90,7 +90,32 @@
     } catch (e) { return { items: [] }; }
   }
 
-  async function searchAddresses(q) {
+  // ArcGIS Geocoding (primary) — better Hebrew/Israel address matching. Returns null when the
+  // key is missing or the service errors (bad token / referrer / network) so the caller falls
+  // back to Nominatim; returns [] for a successful search with no candidates.
+  async function geocodeArcGIS(q) {
+    var key = window.GIS_ARCGIS_KEY;
+    if (!key) return null;
+    var ctrl = new AbortController();
+    var to = setTimeout(function () { ctrl.abort(); }, 4500);
+    try {
+      var url = 'https://geocode-api.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates' +
+        '?f=json&singleLine=' + encodeURIComponent(q) +
+        '&countryCode=ISL&maxLocations=' + ADDR_MAX +
+        '&location=35.30,32.92&outFields=Match_addr&langCode=he&token=' + encodeURIComponent(key);
+      var resp = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(to);
+      if (!resp.ok) return null;
+      var data = await resp.json();
+      if (!data || data.error) return null;        // e.g. 498 invalid token / 403 referrer
+      return (data.candidates || []).map(function (c) {
+        return { kind: 'address', lat: c.location.y, lng: c.location.x, label: (c.address || '').split(',').slice(0, 3).join(',') };
+      });
+    } catch (e) { clearTimeout(to); return null; }
+  }
+
+  // Nominatim (fallback) — used when ArcGIS is unavailable or returns no candidates.
+  async function geocodeNominatim(q) {
     try {
       var url = 'https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(q) +
         '&countrycodes=il&accept-language=he&limit=' + ADDR_MAX + '&viewbox=35.10,33.00,35.50,32.80&bounded=0';
@@ -98,14 +123,18 @@
       var to = setTimeout(function () { ctrl.abort(); }, 4500);
       var resp = await fetch(url, { headers: { Accept: 'application/json' }, signal: ctrl.signal });
       clearTimeout(to);
-      if (!resp.ok) return { items: [] };
+      if (!resp.ok) return [];
       var data = await resp.json();
-      return {
-        items: (data || []).map(function (r) {
-          return { kind: 'address', lat: parseFloat(r.lat), lng: parseFloat(r.lon), label: (r.display_name || '').split(',').slice(0, 3).join(',') };
-        })
-      };
-    } catch (e) { return { items: [] }; }
+      return (data || []).map(function (r) {
+        return { kind: 'address', lat: parseFloat(r.lat), lng: parseFloat(r.lon), label: (r.display_name || '').split(',').slice(0, 3).join(',') };
+      });
+    } catch (e) { return []; }
+  }
+
+  async function searchAddresses(q) {
+    var arc = await geocodeArcGIS(q);            // null = unavailable/errored; [] = searched, no match
+    if (arc && arc.length) return { items: arc };
+    return { items: await geocodeNominatim(q) }; // graceful fallback keeps address search working
   }
 
   // ── run: scaffold sections, then fill each independently as it returns ──────

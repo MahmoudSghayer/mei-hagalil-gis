@@ -301,6 +301,15 @@ function applyBasemap(key) {
     gActiveBasemapLayers = [
       L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom:20, maxNativeZoom:19, attribution:'CartoDB' })
     ];
+  } else if (key === 'arcgis') {
+    // ArcGIS Static Basemap Tiles (Esri cartography, Hebrew labels) — 512px raster, no extra libs.
+    // Needs window.GIS_ARCGIS_KEY; degrades to Google streets if the key is absent.
+    if (!window.GIS_ARCGIS_KEY) { applyBasemap('streets'); return; }
+    name = 'Esri רחוב'; isDark = false;
+    gActiveBasemapLayers = [
+      L.tileLayer('https://static-map-tiles-api.arcgis.com/arcgis/rest/services/static-basemap-tiles-service/v1/arcgis/navigation/static/tile/{z}/{y}/{x}?language=he&token=' + window.GIS_ARCGIS_KEY,
+        { tileSize:512, zoomOffset:-1, maxZoom:20, maxNativeZoom:19, attribution:'Powered by Esri' })
+    ];
   }
   gActiveBasemapLayers.forEach(function(l) { l.addTo(gMap); l.bringToBack(); });
   document.body.classList.toggle('dark-basemap', !!isDark);

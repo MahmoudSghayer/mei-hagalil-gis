@@ -40,6 +40,7 @@
       { label: 'מפת רקע', cmds: [
         { ic: 'satellite', lb: 'Esri HD',  size: 'lg', act: function () { basemap('satellite'); } },
         { col: [
+          { ic: 'map',    lb: 'Esri רחוב', act: function () { basemap('arcgis'); } },
           { ic: 'layers', lb: 'היברידי', act: function () { basemap('hybrid'); } },
           { ic: 'street', lb: 'רחובות',  act: function () { basemap('streets'); } },
           { ic: 'map',    lb: 'בהיר',    act: function () { basemap('light'); } }
