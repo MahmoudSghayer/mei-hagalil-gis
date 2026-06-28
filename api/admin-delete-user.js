@@ -20,6 +20,7 @@
 //  Headers:   Authorization: Bearer <caller's Supabase access_token>
 // ════════════════════════════════════════════════════════════════════════
 const { limitByIp } = require('./_ratelimit');
+const { requireActiveAdmin } = require('./_authcheck');
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'POST only' });
@@ -27,44 +28,10 @@ module.exports = async function handler(req, res) {
   // Anti-abuse: cap per-IP attempts (each call costs 1-2 Supabase round-trips).
   if (!(await limitByIp(req, res, 'admin-delete', 20, 60))) return;
 
-  const SUPABASE_URL = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
-  if (!SUPABASE_URL || !SERVICE_KEY) {
-    return res.status(503).json({ error: 'server not configured (SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY)' });
-  }
-  const svc = { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` };
-
-  // ── 1. Identify the caller from their JWT ──────────────────────────────
-  const authz = req.headers['authorization'] || '';
-  const jwt = authz.startsWith('Bearer ') ? authz.slice(7) : null;
-  if (!jwt) return res.status(401).json({ error: 'missing bearer token' });
-
-  let caller;
-  try {
-    const meR = await fetch(`${SUPABASE_URL}/auth/v1/user`, {
-      headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${jwt}` },
-    });
-    if (!meR.ok) return res.status(401).json({ error: 'invalid session' });
-    caller = await meR.json();
-  } catch (e) {
-    return res.status(401).json({ error: 'session check failed' });
-  }
-  if (!caller || !caller.id) return res.status(401).json({ error: 'invalid session' });
-
-  // ── 2. Caller must be an active admin ──────────────────────────────────
-  let prof;
-  try {
-    const pR = await fetch(
-      `${SUPABASE_URL}/rest/v1/profiles?id=eq.${encodeURIComponent(caller.id)}&select=role,is_active`,
-      { headers: svc }
-    );
-    prof = (await pR.json())[0];
-  } catch (e) {
-    return res.status(500).json({ error: 'profile lookup failed' });
-  }
-  if (!prof || prof.role !== 'admin' || prof.is_active !== true) {
-    return res.status(403).json({ error: 'admin only' });
-  }
+  // ── 1+2. Resolve env + require an active-admin caller (shared gate) ─────
+  const ctx = await requireActiveAdmin(req, res);
+  if (!ctx) return;
+  const { SUPABASE_URL, svc, caller } = ctx;
 
   // ── 3. Validate input ──────────────────────────────────────────────────
   let b = req.body;

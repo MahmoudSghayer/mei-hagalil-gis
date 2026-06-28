@@ -8,7 +8,7 @@
 (function () {
   'use strict';
   function sb() { return window.GIS ? GIS.sb() : window.gSb; }
-  function esc(x) { return String(x == null ? '' : x).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+  // esc() centralized in auth.js (window.escHtml)
   function toast(m) { var t = document.getElementById('toast'); if (!t) return; t.textContent = m; t.className = 'show'; setTimeout(function () { t.className = ''; }, 2600); }
 
   async function openCreate() {

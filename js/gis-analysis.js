@@ -37,7 +37,7 @@
     t.textContent = msg; t.className = (type ? type + ' ' : '') + 'show';
     clearTimeout(toast._t); toast._t = setTimeout(function () { t.className = ''; }, 2600);
   }
-  function esc(x) { return String(x == null ? '' : x).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+  // esc() centralized in auth.js (window.escHtml)
 
   async function engineLayers() {
     var ls = await GIS.layers.getLayers();

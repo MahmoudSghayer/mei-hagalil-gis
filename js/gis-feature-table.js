@@ -561,7 +561,7 @@ function shallowMatch(a, b) {
   for (var i = 0; i < keys.length; i++) if (a[keys[i]] !== undefined && a[keys[i]] === b[keys[i]]) return true;
   return false;
 }
-function esc(x) { return String(x == null ? '' : x).replace(/[&<>"']/g, function (c) { return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]; }); }
+// esc() centralized in auth.js (window.escHtml)
 function debounce(fn, ms) { var t; return function (e) { clearTimeout(t); t = setTimeout(function () { fn(e); }, ms); }; }
 
 })();

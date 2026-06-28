@@ -409,7 +409,7 @@ async function save() {
 // ── עזרים ─────────────────────────────────────────────────────────────────────
 function row(k, v) { return '<tr><td class="k">' + esc(k) + '</td><td class="v">' + esc(v) + '</td></tr>'; }
 function fmt(n) { return (n == null || n === '') ? '—' : (typeof n === 'number' ? n.toLocaleString('he-IL') : esc(n)); }
-function esc(x) { return String(x == null ? '' : x).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+// esc() centralized in auth.js (window.escHtml)
 function debounce(fn, ms) { var t; return function () { clearTimeout(t); t = setTimeout(fn, ms); }; }
 
 })();

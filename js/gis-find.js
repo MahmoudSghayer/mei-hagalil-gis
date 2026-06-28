@@ -32,7 +32,7 @@
   var _hi = null;        // current feature highlight on the map (persists until next pick)
   var _addrMarker = null;
 
-  function esc(x) { return String(x == null ? '' : x).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+  // esc() centralized in auth.js (window.escHtml)
   function toast(m) { var t = document.getElementById('toast'); if (!t) return; t.textContent = m; t.className = 'show'; setTimeout(function () { t.className = ''; }, 2200); }
   function hint(m) { return '<div class="gf-hint">' + esc(m) + '</div>'; }
 

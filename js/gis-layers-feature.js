@@ -140,6 +140,6 @@ async function renderLayer(key, name, geomType, st, isMeters) {
 function heb(name) {
   return ({ Pipes: 'צנרת', Valves: 'מגופים', Hydrants: 'הידרנטים', Meters: 'מדי מים' })[name] || name;
 }
-function esc(x) { return String(x == null ? '' : x).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+// esc() centralized in auth.js (window.escHtml)
 
 })();

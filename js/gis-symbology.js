@@ -179,7 +179,7 @@
     return LABELS_ON;
   }
 
-  function esc(x) { return String(x == null ? '' : x).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+  // esc() centralized in auth.js (window.escHtml)
 
   window.GISSymbology = {
     roleOf: roleOf,

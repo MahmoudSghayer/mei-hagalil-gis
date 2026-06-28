@@ -765,7 +765,7 @@ function meterVillageRow(village) {
   return el;
 }
 
-function esc(x) { return String(x == null ? '' : x).replace(/[&<>"]/g, function (c) { return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' })[c]; }); }
+// esc() centralized in auth.js (window.escHtml)
 
 // Expose the Hebrew category label so the legend (GISSymbology) can name layers.
 window.GISLayerLabel = catLabel;

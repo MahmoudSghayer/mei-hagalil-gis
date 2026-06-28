@@ -8,6 +8,18 @@ var SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 var gSb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
+// ── Shared HTML escaper — single source of truth ──
+// auth.js loads first on every page, so every later script can call the global
+// esc()/escHtml() instead of redefining its own. Escapes & < > " AND ' so the
+// output is safe in both single- and double-quoted attribute contexts.
+function escHtml(v) {
+  return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+window.escHtml = escHtml;
+window.esc = escHtml;
+
 function getLoginPath() {
   // index.html lives at repo root, other pages are under /pages/
   // So we need a redirect that works from both locations.

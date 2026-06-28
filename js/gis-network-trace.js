@@ -455,5 +455,5 @@
   function closeCard() { var c = document.getElementById('gis-trace-card'); if (c) c.remove(); }
   function clearAll() { cancelArm(); clearLayers(); closeCard(); banner(false); if (window.gMap) window.gMap.getContainer().style.cursor = ''; GISTrace._state = null; }
 
-  function esc(x) { return String(x == null ? '' : x).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+  // esc() centralized in auth.js (window.escHtml)
 })();

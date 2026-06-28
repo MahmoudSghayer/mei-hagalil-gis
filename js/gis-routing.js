@@ -40,7 +40,7 @@
   }
   function key() { return window.GIS_ARCGIS_KEY || ''; }
   function needKey() { if (key()) return true; toast('דרוש מפתח ArcGIS (window.GIS_ARCGIS_KEY)'); return false; }
-  function esc(x) { return String(x == null ? '' : x).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+  // esc() centralized in auth.js (window.escHtml)
   function pane() {
     if (window.gMap && !gMap.getPane('gisRouting')) {
       var p = gMap.createPane('gisRouting'); p.style.zIndex = 648; p.style.pointerEvents = 'none';

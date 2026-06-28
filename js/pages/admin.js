@@ -8,7 +8,7 @@ var gSelectedRole = 'viewer';
 var gAdminSession = null;
 var gAssignments = [];
 
-function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+// esc() centralized in auth.js (window.escHtml)
 
 window.addEventListener('load', async function() {
   var res = await gSb.auth.getSession();

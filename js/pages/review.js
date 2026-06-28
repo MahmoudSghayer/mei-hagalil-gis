@@ -10,7 +10,7 @@
   var map, geomLayer, gProfiles = {}, gLayers = [], gItems = [], gCurrent = null, gSel = {};
 
   function toast(m) { var t = document.getElementById('toast'); if (!t) { alert(m); return; } t.textContent = m; t.classList.add('show'); setTimeout(function () { t.classList.remove('show'); }, 3000); }
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+  // esc() centralized in auth.js (window.escHtml)
   function val(id) { var e = document.getElementById(id); return e ? e.value.trim() : ''; }
 
   document.getElementById('rv-logout').onclick = async function () { await gSb.auth.signOut(); window.location.replace('login.html'); };

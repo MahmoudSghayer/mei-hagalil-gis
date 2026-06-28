@@ -9,7 +9,7 @@
   'use strict';
   var uid = null, items = [], open = false;
 
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+  // esc() centralized in auth.js (window.escHtml)
   function fmt(ts) { try { return new Date(ts).toLocaleString('he-IL'); } catch (e) { return ''; } }
 
   function injectStyles() {

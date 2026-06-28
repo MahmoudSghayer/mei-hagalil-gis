@@ -17,7 +17,7 @@
   var VILLAGE_OPTS = ['מגד אל-כרום', 'בענה', 'דיר אל-אסד', 'נחף', 'סחנין', 'דיר חנא', 'עראבה'];
 
   function key() { return window.GIS_ARCGIS_KEY || ''; }
-  function esc(x) { return String(x == null ? '' : x).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+  // esc() centralized in auth.js (window.escHtml)
 
   // Letters-only Hebrew normaliser: keep only Hebrew letters (drops spaces,
   // hyphens, the ASCII apostrophe ArcGIS uses in "מג'ד", bidi/zero-width marks,

@@ -34,11 +34,7 @@
     t.textContent = msg; t.className = (type ? type + ' ' : '') + 'show';
     clearTimeout(toast._t); toast._t = setTimeout(function () { t.className = ''; }, 2800);
   }
-  function esc(x) {
-    return String(x == null ? '' : x).replace(/[&<>"]/g, function (c) {
-      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c];
-    });
-  }
+  // esc() centralized in auth.js (window.escHtml)
   function num(n) { return (n == null || isNaN(n)) ? '—' : Number(n).toLocaleString('he-IL'); }
   // metres between two [lng,lat]
   function distM(a, b) {

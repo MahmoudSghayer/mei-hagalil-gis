@@ -82,4 +82,4 @@ function details(r) {
 
 function val(v) { if (v === null || v === undefined) return '∅'; if (typeof v === 'object') return JSON.stringify(v); return String(v); }
 function fmt(s) { try { var dt = new Date(s); return dt.toLocaleDateString('he-IL') + ' ' + dt.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); } catch (e) { return s; } }
-function esc(x) { return String(x == null ? '' : x).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+// esc() centralized in auth.js (window.escHtml)

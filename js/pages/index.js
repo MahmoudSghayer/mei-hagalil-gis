@@ -810,7 +810,7 @@ function zoomToVillage(villageId) {
 //  INCIDENTS
 // ════════════════════════════════════════════════════════════
 // Escape DB/user-supplied strings before HTML interpolation (popups + innerHTML). XSS guard.
-function escHtml(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+// escHtml() centralized in auth.js (window.escHtml)
 function initSB(){loadIncidents();subscribeRT();}
 function loadIncidents(){gSb.from('incidents').select('*').in('status',['open','in_progress']).order('created_at',{ascending:false}).then(function(res){
   if(res.error){

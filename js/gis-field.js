@@ -20,7 +20,7 @@
 
   function sb() { return window.GIS ? GIS.sb() : window.gSb; }
   function toast(m, t) { if (window.showToast) showToast(m, t); else alert(m); }
-  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+  // esc() centralized in auth.js (window.escHtml)
 
   // ── styles ────────────────────────────────────────────────────────────────
   function injectStyles() {
