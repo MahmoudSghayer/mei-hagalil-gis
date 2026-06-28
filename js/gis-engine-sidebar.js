@@ -384,8 +384,11 @@ async function onMapClickPick(e) {
   // 1) Meters first — in-memory hit-test (no DB), reliable under the MVT canvas.
   var m = nearestMeterAt(e.latlng);
   if (m) {
+    // Highlight the meter on the map (same cyan selection as any other feature),
+    // THEN open its panel — mirrors openPanelFor()'s highlight-then-open order.
+    // (Was if/else, so meters opened the panel but never got the selection color.)
+    if (window.GISIdentify) GISIdentify.highlight(m.f);
     if (window.GISPanel && GISPanel.openMeter) GISPanel.openMeter(m.f);
-    else if (window.GISIdentify) GISIdentify.highlight(m.f);
     return;
   }
   // 2) Engine features — cached if available, else an on-demand per-click query.
