@@ -29,6 +29,7 @@ RETURNS BOOLEAN
 LANGUAGE sql
 SECURITY DEFINER
 STABLE
+SET search_path = public
 AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.profiles
@@ -46,6 +47,7 @@ RETURNS BOOLEAN
 LANGUAGE sql
 SECURITY DEFINER
 STABLE
+SET search_path = public
 AS $$
   SELECT EXISTS (
     SELECT 1 FROM public.profiles
@@ -105,6 +107,7 @@ CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
   INSERT INTO public.profiles (id, email, full_name, role, phone, department)
