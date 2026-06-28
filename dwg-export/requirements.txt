@@ -1,7 +1,7 @@
-fastapi==0.111.1
+fastapi==0.115.6          # pulls starlette>=0.40 — fixes CVE-2024-47874 (multipart DoS)
 uvicorn[standard]==0.30.1
 pydantic==2.7.4
 ezdxf==1.3.4
 pyproj==3.6.1
-python-multipart==0.0.9
+python-multipart==0.0.18  # fixes CVE-2024-53981 (malformed-multipart DoS)
 PyJWT==2.9.0
