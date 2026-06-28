@@ -1004,7 +1004,15 @@ function buildCSV(features) {
     rows.push([p._village||'', p._category||'', lon, lat, g.type, p.Text||'', p.Layer||'', JSON.stringify(p)]);
   });
   return rows.map(function (r) {
-    return r.map(function (v) { var s2 = String(v==null?'':v).replace(/"/g,'""'); return '"'+s2+'"'; }).join(',');
+    return r.map(function (v) {
+      var s2 = String(v==null?'':v);
+      // CSV/formula-injection guard (CWE-1236): a cell whose first char is = + - @
+      // TAB or CR is run as a live formula by Excel/Sheets. Attribute values here can
+      // come from uploaded DWG/Shapefile/GeoJSON, so prefix ' to force plain text.
+      if (/^[=+\-@\t\r]/.test(s2)) s2 = "'" + s2;
+      s2 = s2.replace(/"/g,'""');
+      return '"'+s2+'"';
+    }).join(',');
   }).join('\n');
 }
 
