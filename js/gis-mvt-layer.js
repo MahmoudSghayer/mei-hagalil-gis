@@ -19,6 +19,16 @@
 (function () {
   'use strict';
 
+  // ── Compat shim: Leaflet.VectorGrid 1.3.0 calls L.DomEvent.fakeStop in its
+  //    canvas click handler, but fakeStop was removed in Leaflet 1.x. Without
+  //    this, EVERY click on a vector tile throws "L.DomEvent.fakeStop is not a
+  //    function", which breaks the map's click/drag handling — including the
+  //    export area-draw. Map it to the modern stopPropagation (same intent:
+  //    don't let the map also handle a click that hit a feature).
+  if (window.L && L.DomEvent && typeof L.DomEvent.fakeStop !== 'function') {
+    L.DomEvent.fakeStop = function (e) { return L.DomEvent.stopPropagation(e); };
+  }
+
   function base() { return typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : ''; }
   function anon() { return typeof SUPABASE_ANON !== 'undefined' ? SUPABASE_ANON : ''; }
   function rpcBase() { return base() + '/rest/v1/rpc/features_mvt'; }
