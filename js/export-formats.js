@@ -7,8 +7,21 @@
 //  call time (both files are loaded well before any export runs).
 // ════════════════════════════════════════════════════════════════
 
+// ── async chunking ─────────────────────────────────────────────────────────────
+// Yield to the browser between chunks so a big export doesn't freeze the tab and
+// the progress spinner keeps animating. _forEachChunked applies fn to every item
+// in order (identical output to .forEach), pausing every `chunk` items.
+function _yieldUI() { return new Promise(function (r) { setTimeout(r, 0); }); }
+async function _forEachChunked(arr, chunk, fn, onProgress) {
+  for (var i = 0; i < arr.length; i++) {
+    fn(arr[i], i);
+    if ((i + 1) % chunk === 0) { if (onProgress) onProgress(i + 1, arr.length); await _yieldUI(); }
+  }
+  if (onProgress) onProgress(arr.length, arr.length);
+}
+
 // ── DXF ───────────────────────────────────────────────────────────────────────
-function buildDXF(features) {
+async function buildDXF(features, onProgress) {
   var toITM = makeToITM();
   var colors = {
     sewage_pipe:2,manhole:4,sleeve:6,control_point:1,water_pipes:5,water_meters:5,
@@ -82,7 +95,7 @@ function buildDXF(features) {
   lines.push('0','ENDTAB');
   lines.push('0','ENDSEC');
   lines.push('0','SECTION','2','ENTITIES');
-  features.forEach(function (f) {
+  await _forEachChunked(features, 2000, function (f) {
     var layer = (f.properties && f.properties._category) || 'other';
     var g = f.geometry;
     if (!g) return;
@@ -123,7 +136,7 @@ function buildDXF(features) {
                       lcat === 'water_pipes'     || lcat === 'main_sewer' || lcat === 'supply_pipe';
       if (wantLabel) dxfAttrLabel(lines, f.properties, labelPt[0], labelPt[1]);
     }
-  });
+  }, onProgress);
   lines.push('0','ENDSEC','0','EOF');
   return lines.join('\r\n');
 }
@@ -206,15 +219,15 @@ function dxfPolyline(lines, coords, layer, closed, toITM, props) {
 }
 
 // ── CSV ───────────────────────────────────────────────────────────────────────
-function buildCSV(features) {
+async function buildCSV(features, onProgress) {
   var rows = [['village','category','lon','lat','geometry_type','text','layer','properties_json']];
-  features.forEach(function (f) {
+  await _forEachChunked(features, 5000, function (f) {
     var p = f.properties || {}, g = f.geometry, lon = '', lat = '';
     if (g.type === 'Point') { lon = g.coordinates[0]; lat = g.coordinates[1]; }
     else if (g.type === 'LineString' && g.coordinates.length) { lon = g.coordinates[0][0]; lat = g.coordinates[0][1]; }
     else if (g.type === 'Polygon' && g.coordinates[0] && g.coordinates[0].length) { lon = g.coordinates[0][0][0]; lat = g.coordinates[0][0][1]; }
     rows.push([p._village||'', p._category||'', lon, lat, g.type, p.Text||'', p.Layer||'', JSON.stringify(p)]);
-  });
+  }, onProgress);
   return rows.map(function (r) {
     return r.map(function (v) {
       var s2 = String(v==null?'':v);
@@ -253,14 +266,16 @@ function kmlGeom(g) {
   if (g.type === 'MultiPolygon') return '<MultiGeometry>' + g.coordinates.map(kmlPoly).join('') + '</MultiGeometry>';
   return '';
 }
-function buildKML(features) {
+async function buildKML(features, onProgress) {
   var byCat = groupByCategory(features);
   var out = ['<?xml version="1.0" encoding="UTF-8"?>',
     '<kml xmlns="http://www.opengis.net/kml/2.2"><Document>',
     '<name>Mei HaGalil GIS Export</name>'];
-  Object.keys(byCat).forEach(function (c) {
+  var cats = Object.keys(byCat);
+  for (var ci = 0; ci < cats.length; ci++) {
+    var c = cats[ci];
     out.push('<Folder><name>' + kmlEsc(LABELS[c] || c) + '</name>');
-    byCat[c].forEach(function (f) {
+    await _forEachChunked(byCat[c], 5000, function (f) {
       var p = f.properties || {}, g = f.geometry;
       if (!g) return;
       out.push('<Placemark>');
@@ -277,7 +292,8 @@ function buildKML(features) {
       out.push('</Placemark>');
     });
     out.push('</Folder>');
-  });
+  }
+  if (onProgress) onProgress(features.length, features.length);
   out.push('</Document></kml>');
   return out.join('\n');
 }

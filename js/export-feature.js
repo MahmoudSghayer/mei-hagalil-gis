@@ -637,25 +637,28 @@ function triggerDownload(blob, name) {
 }
 
 // ── GENERATE & DOWNLOAD ───────────────────────────────────────────────────────
-function generateAndDownload(features) {
+async function generateAndDownload(features) {
   var ts = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
   var filename = 'mei-hagalil-' + ts;
+  // Progress for the chunked builders — only show a % on large exports.
+  function onProg(done, total) { if (total > 4000) setGenMsg('מייצא… ' + Math.round(done / total * 100) + '%'); }
 
   try {
     if (gExp.format === 'dwg') {
       closeBusy();                               // DWG has its own dedicated wait modal
       _exportDWG(features, filename);            // own wait modal; success/error handled inside
     } else if (gExp.format === 'dxf') {
-      triggerDownload(new Blob([buildDXF(features)], { type: 'application/dxf' }), filename + '.dxf');
+      triggerDownload(new Blob([await buildDXF(features, onProg)], { type: 'application/dxf' }), filename + '.dxf');
       finishGen(true);
     } else if (gExp.format === 'geojson') {
+      await _yieldUI();   // JSON.stringify can't be chunked; yield so the spinner paints first
       triggerDownload(new Blob([JSON.stringify({ type: 'FeatureCollection', features: features }, null, 2)], { type: 'application/geo+json' }), filename + '.geojson');
       finishGen(true);
     } else if (gExp.format === 'csv') {
-      triggerDownload(new Blob(['﻿' + buildCSV(features)], { type: 'text/csv;charset=utf-8' }), filename + '.csv');
+      triggerDownload(new Blob(['﻿' + await buildCSV(features, onProg)], { type: 'text/csv;charset=utf-8' }), filename + '.csv');
       finishGen(true);
     } else if (gExp.format === 'kml') {
-      triggerDownload(new Blob([buildKML(features)], { type: 'application/vnd.google-earth.kml+xml' }), filename + '.kml');
+      triggerDownload(new Blob([await buildKML(features, onProg)], { type: 'application/vnd.google-earth.kml+xml' }), filename + '.kml');
       finishGen(true);
     } else if (gExp.format === 'shapefile') {
       setGenMsg('בונה Shapefile…');
