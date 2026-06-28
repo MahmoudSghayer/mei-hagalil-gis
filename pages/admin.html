@@ -141,8 +141,8 @@
     <div class="modal-title" style="color:var(--red)">מחיקת משתמש</div>
     <div class="modal-sub" id="del-target">—</div>
     <div class="alert-warn">
-      פעולה זו תסיר את הפרופיל והגישה של המשתמש למערכת.<br>
-      <strong>שים לב:</strong> מחיקה מלאה של חשבון האימייל מ-Supabase Auth דורשת גישה לדשבורד של Supabase.
+      פעולה זו תמחק לצמיתות את חשבון המשתמש וגישתו למערכת.<br>
+      <strong>שים לב:</strong> החשבון יוסר לחלוטין (כולל האימייל) ולא ניתן לשחזרו. משימות שדה שנוצרו/שויכו למשתמש יישמרו ללא שיוך.
     </div>
     <div class="modal-btns">
       <button class="btn btn-primary" style="background:var(--red)" onclick="confirmDelete()">מחק לצמיתות</button>
@@ -153,7 +153,7 @@
 
 <div id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 <script src="../js/motion-utils.js"></script>
-<script src="../js/pages/admin.js?v=2"></script>
+<script src="../js/pages/admin.js?v=3"></script>
 <script src="../js/gis-notifications.js"></script>
 </body>
 </html>

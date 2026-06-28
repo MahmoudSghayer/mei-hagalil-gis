@@ -262,11 +262,27 @@ function closeDelModal() { document.getElementById('del-modal-bg').classList.rem
 
 async function confirmDelete() {
   if (!gDelTargetUser) return;
-  var res = await gSb.from('profiles').delete().eq('id', gDelTargetUser.id);
-  closeDelModal();
-  if (res.error) { showToast('שגיאה: ' + res.error.message, 'error'); return; }
-  showToast('🗑️ הפרופיל נמחק. למחיקה מלאה — Supabase Dashboard → Auth → Users', 'success');
-  loadUsers();
+  // Server-side, admin-gated deletion via the Supabase Admin API. This removes
+  // the real auth account (auth.users) — the profile, push subscriptions and
+  // field-task links are handled by the DB cascade. A direct browser delete
+  // could only touch the profiles row, leaving the login account alive.
+  try {
+    var sess = (await gSb.auth.getSession()).data.session;
+    if (!sess) { showToast('פג תוקף ההתחברות, התחבר מחדש', 'error'); return; }
+    var resp = await fetch('/api/admin-delete-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + sess.access_token },
+      body: JSON.stringify({ id: gDelTargetUser.id })
+    });
+    var data = await resp.json().catch(function(){ return {}; });
+    closeDelModal();
+    if (!resp.ok) { showToast('שגיאה: ' + (data.error || ('HTTP ' + resp.status)), 'error'); return; }
+    showToast('🗑️ המשתמש נמחק לצמיתות', 'success');
+    loadUsers();
+  } catch (e) {
+    closeDelModal();
+    showToast('שגיאה: ' + e.message, 'error');
+  }
 }
 
 function showToast(msg, type) {
