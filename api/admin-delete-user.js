@@ -107,6 +107,15 @@ module.exports = async function handler(req, res) {
     return res.status(200).json({ ok: true });
   }
 
-  const errJson = await delR.json().catch(() => ({}));
-  return res.status(delR.status).json({ error: errJson.msg || errJson.error_description || errJson.error || 'delete failed' });
+  // Surface the real reason. GoTrue/Supabase variously use msg | message |
+  // error_description | error; a DB-level cascade block (e.g. an un-migrated
+  // RESTRICT foreign key) shows up here as a 500 "Database error deleting user".
+  const raw = await delR.text().catch(() => '');
+  let errJson = {};
+  try { errJson = raw ? JSON.parse(raw) : {}; } catch (e) { /* non-JSON body */ }
+  const detail = errJson.msg || errJson.message || errJson.error_description || errJson.error || raw || 'delete failed';
+  const hint = delR.status >= 500
+    ? ' — אם זו שגיאת מסד נתונים, ודא שהרצת את gis-engine/sql/fix-user-delete-fks.sql ב-Supabase'
+    : '';
+  return res.status(delR.status).json({ error: `[${delR.status}] ${detail}${hint}` });
 };
