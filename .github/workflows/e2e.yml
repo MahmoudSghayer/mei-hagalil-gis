@@ -2,6 +2,12 @@ name: E2E (Playwright)
 
 # Runs against the deployed app. Manual + weekly so it never blocks per-push CI
 # or deploys. RBAC specs auto-skip unless the MGIS_VIEWER_* secrets are set.
+# The write-gated specs (import-flow/table-flow/export-area/realtime —
+# tests/e2e/helpers.js writeGateReason()) auto-skip unless BOTH
+# MGIS_ADMIN_EMAIL/MGIS_ADMIN_PASSWORD AND MGIS_E2E_WRITE=1 are set — they
+# create + delete a handful of self-marked ("E2E-<runId>") rows against the
+# LIVE database, so MGIS_E2E_WRITE is a deliberate second opt-in, not just a
+# missing-secret skip.
 on:
   workflow_dispatch:
   schedule:
@@ -24,4 +30,9 @@ jobs:
           BASE_URL: https://mei-hagalil-gis.vercel.app
           MGIS_VIEWER_EMAIL: ${{ secrets.MGIS_VIEWER_EMAIL }}
           MGIS_VIEWER_PASSWORD: ${{ secrets.MGIS_VIEWER_PASSWORD }}
+          # Write-gated specs (see comment above) — unset/false by default so
+          # this workflow stays read-only until someone deliberately opts in.
+          MGIS_ADMIN_EMAIL: ${{ secrets.MGIS_ADMIN_EMAIL }}
+          MGIS_ADMIN_PASSWORD: ${{ secrets.MGIS_ADMIN_PASSWORD }}
+          MGIS_E2E_WRITE: ${{ secrets.MGIS_E2E_WRITE }}
         run: npx playwright test
