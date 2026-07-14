@@ -17,3 +17,4 @@ venv/
 # Confidential security audit / roadmap docs — never push (attacker-useful)
 AUDIT.md
 EXECUTION-ROADMAP.md
+test-results/

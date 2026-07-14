@@ -18,14 +18,21 @@ GET  /health          — liveness check
 # Python 3.11 this service runs (CI + the Render Docker image), so postponed
 # evaluation isn't needed.
 
+import asyncio
 import io
 import json
+import logging
 import os
 import shutil
 import subprocess
 import tempfile
 import urllib.request
 from typing import Any
+
+try:
+    import resource  # POSIX-only: RLIMIT_AS guard on the ODA subprocess (see _oda_preexec_fn)
+except ImportError:  # Windows dev machines — the guard becomes a documented no-op there
+    resource = None  # type: ignore[assignment]
 
 import jwt
 from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
@@ -44,6 +51,16 @@ app = FastAPI(
     title="Mei HaGalil GIS — DWG Export Service",
     version="1.0.0",
 )
+
+# The production incident that prompted the guards in this file (ODA subprocess
+# OOM-killing the whole container) left NOTHING in the Render logs — the
+# container died before any line about the failure could be written. Every ODA
+# failure/timeout path below now logs returncode + stderr tail + input size
+# before returning None. `basicConfig` is a no-op if a handler is already
+# attached to the root logger (e.g. uvicorn's own logging setup in
+# production), so this only matters for bare `python main.py` / `pytest -s`.
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("dwg_export")
 
 # Restrict which sites may call this service.
 # Set ALLOWED_ORIGINS in Render (comma-separated) to your real domain(s),
@@ -108,6 +125,17 @@ async def _limit_body_size(request: Request, call_next):
 # DXF instead — large exports OOM-crash the converter on small instances (502).
 # Raise this if you move to an instance with more RAM.
 MAX_DWG_FEATURES: int = int(os.getenv("MAX_DWG_FEATURES", "8000"))
+
+# Virtual-memory ceiling (MB) applied to the ODA File Converter subprocess via
+# RLIMIT_AS — see _oda_preexec_fn() below for the full reasoning. Render's free
+# tier gives the container 512MB total; this FastAPI process + uvicorn workers
+# + the xvfb X server sit around ~150MB baseline, so 400MB leaves the ODA child
+# a real budget while still failing (SIGKILL'd by the kernel's malloc path,
+# non-zero exit) well before it could push the *container's* cgroup over
+# 512MB and get the whole process OOM-killed by Render instead. Tune via env:
+# raise it if legitimate conversions start dying under real usage, lower it if
+# the container is still going down.
+ODA_MAX_MEMORY_MB: int = int(os.getenv("ODA_MAX_MEMORY_MB", "400"))
 
 # Preferred auth: validate the caller's Supabase access token REMOTELY by asking
 # Supabase (GET /auth/v1/user). This works no matter how the project signs its
@@ -224,6 +252,75 @@ def _require_auth(authorization: str | None = None) -> None:
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
+# Only one ODA conversion runs at a time. Render's free tier gives this
+# service ~0.1 CPU — two concurrent ODA/xvfb subprocesses wouldn't actually
+# run in parallel, they'd thrash the same sliver of CPU and each other's
+# memory budget for longer than either would take alone. A second concurrent
+# upload simply waits for the first conversion to finish rather than racing
+# it — a deliberate "prefer waiting over complex queueing" choice; there is
+# no separate queue/backoff, just FIFO-ish contention on this semaphore.
+_oda_semaphore = asyncio.Semaphore(1)
+
+# Bilingual, actionable detail returned to the caller when DWG→DXF conversion
+# fails (ODA missing/timeout/crash — including the RLIMIT_AS guard below
+# doing its job). ExportRequest/UploadFile callers are Hebrew-first (this is
+# a Hebrew-language GIS tool); the parenthetical English mirrors it for any
+# English-reading admin. 422 (not 500): from the caller's point of view this
+# is "your file is likely too large/complex for this server", an actionable
+# client-side condition, not an opaque server fault.
+DWG_CONVERSION_FAILED_DETAIL = (
+    "המרת ה-DWG נכשלה — ייתכן שהקובץ גדול/מורכב מדי לשרת. "
+    "המר את הקובץ ל-DXF (SAVEAS בתוכנת CAD) והעלה אותו ישירות — "
+    "ייבוא DXF אינו דורש המרה. "
+    "(DWG conversion failed — likely too large/complex for the server; "
+    "save as DXF and upload that instead.)"
+)
+
+
+def _oda_preexec_fn():
+    """Build a `subprocess.run(..., preexec_fn=...)` callable that caps the
+    ODA File Converter child's virtual memory via RLIMIT_AS, or return None
+    where that isn't possible/meaningful.
+
+    Why: ODA File Converter is a Qt GUI app driven headlessly through
+    xvfb-run. A large/malformed DWG can make it balloon its memory use well
+    past what this 512MB Render container has left (~150MB baseline for this
+    FastAPI process + uvicorn + Xvfb) — and until now that OOM-killed the
+    whole container (PID 1), dropping the in-flight HTTP connection with no
+    response and no CORS headers at all. The browser then reports a bogus
+    "CORS error" that has nothing to do with CORS; Render's logs showed
+    nothing but "Skipping data after last boundary" then silence then
+    "Started server process [1]" (the restart) — no error, no stack trace.
+
+    RLIMIT_AS caps *virtual* address space, not resident memory (there is no
+    portable, race-free way to cap RSS from preexec_fn) — Qt/X11 over-commit
+    virtual memory routinely (mmap'd fonts, shared libs, lazily-reserved
+    buffers), so ODA_MAX_MEMORY_MB is an APPROXIMATE ceiling, not an exact RSS
+    budget: a conversion can fail here well before it would have actually
+    used that much resident memory. That's an intentional, documented
+    trade-off — the goal is only that a runaway conversion's malloc() fails
+    and *that child process* exits non-zero (SIGSEGV/SIGABRT/non-zero rc),
+    instead of the kernel's OOM-killer picking the whole container. Tune
+    ODA_MAX_MEMORY_MB up if real conversions start failing well under actual
+    usage, or down if the container is still dying.
+
+    Linux-only: `resource` (and RLIMIT_AS) doesn't exist on Windows, where
+    this service's dev machine runs — `subprocess.run` also outright rejects
+    a non-None `preexec_fn` on Windows, so this returns None there and
+    callers pass that straight through as `preexec_fn=None` (the default,
+    a no-op), not a Windows-specific code path. Tests simulate the
+    Linux/"available" branch by monkeypatching module-level `resource`.
+    """
+    if resource is None or not hasattr(resource, "RLIMIT_AS"):
+        return None
+    limit_bytes = ODA_MAX_MEMORY_MB * 1024 * 1024
+
+    def _apply_memory_limit():
+        resource.setrlimit(resource.RLIMIT_AS, (limit_bytes, limit_bytes))
+
+    return _apply_memory_limit
+
+
 def _build_dxf_bytes(features: list[dict]) -> bytes:
     # ezdxf writes to a *text* stream and handles DXF encoding itself, so we
     # save to a temp .dxf file and read the bytes back.
@@ -281,15 +378,25 @@ def _convert_dxf_to_dwg(dxf_bytes: bytes) -> tuple[bytes | None, dict]:
         diag["cmd"] = " ".join(cmd)
 
         try:
-            res = subprocess.run(cmd, capture_output=True, timeout=120)
+            res = subprocess.run(
+                cmd, capture_output=True, timeout=120, preexec_fn=_oda_preexec_fn(),
+            )
             diag["returncode"] = res.returncode
             diag["stdout"] = res.stdout.decode("utf-8", "replace")[-1500:]
             diag["stderr"] = res.stderr.decode("utf-8", "replace")[-1500:]
         except subprocess.TimeoutExpired:
             diag["error"] = "timeout"
+            logger.error(
+                "ODA DXF->DWG conversion timed out after 120s: input_bytes=%d",
+                len(dxf_bytes),
+            )
             return None, diag
         except OSError as e:
             diag["error"] = f"OSError: {e}"
+            logger.error(
+                "ODA DXF->DWG conversion raised OSError: %s, input_bytes=%d",
+                e, len(dxf_bytes),
+            )
             return None, diag
 
         diag["out_files"] = os.listdir(out_dir)
@@ -299,6 +406,11 @@ def _convert_dxf_to_dwg(dxf_bytes: bytes) -> tuple[bytes | None, dict]:
                 return fh.read(), diag
 
     diag.setdefault("error", "no .dwg produced")
+    logger.error(
+        "ODA DXF->DWG conversion produced no output file: returncode=%s "
+        "input_bytes=%d stderr_tail=%r",
+        diag.get("returncode"), len(dxf_bytes), diag.get("stderr", "")[-500:],
+    )
     return None, diag
 
 
@@ -311,6 +423,10 @@ def _dwg_to_dxf(dwg_bytes: bytes) -> bytes | None:
     """Convert DWG bytes → DXF bytes via ODA File Converter (reverse direction)."""
     oda = _find_oda()
     if not oda:
+        logger.error(
+            "ODA DWG->DXF conversion skipped: ODA binary not found, input_bytes=%d",
+            len(dwg_bytes),
+        )
         return None
     with tempfile.TemporaryDirectory() as tmp:
         in_dir = os.path.join(tmp, "in")
@@ -323,14 +439,59 @@ def _dwg_to_dxf(dwg_bytes: bytes) -> bytes | None:
         if shutil.which("xvfb-run"):
             cmd = ["xvfb-run", "-a", *cmd]
         try:
-            subprocess.run(cmd, capture_output=True, timeout=120)
-        except (subprocess.TimeoutExpired, OSError):
+            res = subprocess.run(
+                cmd, capture_output=True, timeout=120, preexec_fn=_oda_preexec_fn(),
+            )
+        except subprocess.TimeoutExpired:
+            logger.error(
+                "ODA DWG->DXF conversion timed out after 120s: input_bytes=%d",
+                len(dwg_bytes),
+            )
+            return None
+        except OSError as e:
+            logger.error(
+                "ODA DWG->DXF conversion raised OSError: %s, input_bytes=%d",
+                e, len(dwg_bytes),
+            )
             return None
         produced = os.path.join(out_dir, "input.dxf")
         if os.path.exists(produced):
             with open(produced, "rb") as fh:
                 return fh.read()
+        stderr_tail = res.stderr.decode("utf-8", "replace")[-1500:]
+        logger.error(
+            "ODA DWG->DXF conversion produced no output file: returncode=%s "
+            "input_bytes=%d stderr_tail=%r",
+            res.returncode, len(dwg_bytes), stderr_tail[-500:],
+        )
     return None
+
+
+# Async wrappers around the two ODA directions above, run in a worker thread
+# (subprocess.run blocks for real, up to 120s) and serialized through
+# _oda_semaphore (only one ODA conversion at a time — see its definition).
+# Route handlers below `await` these instead of calling `_dxf_to_dwg`/
+# `_dwg_to_dxf` directly: an `async def` FastAPI handler that calls a
+# blocking function directly runs it ON the single asyncio event loop thread,
+# freezing EVERY other in-flight request (including /health) for the whole
+# subprocess duration — that is a second, independent way the container was
+# going down (Render's health check stops getting answered → Render kills the
+# "unhealthy" container), on top of the OOM path _oda_preexec_fn() guards
+# against. `asyncio.to_thread` moves the call to a worker thread so the event
+# loop stays free to keep answering /health and other requests meanwhile.
+#
+# These call `_dxf_to_dwg` / `_dwg_to_dxf` by their plain (module-global)
+# names rather than capturing a reference, so existing tests that do
+# `monkeypatch.setattr(main, "_dxf_to_dwg", ...)` keep working unchanged —
+# the lookup happens at call time, after monkeypatch has already run.
+async def _run_dxf_to_dwg(dxf_bytes: bytes) -> bytes | None:
+    async with _oda_semaphore:
+        return await asyncio.to_thread(_dxf_to_dwg, dxf_bytes)
+
+
+async def _run_dwg_to_dxf(dwg_bytes: bytes) -> bytes | None:
+    async with _oda_semaphore:
+        return await asyncio.to_thread(_dwg_to_dxf, dwg_bytes)
 
 
 # ── routes ────────────────────────────────────────────────────────────────────
@@ -353,8 +514,8 @@ async def export_dxf(
     body: ExportRequest,
     authorization: str | None = Header(None),
 ) -> StreamingResponse:
-    _require_auth(authorization)
-    dxf_bytes = _build_dxf_bytes(body.features)
+    await asyncio.to_thread(_require_auth, authorization)
+    dxf_bytes = await asyncio.to_thread(_build_dxf_bytes, body.features)
     fname = f"{body.filename}.dxf"
     return StreamingResponse(
         io.BytesIO(dxf_bytes),
@@ -370,13 +531,13 @@ async def export_dwg(
     body: ExportRequest,
     authorization: str | None = Header(None),
 ) -> StreamingResponse:
-    _require_auth(authorization)
+    await asyncio.to_thread(_require_auth, authorization)
 
-    dxf_bytes = _build_dxf_bytes(body.features)
+    dxf_bytes = await asyncio.to_thread(_build_dxf_bytes, body.features)
 
     # Skip the OOM-prone ODA step for very large exports → return DXF, don't 502.
     too_large = len(body.features) > MAX_DWG_FEATURES
-    dwg_bytes = None if too_large else _dxf_to_dwg(dxf_bytes)
+    dwg_bytes = None if too_large else await _run_dxf_to_dwg(dxf_bytes)
 
     if dwg_bytes:
         fname = f"{body.filename}.dwg"
@@ -422,7 +583,7 @@ async def convert_dwg_to_geojson(
     when the content doesn't actually look like a DWG binary (the "AC10..."
     signature): a file named .dxf whose bytes are really a DWG still goes
     through the normal ODA path below."""
-    _require_auth(authorization)
+    await asyncio.to_thread(_require_auth, authorization)
     raw_bytes = await file.read()
     filename = (file.filename or "").lower()
     is_dxf_upload = filename.endswith(".dxf") and not _looks_like_dwg(raw_bytes)
@@ -430,12 +591,17 @@ async def convert_dwg_to_geojson(
     if is_dxf_upload:
         dxf_bytes = raw_bytes
     else:
-        dxf_bytes = _dwg_to_dxf(raw_bytes)
+        dxf_bytes = await _run_dwg_to_dxf(raw_bytes)
         if not dxf_bytes:
-            raise HTTPException(status_code=500, detail="DWG→DXF conversion failed (ODA unavailable?)")
+            # 422, not 500: from the caller's side this reads as "your file is
+            # too big/complex for the server", an actionable condition — see
+            # DWG_CONVERSION_FAILED_DETAIL for the full bilingual message and
+            # _oda_preexec_fn()/the ODA subprocess logging above for why this
+            # is now the clean outcome instead of a dropped connection.
+            raise HTTPException(status_code=422, detail=DWG_CONVERSION_FAILED_DETAIL)
 
     try:
-        geojson = dxf_to_geojson(dxf_bytes, source_crs=source_crs or "EPSG:2039")
+        geojson = await asyncio.to_thread(dxf_to_geojson, dxf_bytes, source_crs=source_crs or "EPSG:2039")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"DXF parse failed: {e}")
     return JSONResponse(geojson)
@@ -449,11 +615,13 @@ async def convert_dwg_to_dxf(
     authorization: str | None = Header(None),
 ) -> StreamingResponse:
     """Convert an uploaded DWG file to DXF (for inspection / round-tripping)."""
-    _require_auth(authorization)
+    await asyncio.to_thread(_require_auth, authorization)
     dwg_bytes = await file.read()
-    dxf_bytes = _dwg_to_dxf(dwg_bytes)
+    dxf_bytes = await _run_dwg_to_dxf(dwg_bytes)
     if not dxf_bytes:
-        raise HTTPException(status_code=500, detail="DWG→DXF conversion failed")
+        # Harmonized with /api/convert/dwg-to-geojson's failure detail (422,
+        # same bilingual message) — same root cause, same actionable fix.
+        raise HTTPException(status_code=422, detail=DWG_CONVERSION_FAILED_DETAIL)
     return StreamingResponse(
         io.BytesIO(dxf_bytes),
         media_type="application/dxf",

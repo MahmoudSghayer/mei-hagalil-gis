@@ -128,14 +128,18 @@ def test_dwg_upload_still_goes_through_oda(client, monkeypatch):
     assert oda_calls == [dwg_bytes]  # ODA WAS invoked, with the raw DWG bytes
 
 
-def test_dwg_upload_500s_when_oda_unavailable(client, monkeypatch):
+def test_dwg_upload_422s_when_oda_unavailable(client, monkeypatch):
+    # Conversion failure is a caller-actionable condition now (W3.4 hotfix):
+    # 422 with a bilingual detail steering the user to upload DXF directly
+    # (was a bare 500 before the ODA OOM/loop-freeze incident fix).
     monkeypatch.setattr(main, "_dwg_to_dxf", lambda dwg_bytes: None)
     r = client.post(
         "/api/convert/dwg-to-geojson",
         files={"file": ("plan.dwg", b"AC1027" + b"\x00" * 10, "application/octet-stream")},
         headers=AUTH,
     )
-    assert r.status_code == 500
+    assert r.status_code == 422
+    assert "DXF" in r.json()["detail"]
 
 
 # ── mismatched content: .dxf extension but real DWG ("AC10...") bytes ──────

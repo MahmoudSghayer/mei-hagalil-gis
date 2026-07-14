@@ -28,19 +28,44 @@
    - Vercel: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `ALLOWED_ORIGINS`, `KV_REST_API_URL`, `KV_REST_API_TOKEN`.
    - Render (DWG): `SUPABASE_URL`, `SUPABASE_ANON_KEY`, (`API_TOKEN` blanked), `MAX_DWG_FEATURES`, `ALLOWED_ORIGINS`.
    - Supabase Edge secrets: `VAPID_PUBLIC`, `VAPID_PRIVATE`.
-   - The DB schema is reproducible from `db/*.sql` + `gis-engine/sql/*.sql`.
+   - The DB schema is reproducible from `db/*.sql` + `gis-engine/sql/*.sql`, **plus** every
+     dated follow-up file under `gis-engine/sql/migrations/` — these are deltas on top of
+     `gis-engine/sql/schema.sql`, not yet folded into it, so a from-scratch restore must
+     re-apply them too, **in this order**, after the base schema files:
+     1. `2026-07-14-feature-table-pagination.sql` — `features_page`/`features_page_count`/
+        `features_bulk_update` RPCs (server-side attribute-table paging + bulk edit).
+     2. `2026-07-14-import-meters-admin-guard.sql` — re-creates `import_meters` with an
+        explicit `is_admin()` guard (security fix; safe/idempotent to re-run).
+     3. `2026-07-14-export-area-summary.sql` — `export_area_summary` RPC + a clamped
+        `features_in_bbox`. **Requires** `fix-features-bbox-timeout.sql` (or `extras.sql`)
+        already applied first, in addition to the base schema.
+     4. `2026-07-14-features-realtime.sql` — adds `public.features` to the
+        `supabase_realtime` publication and sets `REPLICA IDENTITY FULL` (needed for
+        filtered Realtime map↔table sync to receive DELETE events).
+     Each file's header comment documents its own purpose/order/idempotency in full;
+     check the directory for any files landed after this was last reviewed.
 
 ## Restore procedures
 - **DB data loss / corruption:** Supabase → Backups → restore the latest backup, or PITR
   to the moment before the incident. If restoring into a *new* project, re-point
   `SUPABASE_URL`/keys in Vercel + Render, then redeploy. Re-apply any schema delta from
-  `db/*.sql` if needed.
+  `db/*.sql` if needed — and, if the new project starts from a base backup that predates
+  them, the four dated files under `gis-engine/sql/migrations/` too (see the inventory
+  above for the required order).
 - **Accidental row deletion (small):** prefer PITR to a timestamp over a full restore.
   The append-only `incident_logs` audit trail helps reconstruct incident state.
 - **Storage loss:** re-upload from the last bucket export. `village-layers` can also be
   rebuilt from the source Shapefiles in `Data/` via the upload flow.
 - **Frontend / api broken deploy:** Vercel → Deployments → **Promote** the last known-good
-  deployment (instant rollback). RTO ≈ minutes.
+  deployment (instant rollback). RTO ≈ minutes. A from-scratch frontend rebuild is just
+  "redeploy from GitHub" — no separate install/build step — but note two directories
+  that are easy to forget aren't CDN-loaded: `js/vendor/` (third-party libraries vendored
+  verbatim into the repo, e.g. `togeojson.js` — copied from `npm i -D`, not installed at
+  deploy time; restoring the repo restores them) and `js/importers/` (the multi-format
+  import pipeline: `geojson.js`/`shapefile.js`/`dwg.js`/`kml.js`/`csv.js`, driven by
+  `js/import-pipeline.js`) — both are plain static files under `js/`, so they come back
+  automatically with any GitHub-sourced redeploy; called out here only so a manual
+  "rebuild the frontend from parts" recovery doesn't skip them.
 - **DWG service down:** Render → redeploy `dwg-export/` from `main`; allow for a cold start.
   Export degrades gracefully (DXF fallback) while it's down.
 - **Supabase region outage:** no live failover today (single region). Wait for provider

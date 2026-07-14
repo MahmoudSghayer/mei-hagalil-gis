@@ -39,6 +39,53 @@ function requireDwgUrl() {
   }
 }
 
+// Reads a non-OK response body and returns the best user-facing message.
+// The DWG-export service (dwg-export/main.py) raises FastAPI HTTPExceptions
+// with `{"detail": "..."}` — including the bilingual Hebrew/English strings
+// added for the ODA-conversion failure paths (e.g. "DWG conversion failed —
+// likely too large/complex for the server..."). Prefer that verbatim over a
+// generic wrapper so the user sees the server's actual, actionable message
+// instead of just a status code. Falls back to an older {error,message}
+// shape (a couple of legacy stubs used this), then a raw-text snippet.
+async function _extractErrorMessage(res) {
+  var errText = '';
+  try { errText = await res.text(); } catch (e) { /* body unreadable/already consumed */ }
+  try {
+    var errJson = JSON.parse(errText);
+    if (errJson && typeof errJson.detail === 'string' && errJson.detail) return errJson.detail;
+    if (errJson && errJson.error) return errJson.error + (errJson.message ? ': ' + errJson.message : '');
+  } catch (e) { /* not JSON */ }
+  return 'שגיאה ' + res.status + ': ' + errText.substring(0, 200);
+}
+
+// Hebrew hint shown when fetch() itself REJECTS (as opposed to resolving with
+// a non-OK response) — a network-level failure with no HTTP response at all.
+// This is exactly the OOM-killed-container / cold-Render-instance case: the
+// connection drops mid-request, the browser never sees any response (let
+// alone CORS headers), and reports a bogus "TypeError: Failed to fetch" /
+// "CORS error" that has nothing to do with CORS. Browsers reject fetch()
+// with a TypeError specifically for this class of failure, which is what
+// _isNetworkError() below keys off of — distinct from the Errors this file
+// throws itself after a successful-but-non-OK response (those are plain
+// Error, not TypeError, so they pass through unchanged).
+var FETCH_UNAVAILABLE_HINT_HE =
+  'שירות ההמרה אינו זמין כרגע (ייתכן שהוא מתעורר או שהקובץ גדול מדי) — ' +
+  'נסה שוב בעוד דקה, או המר ל-DXF והעלה אותו ישירות.';
+
+function _isNetworkError(e) {
+  return e instanceof TypeError;
+}
+
+// Wraps a caught error from a fetch() call site: a genuine network failure
+// (fetch rejected) becomes the Hebrew "service unavailable" hint; anything
+// else (a session error from authHeaders(), an Error we threw ourselves
+// after reading a real response, an AbortError from a caller-supplied
+// signal, ...) passes through unchanged so its original message still
+// reaches the user.
+function _friendlyFetchError(e) {
+  return _isNetworkError(e) ? new Error(FETCH_UNAVAILABLE_HINT_HE) : e;
+}
+
 // ════════════════════════════════════════════════════════════════
 //  PUBLIC API
 // ════════════════════════════════════════════════════════════════
@@ -94,15 +141,7 @@ window.dwgToGeoJSON = async function(dwgFile, options, onProgress) {
     clearInterval(pollProgress);
 
     if (!res.ok) {
-      var errText = await res.text();
-      var errMsg;
-      try {
-        var errJson = JSON.parse(errText);
-        errMsg = errJson.error + (errJson.message ? ': ' + errJson.message : '');
-      } catch(e) {
-        errMsg = 'שגיאה ' + res.status + ': ' + errText.substring(0, 200);
-      }
-      throw new Error(errMsg);
+      throw new Error(await _extractErrorMessage(res));
     }
 
     if (onProgress) onProgress('download', 95, 'מקבל תוצאה...');
@@ -130,7 +169,7 @@ window.dwgToGeoJSON = async function(dwgFile, options, onProgress) {
     return geojson;
   } catch(e) {
     clearInterval(pollProgress);
-    throw e;
+    throw _friendlyFetchError(e);
   }
 };
 
@@ -173,8 +212,7 @@ window.geoJSONtoDWG = async function(features, options, onProgress) {
     clearInterval(pollProgress);
 
     if (!res.ok) {
-      var errText = await res.text();
-      throw new Error('Export error: ' + errText.substring(0, 200));
+      throw new Error(await _extractErrorMessage(res));
     }
 
     var isFallback = res.headers.get('X-Fallback-Format') === 'dxf';
@@ -198,7 +236,7 @@ window.geoJSONtoDWG = async function(features, options, onProgress) {
     return { format: isFallback ? 'dxf' : 'dwg' };
   } catch(e) {
     clearInterval(pollProgress);
-    throw e;
+    throw _friendlyFetchError(e);
   }
 };
 
@@ -297,8 +335,7 @@ window.exportDXFSmart = async function(features, filename, onProgress) {
     clearInterval(pollProgress);
 
     if (!res.ok) {
-      var errText = await res.text();
-      throw new Error('שגיאת שרת ביצוא DXF (' + res.status + '): ' + errText.substring(0, 200));
+      throw new Error(await _extractErrorMessage(res));
     }
 
     if (onProgress) onProgress('download', 95, 'מקבל DXF...');
@@ -310,7 +347,10 @@ window.exportDXFSmart = async function(features, filename, onProgress) {
     return blob;
   } catch (e) {
     clearInterval(pollProgress);
-    throw e;   // real error post-ping — caller shows it, does NOT silently fall back
+    // real error post-ping — caller shows it, does NOT silently fall back
+    // (a network-level failure here still gets the friendly Hebrew hint,
+    // e.g. the service died between the health ping and this request)
+    throw _friendlyFetchError(e);
   }
 };
 

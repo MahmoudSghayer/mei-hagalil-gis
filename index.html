@@ -294,7 +294,7 @@
 (function () {
   var LAZY = [
     'js/measure-tools.js',
-    'js/backend-client.js?v=8',
+    'js/backend-client.js?v=9',
     'js/export-formats.js?v=3',
     'js/export-feature.js?v=19',
     'js/stats-feature.js?v=1',
@@ -307,7 +307,7 @@
     'js/gis-meter-connect.js?v=6',
     'js/gis-dashboard.js?v=2',
     'js/gis-tasks.js?v=7',
-    'js/gis-onboarding.js?v=1'
+    'js/gis-onboarding.js?v=2'
   ];
   function load() { LAZY.forEach(function (src) { var s = document.createElement('script'); s.src = src; s.defer = true; document.body.appendChild(s); }); }
   function go() { if ('requestIdleCallback' in window) requestIdleCallback(load, { timeout: 2500 }); else setTimeout(load, 1200); }
