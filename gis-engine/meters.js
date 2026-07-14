@@ -112,17 +112,34 @@
     return out;
   }
 
+  // Effective ceiling for a getMeters() call. The meters_geojson RPC's own
+  // DEFAULT is 20000, but this fleet is ~32k meters across 7 villages (see the
+  // getMeters comment below) — a plain 20000 cap would silently truncate real
+  // data, which is exactly why a previous fix here requested 200000 instead.
+  // But 200000 is ~6x the actual fleet size with no grounding of its own, and
+  // asking meters_geojson (SECURITY INVOKER, per-row RLS) for that many rows
+  // is needless load. 50000 keeps solid headroom over the known fleet without
+  // requesting an arbitrarily oversized limit.
+  var METERS_GEOJSON_MAX = 50000;
+
   GIS.meters = {
 
     // All meters as a GeoJSON FeatureCollection (RPC). Read = any authed user.
     // p_limit must be passed explicitly — the RPC defaults to 20000, which
-    // silently truncates large fleets (e.g. 32k meters over 7 villages).
+    // silently truncates large fleets (e.g. 32k meters over 7 villages). The
+    // effective limit is clamped to METERS_GEOJSON_MAX regardless of what the
+    // caller asks for.
+    // Returned FeatureCollection carries a `truncated` flag (true when
+    // features.length hit the effective cap) so callers can tell the result
+    // may be incomplete.
     // NOTE: meters_geojson only returns rows WHERE geometry IS NOT NULL, so a
     // meter imported without recognised lat/lng columns will never appear here.
     getMeters: async function (limit) {
       var sb = GIS.sb();
-      var fc = GIS._unwrap(await sb.rpc('meters_geojson', { p_limit: limit || 200000 }), 'load meters');
-      return fc || GIS.emptyFC();
+      var effLimit = Math.min(limit || METERS_GEOJSON_MAX, METERS_GEOJSON_MAX);
+      var fc = GIS._unwrap(await sb.rpc('meters_geojson', { p_limit: effLimit }), 'load meters') || GIS.emptyFC();
+      fc.truncated = (fc.features || []).length === effLimit;
+      return fc;
     },
 
     // Meters whose point falls inside a bbox, as GeoJSON (RPC, GIST-indexed).

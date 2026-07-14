@@ -5,3 +5,4 @@ ezdxf==1.3.4
 pyproj==3.6.1
 python-multipart==0.0.18  # fixes CVE-2024-53981 (malformed-multipart DoS)
 PyJWT==2.9.0
+slowapi==0.1.10           # per-IP rate limiting on export/convert endpoints

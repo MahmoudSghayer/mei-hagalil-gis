@@ -55,16 +55,23 @@
     };
   }
 
+  // "<village> · <category>" via LayerNaming when loaded; identical inline fallback (load-order safety)
+  function parseLayerName(name) {
+    name = name || '';
+    if (window.LayerNaming) return LayerNaming.parse(name);
+    var i = name.indexOf(' · ');
+    return i >= 0 ? { village: name.slice(0, i), category: name.slice(i + 3) } : { village: null, category: name };
+  }
+
   // pipe layers grouped by village, classified by category role.
   async function pipeLayers() {
     var ls = await GIS.layers.getLayers();
     return ls.map(function (l) {
-      var i = l.name.indexOf(' · ');
-      var cat = i >= 0 ? l.name.slice(i + 3) : l.name;
+      var p = parseLayerName(l.name);
       return {
         id: l.id, name: l.name,
-        village: i >= 0 ? l.name.slice(0, i) : '',
-        role: PIPE_ROLE[cat] || null, geometry_type: l.geometry_type
+        village: p.village || '',
+        role: PIPE_ROLE[p.category] || null, geometry_type: l.geometry_type
       };
     }).filter(function (l) { return l.role === 'water' || l.role === 'sewer'; });
   }
@@ -395,8 +402,7 @@
 
     box.innerHTML = '<div class="mc-cands-h">בחר צינור לחיבור (מהקרוב):</div>' +
       cands.map(function (c, i) {
-        var i2 = c.layer_name ? c.layer_name.indexOf(' · ') : -1;
-        var nm = i2 >= 0 ? c.layer_name.slice(i2 + 3) : (c.layer_name || c.asset_code || '—');
+        var nm = c.layer_name ? parseLayerName(c.layer_name).category : (c.asset_code || '—');
         return '<div class="mc-cand" data-i="' + i + '">' +
           '<span class="mc-cd">' + num(c.distance_m) + ' מ׳</span>' +
           '<span class="mc-cn">' + esc(nm) + '</span></div>';

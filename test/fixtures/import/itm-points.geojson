@@ -1,0 +1,50 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "Layer": "water_pipes_test",
+        "name": "sakhnin_center",
+        "id": 1
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          228194.3718743689,
+          752247.1110639628
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Layer": "water_pipes_test",
+        "name": "arrabeh_center",
+        "id": 2
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          231575.0543635859,
+          750742.3910597417
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "Layer": "water_pipes_test",
+        "name": "nahf_center",
+        "id": 3
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          228627.11824711112,
+          759944.2534195386
+        ]
+      }
+    }
+  ]
+}

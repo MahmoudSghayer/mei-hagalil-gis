@@ -8,7 +8,15 @@ POST /api/export/dwg  — returns a DWG file (requires ODA File Converter)
 GET  /health          — liveness check
 """
 
-from __future__ import annotations
+# NOTE: intentionally no `from __future__ import annotations` here. FastAPI
+# resolves string annotations using the route function's `__globals__`, but
+# slowapi's `@limiter.limit(...)` wraps each handler in a closure defined in
+# slowapi's own module — with postponed evaluation on, FastAPI would try to
+# eval this module's annotations against slowapi's globals and fail with
+# `NameError: name 'StreamingResponse' is not defined` at import time. All
+# type hints below (`X | None`, `list[...]`, etc.) are valid natively on the
+# Python 3.11 this service runs (CI + the Render Docker image), so postponed
+# evaluation isn't needed.
 
 import io
 import json
@@ -23,7 +31,11 @@ import jwt
 from fastapi import FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
 
 from dxf_builder import build_dxf
 from dxf_to_geojson import dxf_to_geojson
@@ -49,6 +61,30 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["X-Fallback-Format", "X-Fallback-Reason"],
 )
+
+# Per-IP rate limiting on the abusable endpoints (DXF/DWG export, DWG conversion).
+# This service runs behind Render's reverse proxy, so request.client.host (what
+# slowapi's default get_remote_address reads) is Render's proxy address, not the
+# caller's — key off X-Forwarded-For instead. Use the LAST entry: the trusted
+# proxy appends the real peer IP, so the last entry is proxy-controlled either
+# way, while the first entry is client-forgeable (a caller could rotate fake
+# leading entries to dodge the limit). Falls back to get_remote_address when
+# the header is absent (e.g. running locally without a proxy in front).
+def _rate_limit_key(request: Request) -> str:
+    xff = request.headers.get("x-forwarded-for")
+    if xff:
+        return xff.split(",")[-1].strip()
+    return get_remote_address(request)
+
+
+limiter = Limiter(key_func=_rate_limit_key)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+# Added before the body-size middleware below so that middleware stays the
+# outermost layer (Starlette runs later-added `add_middleware` calls first) —
+# oversized requests are still rejected on Content-Length alone, before the
+# rate limiter does any work.
+app.add_middleware(SlowAPIMiddleware)
 
 # Reject oversized request bodies BEFORE they are read into memory — a DoS guard
 # for the JSON export payload and the DWG file uploads (both otherwise unbounded).
@@ -89,9 +125,28 @@ SUPABASE_JWT_SECRET: str = os.getenv("SUPABASE_JWT_SECRET", "")
 
 # ── models ────────────────────────────────────────────────────────────────────
 
+# Characters stripped from a caller-supplied filename before it goes into the
+# Content-Disposition header: control chars (incl. CR/LF — header injection),
+# path separators, and the quote that delimits the header's filename="..." value.
+_FILENAME_STRIP = frozenset(chr(c) for c in range(0x00, 0x20)) | frozenset([chr(0x7F), "/", "\\", '"'])
+
+
+def _sanitize_filename(v: str) -> str:
+    cleaned = "".join(ch for ch in v if ch not in _FILENAME_STRIP).strip()
+    return cleaned or "mei-hagalil-export"
+
+
 class ExportRequest(BaseModel):
-    features: list[dict[str, Any]]
-    filename: str = "mei-hagalil-export"
+    # 20000 is well above any real export (MAX_DWG_FEATURES already redirects
+    # large DWG exports to DXF at 8000) — bounds the request body's item count
+    # against a memory-exhaustion DoS via an absurdly long features array.
+    features: list[dict[str, Any]] = Field(..., max_length=20000)
+    filename: str = Field("mei-hagalil-export", max_length=100)
+
+    @field_validator("filename")
+    @classmethod
+    def _clean_filename(cls, v: str) -> str:
+        return _sanitize_filename(v)
 
 
 # ── auth ──────────────────────────────────────────────────────────────────────
@@ -281,6 +336,7 @@ def _dwg_to_dxf(dwg_bytes: bytes) -> bytes | None:
 # ── routes ────────────────────────────────────────────────────────────────────
 
 @app.get("/health")
+@limiter.exempt
 def health() -> dict:
     oda = _find_oda()
     return {
@@ -291,7 +347,9 @@ def health() -> dict:
 
 
 @app.post("/api/export/dxf")
+@limiter.limit("10/minute")
 async def export_dxf(
+    request: Request,
     body: ExportRequest,
     authorization: str | None = Header(None),
 ) -> StreamingResponse:
@@ -306,7 +364,9 @@ async def export_dxf(
 
 
 @app.post("/api/export/dwg")
+@limiter.limit("10/minute")
 async def export_dwg(
+    request: Request,
     body: ExportRequest,
     authorization: str | None = Header(None),
 ) -> StreamingResponse:
@@ -340,18 +400,40 @@ async def export_dwg(
     )
 
 
+def _looks_like_dwg(data: bytes) -> bool:
+    """DWG binary files start with an "AC1<x>" version stamp (e.g. AC1027 =
+    2013, AC1032 = 2018) — the same signature js/pages/upload.js's client-side
+    magic-byte gate checks for. Used here to sanity-check the caller's
+    filename/extension claim rather than trusting it blindly."""
+    return data[:4] == b"AC10"
+
+
 @app.post("/api/convert/dwg-to-geojson")
+@limiter.limit("10/minute")
 async def convert_dwg_to_geojson(
+    request: Request,
     file: UploadFile = File(...),
     source_crs: str = Form("EPSG:2039"),
     authorization: str | None = Header(None),
 ) -> JSONResponse:
-    """Convert an uploaded DWG → WGS84 GeoJSON (for importing into the map)."""
+    """Convert an uploaded DWG *or* DXF → WGS84 GeoJSON (for importing into the
+    map). A .dxf upload skips the ODA DWG→DXF conversion step entirely (the
+    file is already DXF) — detected by filename extension, but only trusted
+    when the content doesn't actually look like a DWG binary (the "AC10..."
+    signature): a file named .dxf whose bytes are really a DWG still goes
+    through the normal ODA path below."""
     _require_auth(authorization)
-    dwg_bytes = await file.read()
-    dxf_bytes = _dwg_to_dxf(dwg_bytes)
-    if not dxf_bytes:
-        raise HTTPException(status_code=500, detail="DWG→DXF conversion failed (ODA unavailable?)")
+    raw_bytes = await file.read()
+    filename = (file.filename or "").lower()
+    is_dxf_upload = filename.endswith(".dxf") and not _looks_like_dwg(raw_bytes)
+
+    if is_dxf_upload:
+        dxf_bytes = raw_bytes
+    else:
+        dxf_bytes = _dwg_to_dxf(raw_bytes)
+        if not dxf_bytes:
+            raise HTTPException(status_code=500, detail="DWG→DXF conversion failed (ODA unavailable?)")
+
     try:
         geojson = dxf_to_geojson(dxf_bytes, source_crs=source_crs or "EPSG:2039")
     except Exception as e:
@@ -360,7 +442,9 @@ async def convert_dwg_to_geojson(
 
 
 @app.post("/api/convert/dwg-to-dxf")
+@limiter.limit("10/minute")
 async def convert_dwg_to_dxf(
+    request: Request,
     file: UploadFile = File(...),
     authorization: str | None = Header(None),
 ) -> StreamingResponse:

@@ -828,7 +828,56 @@ function renderIncidentError(){
     var b=document.getElementById('inc-retry'); if(b) b.onclick=loadIncidents; }
   var mp=document.getElementById('my-panel'); if(mp) mp.style.display='none';
 }
-function subscribeRT(){gSb.channel('inc-rt').on('postgres_changes',{event:'*',schema:'public',table:'incidents'},function(p){if(p.eventType==='INSERT'){gIncidents.unshift(p.new);showToast('תקלה חדשה: '+p.new.title);}else if(p.eventType==='UPDATE'){var i=gIncidents.findIndex(function(x){return x.id===p.new.id;});if(i>=0)gIncidents[i]=p.new;else gIncidents.unshift(p.new);if(p.new.status==='closed')gIncidents=gIncidents.filter(function(x){return x.id!==p.new.id;});}else if(p.eventType==='DELETE')gIncidents=gIncidents.filter(function(x){return x.id!==p.old.id;});renderAll();}).subscribe();}
+// Decide how to scope the incidents realtime subscription for a profile.
+//   null            → one unfiltered channel (every change, for every client) —
+//                      today's only behavior, and still the only behavior for
+//                      editors/admins (few users; they need to see everything).
+//   array<string>   → one server-side-filtered channel per village
+//                      (postgres_changes filter: 'village=eq.X'), so a viewer
+//                      scoped to 1-2 villages stops receiving every other
+//                      client's incidents. Sourced from profile.assigned_villages
+//                      — not part of the data model yet (profiles today only
+//                      carry role, no per-user village list), so this is a
+//                      forward-compatible no-op until that field exists; it
+//                      activates automatically, with no further code changes,
+//                      the day a viewer profile does carry one.
+// Kept as a small pure function (profile in, decision out) so it is
+// unit-testable without Supabase/DOM.
+function _incidentsChannelVillages(profile){
+  if(!profile||profile.role!=='viewer')return null;
+  var villages=profile.assigned_villages;
+  if(!Array.isArray(villages)||!villages.length)return null;
+  var seen={},out=[];
+  villages.forEach(function(v){ if(v&&!seen[v]){seen[v]=true;out.push(v);} });
+  return out.length?out:null;
+}
+
+function _onIncidentRT(p){
+  if(p.eventType==='INSERT'){gIncidents.unshift(p.new);showToast('תקלה חדשה: '+p.new.title);}
+  else if(p.eventType==='UPDATE'){var i=gIncidents.findIndex(function(x){return x.id===p.new.id;});if(i>=0)gIncidents[i]=p.new;else gIncidents.unshift(p.new);if(p.new.status==='closed')gIncidents=gIncidents.filter(function(x){return x.id!==p.new.id;});}
+  else if(p.eventType==='DELETE')gIncidents=gIncidents.filter(function(x){return x.id!==p.old.id;});
+  _renderAllDebounced();
+}
+
+// Bursts of realtime events (e.g. a bulk update) each mutate gIncidents
+// synchronously, but the (re)render is coalesced to one trailing call so a
+// burst doesn't repaint the map/lists once per event.
+var _renderAllTimer=null;
+function _renderAllDebounced(){
+  if(_renderAllTimer)clearTimeout(_renderAllTimer);
+  _renderAllTimer=setTimeout(function(){_renderAllTimer=null;renderAll();},300);
+}
+
+function subscribeRT(){
+  var villages=_incidentsChannelVillages(gProfile);
+  if(villages){
+    villages.forEach(function(v,idx){
+      gSb.channel('inc-rt-'+idx).on('postgres_changes',{event:'*',schema:'public',table:'incidents',filter:'village=eq.'+v},_onIncidentRT).subscribe();
+    });
+  } else {
+    gSb.channel('inc-rt').on('postgres_changes',{event:'*',schema:'public',table:'incidents'},_onIncidentRT).subscribe();
+  }
+}
 
 function isVisibleToMe(inc){if(inc.status==='open')return true;if(inc.status==='in_progress')return inc.assigned_to===gUser.id||gProfile.role==='admin';return false;}
 function isMine(inc){return inc.assigned_to===gUser.id&&inc.status==='in_progress';}

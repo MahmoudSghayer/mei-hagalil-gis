@@ -91,6 +91,24 @@
       if (!window.turf) throw new Error('[GIS.spatial] intersects() requires Turf.js (load it via CDN).');
       var wrap = function (x) { return x.type === 'Feature' ? x : { type: 'Feature', geometry: x, properties: {} }; };
       return window.turf.booleanIntersects(wrap(a), wrap(b));
+    },
+
+    // Area-scoped feature summary for the export wizard's draw-scope flow —
+    // one row per requested layer_id with a fast COUNT (no feature payloads)
+    // plus the distinct PostGIS geometry types present in the bbox. See
+    // gis-engine/sql/migrations/2026-07-14-export-area-summary.sql.
+    // bounds = { minLng, minLat, maxLng, maxLat } (WGS84). Returns
+    // [{ layer_id, name, count, geometry_types }, ...] (possibly empty).
+    exportAreaSummary: async function (bounds, layerIds) {
+      GIS._assert(bounds, 'exportAreaSummary requires bounds');
+      GIS._assert(layerIds && layerIds.length, 'exportAreaSummary requires a non-empty layerIds array');
+      var sb = GIS.sb();
+      var rows = GIS._unwrap(await sb.rpc('export_area_summary', {
+        p_min_lng: bounds.minLng, p_min_lat: bounds.minLat,
+        p_max_lng: bounds.maxLng, p_max_lat: bounds.maxLat,
+        p_layer_ids: layerIds
+      }), 'export area summary');
+      return rows || [];
     }
   };
 })();

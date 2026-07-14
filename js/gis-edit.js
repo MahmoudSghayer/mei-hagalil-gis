@@ -31,6 +31,7 @@
     snapGuide: null,       // L.geoJSON guide layer for snapping
     editLayer: null,       // temp editable L.geoJSON during editgeom
     editId: null,
+    editBeforeGeometry: null,  // geometry captured at edit-start, for undo
     clickHandler: null,    // one-shot map-click handler (edit/delete pick)
     createHandler: null    // pm:create handler (add)
   };
@@ -67,6 +68,26 @@
     var dLng = (padM || 0) / (111320 * Math.cos(b.getCenter().lat * Math.PI / 180) || 1);
     return { minLng: b.getWest() - dLng, minLat: b.getSouth() - dLat, maxLng: b.getEast() + dLng, maxLat: b.getNorth() + dLat };
   }
+  // מפרק "<כפר> · <category>" דרך LayerNaming כשהוא טעון; נופל בחזרה לפירוק
+  // inline זהה מבחינה סמנטית אם הסקריפט טרם נטען (בטיחות סדר-טעינה).
+  function parseLayerName(name) {
+    name = name || '';
+    if (window.LayerNaming) return LayerNaming.parse(name);
+    var idx = name.indexOf(' · ');
+    return idx >= 0 ? { village: name.slice(0, idx), category: name.slice(idx + 3) } : { village: null, category: name };
+  }
+
+  // Strip UI-only marker properties (added by features_geojson/features_in_bbox)
+  // before they can be replayed back into a new row's `properties` column —
+  // asset_code travels separately; __id/__layer_id are query-time synthetics.
+  function cleanProps(props) {
+    var out = {};
+    Object.keys(props || {}).forEach(function (k) {
+      if (k === '__id' || k === '__layer_id' || k === 'asset_code') return;
+      out[k] = props[k];
+    });
+    return out;
+  }
 
   async function requireEditor() {
     var role = null;
@@ -80,11 +101,11 @@
   async function listLayers() {
     var ls = await GIS.layers.getLayers();
     return (ls || []).map(function (l) {
-      var i = l.name.indexOf(' · ');
+      var parsed = parseLayerName(l.name);
       return {
         id: l.id, name: l.name,
-        label: i >= 0 ? l.name.slice(i + 3) : l.name,
-        village: i >= 0 ? l.name.slice(0, i) : '',
+        label: parsed.category,
+        village: parsed.village != null ? parsed.village : '',
         geometry_type: l.geometry_type
       };
     });
@@ -310,7 +331,7 @@
     if (village) {
       var hit = group.layers.filter(function (l) { return l.village === village; })[0];
       if (hit) return hit.id;
-      var name = village + ' · ' + group.label;
+      var name = window.LayerNaming ? LayerNaming.compose(village, group.label) : village + ' · ' + group.label;
       try {
         var found = await GIS.layers.findByName(name);
         if (found) return found.id;
@@ -362,8 +383,12 @@
 
     toast('יוצר ישות…');
     try {
-      await GIS.features.createFeature(layer.id, geometry, res.props, res.code);
+      var created = await GIS.features.createFeature(layer.id, geometry, res.props, res.code);
       toast('הישות נוצרה ✓');
+      GISEditHistory.push({
+        type: 'create', layerId: layer.id, id: created && created.id,
+        geometry: geometry, properties: res.props, assetCode: res.code
+      });
       refreshLayer(layer.id, true);
     } catch (e) {
       toast(cleanErr(e), 'error');
@@ -423,6 +448,7 @@
     state.targetLayerId = pick.layerId;
     state.editId = feature.id || (feature.properties && feature.properties.__id);
     if (!state.editId) { toast('לא נמצא מזהה לישות'); disarm(); return; }
+    state.editBeforeGeometry = feature.geometry;   // captured for undo
     state.editLayer = L.geoJSON(feature, {
       pane: pane,
       style: { color: '#e11d48', weight: 4, opacity: 0.95 },
@@ -443,11 +469,12 @@
     var feat = gj && (gj.type === 'FeatureCollection' ? (gj.features || [])[0] : gj);
     var geometry = feat && feat.geometry;
     if (!geometry) { toast('אין גאומטריה לשמירה'); return; }
-    var layerId = state.targetLayerId, id = state.editId;
+    var layerId = state.targetLayerId, id = state.editId, before = state.editBeforeGeometry;
     toast('שומר…');
     try {
       await GIS.features.updateGeometry(id, geometry);
       toast('הגאומטריה נשמרה ✓');
+      if (before) GISEditHistory.push({ type: 'geometry', layerId: layerId, id: id, before: before, after: geometry });
       disarm();
       refreshLayer(layerId, false);
     } catch (e) {
@@ -482,6 +509,10 @@
     try {
       await GIS.features.deleteFeature(id);
       toast('הישות נמחקה ✓');
+      GISEditHistory.push({
+        type: 'delete', layerId: pick.layerId, id: id,
+        geometry: feature.geometry, properties: cleanProps(p), assetCode: code
+      });
       refreshLayer(pick.layerId, false);
       // a deleted pipe's meters are reset to NONE by a DB trigger — refresh the
       // connector overlay (if shown) so they flip to yellow right away.
@@ -524,6 +555,153 @@
     toast(state.snap ? 'הצמדה פעילה' : 'הצמדה כבויה');
   }
 
+  // ── 5) UNDO / REDO history ──────────────────────────────────────────────────
+  // Bounded (50) stack of inverse operations over GIS.features:
+  //   create           → inverse = delete(id)
+  //   delete           → inverse = re-create (full geometry+properties captured
+  //                       BEFORE the delete; the row gets a NEW id — the entry's
+  //                       id is remapped so a later redo/undo targets it)
+  //   geometry edit    → inverse = restore the pre-edit geometry
+  // Exposed as window.GISEditHistory so it's independently unit-testable
+  // (test/gis/undo-stack.test.js) against a mocked GIS.features.
+  var HISTORY_MAX = 50;
+  var undoStack = [];
+  var redoStack = [];
+  var historyBusy = false;
+  var historyBtns = { undo: null, redo: null, bar: null };
+
+  function updateHistoryButtons() {
+    if (historyBtns.undo) historyBtns.undo.disabled = !undoStack.length;
+    if (historyBtns.redo) historyBtns.redo.disabled = !redoStack.length;
+    // The bar stays hidden until the first edit lands — viewers (read-only)
+    // never see it, and editors don't get dead buttons over the map.
+    if (historyBtns.bar) historyBtns.bar.style.display = (undoStack.length || redoStack.length) ? 'flex' : 'none';
+  }
+
+  function pushHistory(entry) {
+    undoStack.push(entry);
+    if (undoStack.length > HISTORY_MAX) undoStack.shift();
+    redoStack.length = 0;   // a fresh action invalidates the redo chain
+    updateHistoryButtons();
+  }
+
+  // Applies the INVERSE of `entry` when dir==='undo', or REPLAYS it when
+  // dir==='redo'. Mutates entry.id in place whenever a delete↔recreate round
+  // trip changes the row's id, so the SAME entry object stays valid across a
+  // whole undo→redo→undo… chain.
+  async function applyHistoryEntry(entry, dir) {
+    var undoing = dir === 'undo';
+    if (entry.type === 'create') {
+      if (undoing) {
+        await GIS.features.deleteFeature(entry.id);
+      } else {
+        var created = await GIS.features.createFeature(entry.layerId, entry.geometry, entry.properties, entry.assetCode);
+        entry.id = created && created.id;
+      }
+    } else if (entry.type === 'delete') {
+      if (undoing) {
+        var recreated = await GIS.features.createFeature(entry.layerId, entry.geometry, entry.properties, entry.assetCode);
+        entry.id = recreated && recreated.id;
+      } else {
+        await GIS.features.deleteFeature(entry.id);
+      }
+    } else if (entry.type === 'geometry') {
+      await GIS.features.updateGeometry(entry.id, undoing ? entry.before : entry.after);
+    }
+    // A feature just came back into existence — nudge the user if its layer is off.
+    var added = (entry.type === 'create' && !undoing) || (entry.type === 'delete' && undoing);
+    refreshLayer(entry.layerId, added);
+  }
+
+  async function undoHistory() {
+    if (historyBusy || !undoStack.length) return false;
+    historyBusy = true;
+    var entry = undoStack.pop();
+    try {
+      await applyHistoryEntry(entry, 'undo');
+      redoStack.push(entry);
+      if (redoStack.length > HISTORY_MAX) redoStack.shift();
+      toast('הפעולה בוטלה ↶');
+      return true;
+    } catch (e) {
+      undoStack.push(entry);   // inverse failed — restore, stacks unchanged
+      toast(cleanErr(e), 'error');
+      return false;
+    } finally {
+      historyBusy = false;
+      updateHistoryButtons();
+    }
+  }
+
+  async function redoHistory() {
+    if (historyBusy || !redoStack.length) return false;
+    historyBusy = true;
+    var entry = redoStack.pop();
+    try {
+      await applyHistoryEntry(entry, 'redo');
+      undoStack.push(entry);
+      if (undoStack.length > HISTORY_MAX) undoStack.shift();
+      toast('הפעולה בוצעה שוב ↷');
+      return true;
+    } catch (e) {
+      redoStack.push(entry);   // replay failed — restore, stacks unchanged
+      toast(cleanErr(e), 'error');
+      return false;
+    } finally {
+      historyBusy = false;
+      updateHistoryButtons();
+    }
+  }
+
+  // Keyboard-shortcut focus guard: Ctrl/Cmd+Z / Ctrl+Y (or +Shift+Z) are
+  // ignored while the user is typing anywhere (input/textarea/select/contenteditable).
+  function isEditableTarget(t) {
+    if (!t) return false;
+    var tag = (t.tagName || '').toUpperCase();
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+    return !!t.isContentEditable;
+  }
+  document.addEventListener('keydown', function (e) {
+    if (!(e.ctrlKey || e.metaKey) || isEditableTarget(e.target)) return;
+    var key = (e.key || '').toLowerCase();
+    if (key === 'z' && !e.shiftKey) { e.preventDefault(); undoHistory(); }
+    else if (key === 'y' || (key === 'z' && e.shiftKey)) { e.preventDefault(); redoHistory(); }
+  });
+
+  // Small floating undo/redo toolbar (Hebrew tooltips). Always present once this
+  // script loads; both buttons stay disabled until there's something to act on.
+  function ensureHistoryBar() {
+    if (document.getElementById('gis-edit-history-bar')) return;
+    var bar = document.createElement('div'); bar.id = 'gis-edit-history-bar';
+    var undoBtn = document.createElement('button');
+    undoBtn.type = 'button'; undoBtn.className = 'geh-btn'; undoBtn.title = 'בטל';
+    undoBtn.setAttribute('aria-label', 'בטל'); undoBtn.textContent = '↶'; undoBtn.disabled = true;
+    undoBtn.onclick = function () { undoHistory(); };
+    var redoBtn = document.createElement('button');
+    redoBtn.type = 'button'; redoBtn.className = 'geh-btn'; redoBtn.title = 'בצע שוב';
+    redoBtn.setAttribute('aria-label', 'בצע שוב'); redoBtn.textContent = '↷'; redoBtn.disabled = true;
+    redoBtn.onclick = function () { redoHistory(); };
+    bar.appendChild(undoBtn); bar.appendChild(redoBtn);
+    bar.style.display = 'none';   // shown by updateHistoryButtons() on first edit
+    document.body.appendChild(bar);
+    historyBtns.undo = undoBtn; historyBtns.redo = redoBtn; historyBtns.bar = bar;
+  }
+  ensureHistoryBar();
+
+  window.GISEditHistory = {
+    push: pushHistory,
+    undo: undoHistory,
+    redo: redoHistory,
+    canUndo: function () { return undoStack.length > 0; },
+    canRedo: function () { return redoStack.length > 0; },
+    clear: function () { undoStack.length = 0; redoStack.length = 0; updateHistoryButtons(); },
+    size: function () { return { undo: undoStack.length, redo: redoStack.length }; },
+    peekUndo: function () { return undoStack.slice(); },
+    peekRedo: function () { return redoStack.slice(); },
+    isEditableTarget: isEditableTarget,
+    max: HISTORY_MAX
+  };
+
   // ── refresh the rendered layer after a write ────────────────────────────────
   function refreshLayer(layerId, added) {
     if (window.GISEngineSidebar) {
@@ -549,6 +727,7 @@
       state.editLayer = null;
     }
     state.editId = null;
+    state.editBeforeGeometry = null;
     clearSnapGuide();
     closeSaveBar();
     banner(false);
@@ -575,7 +754,13 @@
       '#gis-edit-bar button{border:1px solid #cbd5e1;border-radius:7px;padding:6px 12px;font-size:12.5px;cursor:pointer;font-family:inherit}' +
       '#gis-edit-bar .geb-save{background:#16a34a;color:#fff;border-color:#16a34a}' +
       '#gis-edit-bar .geb-cancel{background:#fff;color:#334155}' +
-      '.geb-req{color:#dc2626}.geb-ty,.geb-fn{font-size:10px;color:#94a3b8;font-weight:400}';
+      '.geb-req{color:#dc2626}.geb-ty,.geb-fn{font-size:10px;color:#94a3b8;font-weight:400}' +
+      '#gis-edit-history-bar{position:absolute;top:64px;inset-inline-end:14px;z-index:1250;display:flex;gap:4px;' +
+      'background:#fff;border:1px solid #d6dbe2;border-radius:9px;box-shadow:0 3px 10px rgba(0,0,0,.15);padding:4px}' +
+      '#gis-edit-history-bar .geh-btn{border:1px solid #cbd5e1;background:#fff;border-radius:6px;width:30px;height:28px;' +
+      'font-size:15px;line-height:1;cursor:pointer;color:#334155;font-family:inherit}' +
+      '#gis-edit-history-bar .geh-btn:hover:not(:disabled){background:#f1f5f9;color:#0d3b5e}' +
+      '#gis-edit-history-bar .geh-btn:disabled{opacity:.35;cursor:default}';
     document.head.appendChild(s);
   })();
 
@@ -585,6 +770,9 @@
     startDelete: startDelete,
     toggleSnap: toggleSnap,
     disarm: disarm,
-    clear: disarm
+    clear: disarm,
+    // Exposed so the layer-name parsing (LayerNaming-backed, with an inline
+    // load-order-safety fallback) is independently unit-testable.
+    _parseLayerName: parseLayerName
   };
 })();

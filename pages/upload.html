@@ -14,11 +14,11 @@
   <script defer src="../js/a11y.js?v=1"></script>
   <!-- GIS engine: uploads import straight into the engine (features/layers/fields) -->
   <script src="../gis-engine/core.js?v=2"></script>
-  <script src="../gis-engine/spatial.js?v=1"></script>
+  <script src="../gis-engine/spatial.js?v=2"></script>
   <script src="../gis-engine/layers.js?v=2"></script>
-  <script src="../gis-engine/features.js?v=2"></script>
+  <script src="../gis-engine/features.js?v=4"></script>
   <script src="../gis-engine/fields.js?v=1"></script>
-  <script src="../gis-engine/migrate.js?v=1"></script>
+  <script src="../gis-engine/migrate.js?v=2"></script>
 </head>
 <body>
 <div id="topbar">
@@ -44,8 +44,8 @@
     <div class="upload-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
       <div class="upload-icon"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V4"/><path d="M8 8l4-4 4 4"/><path d="M5 19h14"/></svg></div>
       <div class="upload-title">גרור קובץ לכאן</div>
-      <div class="upload-sub">GeoJSON (.geojson / .json), Shapefile ב-ZIP (.zip), או DWG (.dwg) · עד 100 MB</div>
-      <input type="file" id="file-input" accept=".geojson,.json,.zip,.dwg,application/geo+json,application/json,application/zip"/>
+      <div class="upload-sub">GeoJSON (.geojson / .json), Shapefile ב-ZIP (.zip), DWG (.dwg), DXF (.dxf), KML (.kml), KMZ (.kmz) או CSV (.csv) · עד 100 MB</div>
+      <input type="file" id="file-input" accept=".geojson,.json,.zip,.dwg,.dxf,.kml,.kmz,.csv,application/geo+json,application/json,application/zip,text/csv"/>
     </div>
     <div class="file-preview" id="file-preview">
       <div class="file-icon"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h6"/></svg></div>
@@ -54,6 +54,43 @@
         <div class="file-size" id="fp-size">—</div>
       </div>
       <button class="file-remove" onclick="clearFile()">✖ הסר</button>
+    </div>
+
+    <!-- CSV column-mapping (only shown for .csv uploads — parse() can't know
+         which columns are X/Y/WKT/layer without the user telling us) -->
+    <div class="mapping-section" id="csv-mapping-section">
+      <div class="card-title" style="margin-top:20px">מיפוי עמודות CSV</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>עמודת WKT (גיאומטריה מוכנה — אופציונלי)</label>
+          <select id="csv-wkt-col"></select>
+        </div>
+        <div class="form-group">
+          <label>עמודת שכבה (אופציונלי)</label>
+          <select id="csv-layer-col"></select>
+        </div>
+        <div class="form-group">
+          <label>עמודת X / קו אורך (lon)</label>
+          <select id="csv-lon-col"></select>
+        </div>
+        <div class="form-group">
+          <label>עמודת Y / קו רוחב (lat)</label>
+          <select id="csv-lat-col"></select>
+        </div>
+        <div class="form-group full">
+          <label>מערכת קואורדינטות</label>
+          <div style="display:flex;gap:18px;margin-top:4px">
+            <label style="display:flex;align-items:center;gap:6px;font-weight:400;text-transform:none;margin:0">
+              <input type="radio" name="csv-crs" id="csv-crs-wgs84" value="wgs84" checked/> WGS84 (מעלות — lon/lat)
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-weight:400;text-transform:none;margin:0">
+              <input type="radio" name="csv-crs" id="csv-crs-itm" value="itm"/> ITM ישראל (מטרים — X/Y)
+            </label>
+          </div>
+        </div>
+      </div>
+      <div id="csv-mapping-err" style="color:#dc2626;font-size:12px;margin-bottom:8px"></div>
+      <button class="btn btn-primary" onclick="confirmCsvMapping()">✔ אשר מיפוי והמשך</button>
     </div>
 
     <!-- Auto village detection -->
@@ -136,7 +173,18 @@
 
 <div id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 <script src="../js/motion-utils.js"></script>
-<script src="../js/backend-client.js?v=7"></script>
-<script src="../js/pages/upload.js?v=6"></script>
+<script src="../js/backend-client.js?v=8"></script>
+<!-- Import pipeline: CRS/naming utils, then per-format parsers, then the pipeline orchestrator -->
+<script src="../js/crs-utils.js?v=1"></script>
+<script src="../js/layer-naming.js?v=1"></script>
+<script src="../js/importers/geojson.js?v=1"></script>
+<script src="../js/importers/shapefile.js?v=1"></script>
+<script src="../js/importers/dwg.js?v=1"></script>
+<!-- KML/KMZ importer: vendored @tmcw/togeojson (browser global window.toGeoJSON) first -->
+<script src="../js/vendor/togeojson.js?v=1"></script>
+<script src="../js/importers/kml.js?v=1"></script>
+<script src="../js/importers/csv.js?v=1"></script>
+<script src="../js/import-pipeline.js?v=1"></script>
+<script src="../js/pages/upload.js?v=8"></script>
 </body>
 </html>

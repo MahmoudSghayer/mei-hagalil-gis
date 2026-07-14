@@ -15,6 +15,7 @@ var gAdminId = null;
 var gRules = [];
 var gLayerStats = {};
 var gDetectedVillage = null;
+var gCsvParse = null; // { needsMapping, headers, rows, preview, guess } from Importers.csv.parse()
 
 var CATEGORIES = [
   { value: 'IGNORE', label: '🚫 דלג (לא להעלות)' },
@@ -48,6 +49,17 @@ var CATEGORIES = [
   { value: 'distance_label', label: '↔ מרחקים' },
   { value: 'other', label: '❓ אחר' }
 ];
+
+// DXF is routed through the SAME server call as DWG — dwg-export/main.py's
+// /api/convert/dwg-to-geojson now accepts .dxf directly and skips the ODA
+// step (the file is already DXF). js/importers/dwg.js's parse() just forwards
+// whatever File it's given to window.dwgToGeoJSON, so it works unmodified for
+// DXF too — this registers it under the 'dxf' format name that ImportPipeline
+// looks up (window.Importers[format]) rather than duplicating the wrapper
+// inside js/importers/dwg.js, which this wave doesn't touch.
+if (window.Importers && window.Importers.dwg && !window.Importers.dxf) {
+  window.Importers.dxf = { parse: window.Importers.dwg.parse };
+}
 
 window.addEventListener('load', async function() {
   var res = await gSb.auth.getSession();
@@ -87,179 +99,10 @@ function setupDragDrop() {
   });
 }
 
-// ── CRS / COORDINATE UTILITIES ───────────────────────────────────────────────
-
-function ensureITM() {
-  if (window.proj4 && !window.proj4.defs('EPSG:2039')) {
-    // EXACT "Israel 1993 to WGS 84 (2)" 7-param Helmert that PROJ/pyproj uses (~0.5 m);
-    // the old 3-param -48,55,52 placed imports ~10 m off. Keep in sync with search/export.
-    window.proj4.defs('EPSG:2039',
-      '+proj=tmerc +lat_0=31.7343936111111 +lon_0=35.2045169444444 ' +
-      '+k=1.0000067 +x_0=219529.584 +y_0=626907.39 +ellps=GRS80 ' +
-      '+towgs84=23.772,17.49,17.859,-0.3132,-1.85274,1.67299,-5.4262 +units=m +no_defs');
-  }
-}
-
-function detectCRSFromPrj(prj) {
-  if (!prj) return 'unknown';
-  var p = prj.toUpperCase();
-  // WGS84 geographic (no projection wrapper)
-  if (p.indexOf('PROJCS') === -1 && (p.indexOf('WGS_1984') !== -1 || p.indexOf('WGS 1984') !== -1)) return 'WGS84';
-  // Israel ITM — check name or known false-easting/northing
-  if (p.indexOf('ISRAEL_TM_GRID') !== -1 || p.indexOf('ISRAEL TM GRID') !== -1) return 'ITM';
-  if (p.indexOf('219529') !== -1 && p.indexOf('626907') !== -1) return 'ITM';
-  return 'unknown';
-}
-
-function convertCoord(xy, crs) {
-  if (crs !== 'ITM') return xy;
-  var r = window.proj4('EPSG:2039', 'EPSG:4326', [xy[0], xy[1]]);
-  return [r[0], r[1]]; // [lng, lat]
-}
-
-function convertCoords(coords, crs) {
-  if (!Array.isArray(coords)) return coords;
-  if (typeof coords[0] === 'number') return convertCoord(coords, crs);
-  return coords.map(function(c) { return convertCoords(c, crs); });
-}
-
-function convertGeometry(geom, crs) {
-  if (!geom || crs === 'WGS84') return geom;
-  return { type: geom.type, coordinates: convertCoords(geom.coordinates, crs) };
-}
-
-function validateCoord(lng, lat) {
-  // Israel bounding box
-  return lat >= 29 && lat <= 34 && lng >= 34 && lng <= 37;
-}
-
-// ── DBF READER (handles type F / Float that shapefile.js ignores) ─────────────
-
-function readDbfRecords(buf) {
-  var bytes = new Uint8Array(buf);
-  var view  = new DataView(buf);
-  var numRecs    = view.getUint32(4, true);
-  var headerSize = view.getUint16(8, true);
-  var recSize    = view.getUint16(10, true);
-
-  var fields = [];
-  var pos = 32;
-  while (pos + 32 <= headerSize && bytes[pos] !== 0x0D) {
-    var name = '';
-    for (var i = 0; i < 11 && bytes[pos + i]; i++) name += String.fromCharCode(bytes[pos + i]);
-    var type = String.fromCharCode(bytes[pos + 11]);
-    var len  = bytes[pos + 16];
-    fields.push({ name: name, type: type, len: len });
-    pos += 32;
-  }
-
-  var records = [];
-  for (var r = 0; r < numRecs; r++) {
-    var rStart = headerSize + r * recSize;
-    if (rStart + recSize > bytes.length) break;
-    var rec = {};
-    var fStart = rStart + 1;
-    for (var f = 0; f < fields.length; f++) {
-      var fd = fields[f];
-      var raw = '';
-      for (var c = 0; c < fd.len; c++) {
-        var b = bytes[fStart + c];
-        raw += (b && b !== 0) ? String.fromCharCode(b) : '';
-      }
-      var trimmed = raw.trim();
-      if (fd.type === 'C') {
-        rec[fd.name] = trimmed;
-      } else if (fd.type === 'N' || fd.type === 'F') {
-        var n = parseFloat(trimmed);
-        rec[fd.name] = isNaN(n) ? null : n;
-      } else if (fd.type === 'D') {
-        rec[fd.name] = trimmed || null;
-      } else if (fd.type === 'L') {
-        rec[fd.name] = (trimmed === 'T' || trimmed === 'Y' || trimmed === 't' || trimmed === 'y');
-      } else {
-        rec[fd.name] = trimmed;
-      }
-      fStart += fd.len;
-    }
-    records.push(rec);
-  }
-  return records;
-}
-
-// ── SHAPEFILE ZIP PROCESSING ──────────────────────────────────────────────────
-
-function processZipFile(file, onDone, onError) {
-  ensureITM();
-
-  JSZip.loadAsync(file).then(function(zip) {
-    var shpPaths = [];
-    zip.forEach(function(path, entry) {
-      if (!entry.dir && path.toLowerCase().endsWith('.shp')) shpPaths.push(path);
-    });
-    if (!shpPaths.length) { onError(new Error('לא נמצאו קבצי .shp בתוך ה-ZIP')); return; }
-
-    var allFeatures = [];
-    var remaining = shpPaths.length;
-    var hasError = false;
-
-    shpPaths.forEach(function(shpPath) {
-      var base = shpPath.replace(/\.shp$/i, '');
-      var layerName = base.split('/').pop().split('\\').pop();
-
-      // Load .shp, .dbf, .prj in parallel
-      var shpPromise  = zip.file(shpPath) ? zip.file(shpPath).async('arraybuffer') : Promise.resolve(null);
-      var dbfFile     = zip.file(base + '.dbf') || zip.file(base + '.DBF');
-      var dbfPromise  = dbfFile ? dbfFile.async('arraybuffer') : Promise.resolve(null);
-      var prjFile     = zip.file(base + '.prj') || zip.file(base + '.PRJ');
-      var prjPromise  = prjFile ? prjFile.async('string') : Promise.resolve(null);
-
-      Promise.all([shpPromise, dbfPromise, prjPromise]).then(function(results) {
-        var shpBuf = results[0], dbfBuf = results[1], prjText = results[2];
-        var crs = detectCRSFromPrj(prjText);
-
-        if (crs === 'unknown') {
-          console.warn('Unknown CRS for ' + layerName + ' — assuming ITM');
-          crs = 'ITM'; // Safe default for Israeli data
-        }
-
-        // Parse DBF ourselves so type-F (Float) fields like TL / LowIL are read correctly
-        var dbfRecords = dbfBuf ? readDbfRecords(dbfBuf) : [];
-
-        return window.shapefile.read(shpBuf, null).then(function(collection) {
-          var bad = 0;
-          collection.features.forEach(function(f, idx) {
-            if (!f.geometry) return;
-            var converted = convertGeometry(f.geometry, crs);
-
-            // Validate a sample coordinate
-            var sample = converted.coordinates;
-            while (Array.isArray(sample[0])) sample = sample[0];
-            if (!validateCoord(sample[0], sample[1])) { bad++; return; }
-
-            // Use our own DBF parser output (handles type F correctly)
-            f.properties = dbfRecords[idx] ? Object.assign({}, dbfRecords[idx]) : {};
-            f.properties.Layer = layerName;
-            f.properties._original_layer = layerName;
-            f.geometry = converted;
-            allFeatures.push(f);
-          });
-          if (bad > 0) console.warn(layerName + ': ' + bad + ' features skipped (outside Israel bounds)');
-        });
-      })
-      .catch(function(e) {
-        console.warn('Failed to read ' + layerName + ':', e);
-      })
-      .then(function() {
-        if (--remaining === 0) {
-          if (!allFeatures.length) { onError(new Error('לא נמצאו אובייקטים תקינים בקבצים')); return; }
-          onDone({ type: 'FeatureCollection', features: allFeatures });
-        }
-      });
-    });
-  }).catch(onError);
-}
-
 // ── FILE HANDLING ─────────────────────────────────────────────────────────────
+// Parsing/CRS-detection/reprojection for all three formats now goes through
+// ImportPipeline.run() (js/import-pipeline.js) + the per-format parsers in
+// js/importers/*.js — see proceedWithFile() below.
 
 // Reads the first `n` bytes of a file and resolves to a lowercase hex string.
 function readMagic(file, n) {
@@ -275,119 +118,144 @@ function readMagic(file, n) {
   });
 }
 
+// Detects "XML text, possibly after a UTF-8 BOM and/or leading whitespace,
+// then '<'" from a hex-encoded byte prefix. Used to sniff KML (plain XML —
+// unlike KMZ there's no zip container to check the signature of instead).
+function looksLikeXmlText(hex) {
+  var t = hex.indexOf('efbbbf') === 0 ? hex.slice(6) : hex; // skip UTF-8 BOM
+  for (var i = 0; i + 2 <= t.length; i += 2) {
+    var b = parseInt(t.substr(i, 2), 16);
+    if (b === 0x20 || b === 0x09 || b === 0x0a || b === 0x0d) continue; // whitespace
+    return b === 0x3c; // '<'
+  }
+  return false;
+}
+
+// Permissive DXF sniff: DXF is a plain-text group-code format, normally
+// starting with a "0" group code line followed by "SECTION" (e.g.
+// "0\r\nSECTION\r\n2\r\nHEADER..."), sometimes indented with leading spaces by
+// some CAD exporters. Explicitly rejects known BINARY signatures (ZIP/DWG/PNG)
+// even if the file was misnamed with a .dxf extension, but otherwise stays
+// permissive — real-world DXF headers vary, and the server does the real
+// parse and rejects genuinely malformed content.
+function looksLikeDxfText(hex) {
+  if (hex.indexOf('504b0304') === 0 || hex.indexOf('504b0506') === 0 || hex.indexOf('504b0708') === 0) return false; // ZIP
+  if (hex.indexOf('414331') === 0) return false; // "AC1..." — a DWG binary, not DXF text
+  if (hex.indexOf('89504e47') === 0) return false; // PNG
+  var text = '';
+  for (var i = 0; i + 2 <= hex.length; i += 2) text += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+  text = text.replace(/^﻿/, '');
+  if (/^\s*0\s*[\r\n]+\s*SECTION/i.test(text)) return true; // classic DXF header
+  return /^[\s0-9]/.test(text); // permissive fallback: starts with whitespace/digit, not binary garbage
+}
+
 function handleFile(file) {
   var isZip     = /\.zip$/i.test(file.name);
   var isGeoJson = /\.(geojson|json)$/i.test(file.name);
   var isDwg     = /\.dwg$/i.test(file.name);
-  if (!isZip && !isGeoJson && !isDwg) { showToast('קבצי GeoJSON, JSON, ZIP או DWG בלבד', 'error'); return; }
+  var isDxf     = /\.dxf$/i.test(file.name);
+  var isKml     = /\.kml$/i.test(file.name);
+  var isKmz     = /\.kmz$/i.test(file.name);
+  var isCsv     = /\.csv$/i.test(file.name);
+  if (!isZip && !isGeoJson && !isDwg && !isDxf && !isKml && !isKmz && !isCsv) {
+    showToast('קבצי GeoJSON, JSON, ZIP (Shapefile), DWG, DXF, KML, KMZ או CSV בלבד', 'error');
+    return;
+  }
   if (file.size > 100*1024*1024) { showToast('גודל מקסימלי 100MB', 'error'); return; }
 
+  // DXF sniffing needs more leading bytes than a fixed signature (it looks for
+  // "0\r\nSECTION" group-code header text, not a magic number at a fixed offset).
+  var magicLen = isDxf ? 64 : 8;
+
   // Verify the real file signature matches the extension — never trust the name
-  // alone before handing bytes to JSZip / shapefile / the DWG parser.
-  readMagic(file, 8).then(function(hex) {
+  // alone before handing bytes to JSZip / shapefile / the DWG parser / DOMParser.
+  readMagic(file, magicLen).then(function(hex) {
     var okZip  = hex.indexOf('504b0304') === 0 || hex.indexOf('504b0506') === 0 || hex.indexOf('504b0708') === 0; // PK..
     var okDwg  = hex.indexOf('414331') === 0; // "AC1" DWG version stamp
     var t      = hex.indexOf('efbbbf') === 0 ? hex.slice(6) : hex; // skip UTF-8 BOM
     var fb     = parseInt(t.slice(0, 2), 16); // first byte
     var okJson = fb === 0x7b || fb === 0x5b || fb === 0x20 || fb === 0x09 || fb === 0x0a || fb === 0x0d; // { [ or leading whitespace
-    if ((isZip && !okZip) || (isDwg && !okDwg) || (isGeoJson && !okJson)) {
+    var okXml  = looksLikeXmlText(hex); // KML: '<' possibly after BOM/whitespace
+    var okDxf  = looksLikeDxfText(hex); // DXF: permissive group-code sniff, rejects binary
+    var okCsv  = !okZip && !okDwg && hex.indexOf('89504e47') !== 0; // CSV/text: reject obvious binary signatures
+    if ((isZip && !okZip) || (isKmz && !okZip) || (isDwg && !okDwg) ||
+        (isGeoJson && !okJson) || (isKml && !okXml) || (isDxf && !okDxf) || (isCsv && !okCsv)) {
       showToast('תוכן הקובץ אינו תואם לסיומת — ייתכן שהקובץ פגום או אינו מהסוג הנכון', 'error');
       return;
     }
-    proceedWithFile(file, isZip, isGeoJson, isDwg);
+    proceedWithFile(file, {
+      isZip: isZip, isGeoJson: isGeoJson, isDwg: isDwg,
+      isDxf: isDxf, isKml: isKml, isKmz: isKmz, isCsv: isCsv
+    });
   });
 }
 
-function proceedWithFile(file, isZip, isGeoJson, isDwg) {
+// Hebrew error-message prefix per format, matching the wording each format
+// used to show before the pipeline unification.
+var IMPORT_ERROR_PREFIX = {
+  shapefile: 'שגיאה: ',
+  geojson: 'שגיאה: ',
+  dwg: 'שגיאת המרת DWG: ',
+  dxf: 'שגיאת עיבוד DXF: ',
+  kml: 'שגיאת KML: ',
+  kmz: 'שגיאת KMZ: ',
+  csv: 'שגיאת CSV: '
+};
+
+function proceedWithFile(file, flags) {
   gFile = file;
   document.getElementById('fp-name').textContent = file.name;
   document.getElementById('fp-size').textContent = formatSize(file.size);
   document.getElementById('file-preview').classList.add('show');
 
-  if (isZip) {
+  // CSV can't go through ImportPipeline.run() directly — parse() alone can't
+  // know which columns are X/Y/WKT/layer, so it returns a {needsMapping:true}
+  // marker instead of {features,...} and a small UI collects that first.
+  if (flags.isCsv) { startCsvMappingFlow(file); return; }
+
+  var format = flags.isZip ? 'shapefile'
+    : flags.isDwg ? 'dwg'
+    : flags.isDxf ? 'dxf'
+    : flags.isKml ? 'kml'
+    : flags.isKmz ? 'kmz'
+    : 'geojson';
+  var opts = {};
+
+  if (flags.isZip) {
     showToast('⏳ מעבד Shapefile...', 'info');
-    processZipFile(file, function(data) {
-      finishFileLoad(data);
-    }, function(err) {
-      showToast('שגיאה: ' + err.message, 'error');
-      clearFile();
-    });
-  } else if (isDwg) {
-    // DWG → GeoJSON via the conversion backend, then the same village/upload pipeline.
+  } else if (flags.isKmz) {
+    showToast('⏳ מעבד KMZ...', 'info');
+  } else if (flags.isDwg || flags.isDxf) {
     if (typeof window.dwgToGeoJSON !== 'function') {
       showToast('שירות המרת DWG לא נטען', 'error'); clearFile(); return;
     }
-    showToast('⏳ ממיר DWG בשרת (עשוי להימשך עד דקה)...', 'info');
+    showToast(flags.isDxf ? '⏳ מעבד DXF בשרת...' : '⏳ ממיר DWG בשרת (עשוי להימשך עד דקה)...', 'info');
     var dwgStatusEl = document.getElementById('fp-size');
-    window.dwgToGeoJSON(file, {}, function(stage, pct, msg) {
-      if (dwgStatusEl && msg) dwgStatusEl.textContent = msg;
-    }).then(function(data) {
-      if (!data || !Array.isArray(data.features) || !data.features.length) {
-        showToast('לא נמצאו אובייקטים בקובץ ה-DWG', 'error'); clearFile(); return;
-      }
-      finishFileLoad(data);
-    }).catch(function(err) {
-      showToast('שגיאת המרת DWG: ' + (err && err.message ? err.message : err), 'error');
-      clearFile();
-    });
-  } else {
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      try {
-        var data = JSON.parse(e.target.result);
-        if (data.type !== 'FeatureCollection' || !Array.isArray(data.features)) {
-          showToast('הקובץ אינו GeoJSON תקין', 'error'); clearFile(); return;
-        }
-        finishFileLoad(data);
-      } catch(err) { showToast('שגיאה: ' + err.message, 'error'); clearFile(); }
-    };
-    reader.readAsText(file);
+    opts.onProgress = function(stage, pct, msg) { if (dwgStatusEl && msg) dwgStatusEl.textContent = msg; };
   }
+
+  ImportPipeline.run(format, file, opts).then(applyPipelineResult).catch(function(err) {
+    var prefix = IMPORT_ERROR_PREFIX[format] || 'שגיאה: ';
+    showToast(prefix + (err && err.message ? err.message : err), 'error');
+    clearFile();
+  });
 }
 
-// First numeric [x,y] of any geometry.
-function firstCoord(g) {
-  if (!g || !g.coordinates) return null;
-  var c = g.coordinates;
-  while (Array.isArray(c) && Array.isArray(c[0])) c = c[0];
-  return (Array.isArray(c) && typeof c[0] === 'number') ? c : null;
-}
-// Heuristic: coords way outside lon/lat range → projected (ITM), not WGS84.
-function looksLikeITM(data) {
-  var n = 0, itm = 0;
-  for (var i = 0; i < data.features.length && n < 80; i++) {
-    var c = firstCoord(data.features[i].geometry); if (!c) continue;
-    n++;
-    if (Math.abs(c[0]) > 1000 || Math.abs(c[1]) > 1000) itm++;  // lon/lat are < 1000
+// Shared success handler for both the file-based pipeline (ImportPipeline.run,
+// above) and the CSV mapping-confirm flow (confirmCsvMapping(), which builds
+// features itself then runs just the validate/reproject stages) — both
+// converge on the same { features, warnings, reprojected } shape.
+function applyPipelineResult(result) {
+  if (result.warnings && result.warnings.length) {
+    result.warnings.forEach(function(w) { console.warn('[import] ' + w); });
   }
-  return n > 0 && itm / n > 0.7;
-}
-function flipXCoords(coords) {
-  if (typeof coords[0] === 'number') return [-coords[0], coords[1]];
-  return coords.map(flipXCoords);
-}
-// If the file is in Israeli ITM (EPSG:2039), convert every geometry to WGS84
-// in place. Handles the mirrored-X variant some CAD exports use.
-function autoReprojectIfITM(data) {
-  if (!looksLikeITM(data)) return false;
-  ensureITM();
-  var neg = 0, pos = 0;
-  for (var i = 0; i < data.features.length && (neg + pos) < 80; i++) {
-    var c = firstCoord(data.features[i].geometry); if (!c) continue;
-    if (c[0] < 0) neg++; else pos++;
+  if (result.reprojected) {
+    showToast('ℹ️ זוהו קואורדינטות ITM — בוצעה המרה אוטומטית ל-WGS84', 'info');
   }
-  var flipX = neg > pos;
-  data.features.forEach(function (f) {
-    if (!f.geometry) return;
-    var g = flipX ? { type: f.geometry.type, coordinates: flipXCoords(f.geometry.coordinates) } : f.geometry;
-    f.geometry = convertGeometry(g, 'ITM');
-  });
-  return true;
+  finishFileLoad({ type: 'FeatureCollection', features: result.features });
 }
 
 function finishFileLoad(data) {
-  // (ITM auto-reproject helpers below are available but NOT auto-applied to
-  // DWG — DWG arrives already converted by the server. Manual use only.)
   gFileData = data;
   document.getElementById('fp-size').textContent = formatSize(gFile.size) + ' · ' + data.features.length + ' אובייקטים';
 
@@ -603,6 +471,83 @@ function toggleOverride() {
   document.getElementById('d-override-form').classList.toggle('show');
 }
 
+// ── CSV column-mapping flow ──────────────────────────────────────────────────
+// CSV files can't declare which columns are coordinates/geometry, so
+// Importers.csv.parse() only reads the headers/rows and returns them for a
+// small mapping UI (below) to resolve; only after the user confirms does
+// Importers.csv.buildFeatures() produce real GeoJSON features, which then
+// join the normal validate/reproject/detect/commit flow like every other format.
+function startCsvMappingFlow(file) {
+  showToast('⏳ קורא CSV...', 'info');
+  window.Importers.csv.parse(file).then(function(parsed) {
+    gCsvParse = parsed;
+    renderCsvMappingUI(parsed);
+  }).catch(function(err) {
+    showToast('שגיאת CSV: ' + (err && err.message ? err.message : err), 'error');
+    clearFile();
+  });
+}
+
+function csvColumnOptions(headers, selectedIdx, includeNone) {
+  var html = includeNone ? '<option value="">— ללא —</option>' : '';
+  headers.forEach(function(h, idx) {
+    var sel = (idx === selectedIdx) ? ' selected' : '';
+    html += '<option value="' + escapeQuote(h) + '"' + sel + '>' + escapeHtml(h) + '</option>';
+  });
+  return html;
+}
+
+function renderCsvMappingUI(parsed) {
+  var headers = parsed.headers || [];
+  var guess = parsed.guess || {};
+  document.getElementById('csv-wkt-col').innerHTML   = csvColumnOptions(headers, guess.wkt, true);
+  document.getElementById('csv-layer-col').innerHTML = csvColumnOptions(headers, guess.layer, true);
+  document.getElementById('csv-lon-col').innerHTML   = csvColumnOptions(headers, guess.lon, true);
+  document.getElementById('csv-lat-col').innerHTML   = csvColumnOptions(headers, guess.lat, true);
+  document.getElementById('csv-mapping-err').textContent = '';
+  document.getElementById('fp-size').textContent = formatSize(gFile.size) + ' · ' + parsed.rows.length + ' שורות';
+
+  document.getElementById('csv-mapping-section').classList.add('show');
+  document.getElementById('meta-form').style.display = 'none';
+  document.getElementById('mapping-section').classList.remove('show');
+  document.getElementById('detection-card').classList.remove('show');
+}
+
+function confirmCsvMapping() {
+  if (!gCsvParse) return;
+  var wktCol   = document.getElementById('csv-wkt-col').value;
+  var lonCol   = document.getElementById('csv-lon-col').value;
+  var latCol   = document.getElementById('csv-lat-col').value;
+  var layerCol = document.getElementById('csv-layer-col').value;
+  var crs      = document.getElementById('csv-crs-itm').checked ? 'itm' : 'wgs84';
+  var errEl    = document.getElementById('csv-mapping-err');
+  errEl.textContent = '';
+
+  if (!wktCol && (!lonCol || !latCol)) {
+    errEl.textContent = 'יש לבחור עמודת WKT, או שתי עמודות X/Y (קו אורך/קו רוחב).';
+    return;
+  }
+
+  var built;
+  try {
+    built = window.Importers.csv.buildFeatures(gCsvParse.rows, {
+      wktCol: wktCol || null, lonCol: lonCol || null, latCol: latCol || null,
+      layerCol: layerCol || null, crs: crs
+    });
+  } catch (e) {
+    errEl.textContent = 'שגיאת CSV: ' + (e && e.message ? e.message : e);
+    return;
+  }
+  if (!built.features.length) {
+    errEl.textContent = 'לא נמצאו רשומות עם גיאומטריה תקינה לפי המיפוי שנבחר.';
+    return;
+  }
+
+  document.getElementById('csv-mapping-section').classList.remove('show');
+  var result = ImportPipeline.reproject(ImportPipeline.validate(built));
+  applyPipelineResult(result);
+}
+
 // ── Merge-upload dedup ────────────────────────────────────────────────────────
 // A new feature is a duplicate of an existing one iff it has the same geometry
 // (coordinates rounded to ~1cm to absorb float noise) AND the same real
@@ -651,10 +596,7 @@ async function fetchActiveVillageFeatures(slug) {
 function analyzeAndDisplayLayers() {
   gLayerStats = {};
   gFileData.features.forEach(function(f) {
-    var props = f.properties || {};
-    var layerName = props.Layer || props.layer || props.LAYER ||
-                    props._original_layer || props._category || 'UNKNOWN';
-    layerName = String(layerName).trim() || 'UNKNOWN';
+    var layerName = ImportPipeline.getLayerName(f);
 
     if (!gLayerStats[layerName]) {
       gLayerStats[layerName] = { name: layerName, count: 0, geomTypes: {}, mapping: 'other', isAuto: false, matchedRule: null };
@@ -746,11 +688,12 @@ function updateLayerMapping(layerName, newCategory) {
 }
 
 function clearFile() {
-  gFile = null; gFileData = null; gLayerStats = {}; gDetectedVillage = null;
+  gFile = null; gFileData = null; gLayerStats = {}; gDetectedVillage = null; gCsvParse = null;
   document.getElementById('file-input').value = '';
   document.getElementById('file-preview').classList.remove('show');
   document.getElementById('meta-form').style.display = 'none';
   document.getElementById('mapping-section').classList.remove('show');
+  document.getElementById('csv-mapping-section').classList.remove('show');
   document.getElementById('detection-card').classList.remove('show');
   document.getElementById('progress').classList.remove('show');
 }
@@ -777,27 +720,12 @@ async function doUpload() {
     pf.style.width = '15%';
     pt.textContent = 'מתייג אובייקטים...';
 
-    var taggedByVillage = {};
-    var ignoredCount = 0;
-
-    gFileData.features.forEach(function(f) {
-      var props = f.properties || {};
-      var layerName = props.Layer || props.layer || props.LAYER || props._original_layer || 'UNKNOWN';
-      layerName = String(layerName).trim() || 'UNKNOWN';
-      var stats = gLayerStats[layerName];
-      if (!stats || stats.mapping === 'IGNORE') { ignoredCount++; return; }
-
-      var targetVillage = overrideVillage || detectFeatureVillage(f);
-      if (!targetVillage) { ignoredCount++; return; }
-
-      var slug = targetVillage.slug;
-      if (!taggedByVillage[slug]) taggedByVillage[slug] = { village: targetVillage, features: [], categoryCounts: {} };
-      var newProps = Object.assign({}, props);
-      newProps._category = stats.mapping;
-      newProps._original_layer = layerName;
-      taggedByVillage[slug].categoryCounts[stats.mapping] = (taggedByVillage[slug].categoryCounts[stats.mapping] || 0) + 1;
-      taggedByVillage[slug].features.push({ type: 'Feature', geometry: f.geometry, properties: newProps });
+    var mapped = ImportPipeline.mapToLayers(gFileData.features, {
+      layerStats: gLayerStats,
+      overrideVillage: overrideVillage,
+      detectFeatureVillage: detectFeatureVillage
     });
+    var taggedByVillage = mapped.taggedByVillage;
 
     var slugs = Object.keys(taggedByVillage);
     if (!slugs.length) throw new Error('כל האובייקטים סומנו כ-IGNORE או מחוץ לאזור');
@@ -812,25 +740,18 @@ async function doUpload() {
     // ── Import straight into the GIS engine (features/layers/fields) ──────
     // Grouped by _category → one engine layer per "<village> · <category>".
     // Re-upload is safe: import_features upserts by synthesised asset_code.
-    var totalAdded = 0;
-
-    for (var vi = 0; vi < slugs.length; vi++) {
-      var slug = slugs[vi];
-      var vData = taggedByVillage[slug];
-      var village = vData.village;
-      var vFeatures = vData.features;
-
-      ps.textContent = 'מייבא ' + village.name + ' למנוע (' + (vi + 1) + '/' + slugs.length + ')';
-      pf.style.width = (55 + Math.round(40 * vi / slugs.length)) + '%';
-      pt.textContent = vFeatures.length + ' אובייקטים...';
-
-      var summary = await GIS.migrate.importFeatures(village.name, village.slug, vFeatures, {
-        onProgress: function (vname) {
-          return function (done, total) { pt.textContent = vname + ': ' + done + ' / ' + total; };
-        }(village.name)
-      });
-      totalAdded += summary.total;
-    }
+    var commitResult = await ImportPipeline.commit(taggedByVillage, {
+      importFeatures: GIS.migrate.importFeatures,
+      onVillageStart: function (village, vi, total, featureCount) {
+        ps.textContent = 'מייבא ' + village.name + ' למנוע (' + (vi + 1) + '/' + total + ')';
+        pf.style.width = (55 + Math.round(40 * vi / total)) + '%';
+        pt.textContent = featureCount + ' אובייקטים...';
+      },
+      onProgress: function (village, done, total) {
+        pt.textContent = village.name + ': ' + done + ' / ' + total;
+      }
+    });
+    var totalAdded = commitResult.totalAdded;
 
     pf.style.width = '100%';
     pt.textContent = '✅ יובאו ' + totalAdded + ' אובייקטים למנוע · ' + slugs.length + ' כפרים';
@@ -901,9 +822,9 @@ function renderLayers(layers) {
   // Group engine layers by village (layer name = "<village> · <category>").
   var groups = {}, order = [];
   layers.forEach(function(l) {
-    var idx = (l.name || '').indexOf(' · ');
-    var village = idx >= 0 ? l.name.slice(0, idx) : (l.name || 'שכבות כלליות');
-    var cat = idx >= 0 ? l.name.slice(idx + 3) : '';
+    var parsed = LayerNaming.parse(l.name || '');
+    var village = parsed.village !== null ? parsed.village : (l.name || 'שכבות כלליות');
+    var cat = parsed.village !== null ? parsed.category : '';
     if (!groups[village]) { groups[village] = []; order.push(village); }
     groups[village].push({ id: l.id, cat: cat, label: CAT_LABELS[cat] || cat || l.name });
   });
@@ -943,8 +864,8 @@ async function deleteVillageLayers(village) {
   try {
     var layers = await GIS.layers.getLayers();
     var toDel = layers.filter(function(l) {
-      var idx = (l.name || '').indexOf(' · ');
-      var v = idx >= 0 ? l.name.slice(0, idx) : (l.name || '');
+      var parsed = LayerNaming.parse(l.name || '');
+      var v = parsed.village !== null ? parsed.village : (l.name || '');
       return v === village;
     });
     for (var i = 0; i < toDel.length; i++) await GIS.layers.deleteLayer(toDel[i].id);
@@ -973,3 +894,4 @@ window.updateLayerMapping = updateLayerMapping;
 window.deleteEngineLayer = deleteEngineLayer;
 window.deleteVillageLayers = deleteVillageLayers;
 window.toggleOverride = toggleOverride;
+window.confirmCsvMapping = confirmCsvMapping;

@@ -1,23 +1,11 @@
 (function () {
 'use strict';
 
-var LABELS = {
-  sewage_pipe:'קווי ביוב (DWG)', manhole:'שוחות ביוב (DWG)', sleeve:'שרוולים',
-  control_point:'נקודות בקרה', pipe_label:'תוויות צנרת', elevation_label:'גבהים TL/IL',
-  attribute_label:'תוויות שוחות', distance_label:'מרחקים', dimension_line:'קווי מידה',
-  manhole_drawing:'שרטוטי שוחות', buildings:'בניינים', parcels:'חלקות',
-  water_meters:'מדי מים', water_pipes:'קווי מים', sewage_pipes:'קווי ביוב',
-  sewage_manholes:'שוחות ביוב', hydrants:'הידרנטים', valves:'מגופים',
-  control_valves:'מגופים שולטים', connection_points:'נקודות חיבור מקורות',
-  reservoirs:'מאגרי מים', pump_stations:'תחנות שאיבה',
-  sampling_points:'נקודות דיגום',
-  main_sewer:'ביב ראשי', supply_pipe:'קו הספקה',
-  sewage_cascade:'מפל ביוב', fittings:'מתאמים',
-  annotation_points:'נקודות להערות', sewer_exit:'יציאה מרשת ביוב',
-  annotation_polygons:'פוליגונים להערות', annotation_lines:'קווים להערות',
-  valve_chamber:'תא מגופים', block:'גוש',
-  other:'אחר'
-};
+// LABELS moved to js/export-formats.js (loaded before this file — see index.html) so it's a
+// real global reachable from BOTH files. This file's whole body is wrapped in this IIFE, so a
+// `var LABELS` declared here would be local to this closure and invisible to export-formats.js
+// (that mismatch used to make buildKML() throw "LABELS is not defined" at runtime). LABELS is
+// still used below by plain identifier — it resolves via the normal global-scope lookup.
 
 // Supported export formats, in display order. DXF/DWG/GeoJSON/CSV are unchanged from before;
 // shapefile/kml/excel are new.
@@ -46,15 +34,54 @@ var gExp = {
   step: 1,            // 1..4 wizard step
   format: 'dxf',
   scope: 'all',       // 'all' | 'draw'
+  wkt: false,         // CSV/Excel only: include a full-geometry geometry_wkt column (default OFF)
   busy: false,
   loading: false,     // building the layer list (engine layers + head counts)
   loaded: false,      // layer model built this session
   loadError: null,
   layers: {},         // catId -> { label, count, visible, selected, layerIds:[{id,village}] }
-  seed: null          // when set (features[]), export this fixed set from the FORMAT step
+  seed: null,         // when set (features[]), export this fixed set from the FORMAT step
+  // Draw-scope area-summary modal state (W2.2) — set by startAreaSummary() once the
+  // rectangle is drawn, cleared by cleanupAreaSummary() on cancel/confirm.
+  areaCats: null,     // categories the summary/export applies to
+  areaBounds: null,   // {minLng,minLat,maxLng,maxLat} of the drawn rectangle
+  areaModel: null     // { rows:[{cat,label,count,geomTypes,geomTypesLabel,enabled,overCap,previewPartial}], format }
 };
 
 var gRect = null, gDrawing = false, gDrawStart = null, gDrawTemp = null;
+
+// ── DRAW-SCOPE AREA-SUMMARY STATE (W2.2) ───────────────────────────────────
+// After the user drags a rectangle, an area-summary modal (counts + geometry
+// types per selected category, from a fast COUNT-only RPC) is shown BEFORE
+// any export runs. gAreaPreview is the temporary on-map preview layer.
+var gAreaPreview = null;
+
+// Per-layer fetch cap for the REAL draw-scope export (server bbox fetch via
+// GIS.features.getInBBox / features_in_bbox). Matches the LIMIT clamp added
+// to features_in_bbox in gis-engine/sql/migrations/2026-07-14-export-area-summary.sql
+// — keep these two in sync if either changes.
+var AREA_FETCH_CAP = 20000;
+// Cap for the on-map PREVIEW fetch (separate, much smaller — just a visual
+// hint of the drawn area's contents, not the export itself).
+var AREA_PREVIEW_CAP = 2000;
+
+// Rough bytes-per-feature heuristics per export format, for the "estimated
+// output size" shown in the area-summary modal (always labelled "משוער" —
+// real size depends heavily on attribute richness). Tuned from how each
+// serializer in js/export-formats.js actually writes a feature: DXF/KML are
+// verbose text formats (XDATA / ExtendedData per feature), Shapefile/CSV are
+// compact flat/binary rows, DWG and Excel sit in between (binary but with
+// container/format overhead).
+var BYTES_PER_FEATURE = { dxf: 260, dwg: 160, geojson: 300, shapefile: 120, kml: 350, csv: 150, excel: 190 };
+// Formats whose output CRS is ITM (EPSG:2039) instead of WGS84 (EPSG:4326) —
+// see makeToITM() in export-formats.js.
+var ITM_FORMATS = { dxf: 1, dwg: 1, shapefile: 1 };
+// PostGIS GeometryType() (no ST_ prefix) → Hebrew bucket label.
+var GEOM_TYPE_HE = {
+  POINT: 'נקודות', MULTIPOINT: 'נקודות',
+  LINESTRING: 'קווים', MULTILINESTRING: 'קווים', CIRCULARSTRING: 'קווים',
+  POLYGON: 'פוליגונים', MULTIPOLYGON: 'פוליגונים'
+};
 
 // ── STYLES ──────────────────────────────────────────────────────────────────
 var s = document.createElement('style');
@@ -101,6 +128,8 @@ s.textContent =
   '.exp-fmt.active{border-color:#0d3b5e;background:#eff6ff;color:#0d3b5e;}' +
   '.exp-fmt-sub{display:block;font-size:9px;font-weight:400;margin-top:3px;opacity:.8;}' +
   '.exp-note{font-size:11px;color:#94a3b8;line-height:1.5;background:#f8fafc;border-radius:8px;padding:10px 12px;}' +
+  '.exp-warn{font-size:11px;color:#b45309;line-height:1.5;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 12px;margin:-2px 0 6px;}' +
+  '.exp-empty{padding:24px 10px;text-align:center;color:#94a3b8;font-size:13px;}' +
   // summary
   '.exp-sum{border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:6px;}' +
   '.exp-sum-row{display:flex;justify-content:space-between;padding:9px 14px;font-size:13px;border-bottom:1px solid #f1f5f9;color:#334155;}' +
@@ -194,6 +223,7 @@ function openExportModal() { withExportPermission(_openExportModal); }
 function _openExportModal() {
   if (!window.gMap) { alert('המפה עדיין לא נטענה'); return; }
   if (!window.GIS || !window.GIS.layers) { alert('מנוע ה-GIS עדיין נטען — נסה שוב בעוד רגע'); return; }
+  cleanupAreaSummary();              // defensive: drop any leftover rect/preview from an abandoned draw session
   gExp.step = 1;
   gExp.busy = false;
   gExp.loadError = null;
@@ -213,7 +243,13 @@ function _openExportModal() {
       if (document.getElementById('exp-modal').classList.contains('open') && gExp.step === 1) renderWizard();
     });
 }
-function closeExportModal() { document.getElementById('exp-modal').classList.remove('open'); }
+function closeExportModal() {
+  document.getElementById('exp-modal').classList.remove('open');
+  // The header ✕ button calls this directly too — if the area-summary modal was
+  // showing, make sure the rectangle + preview don't linger on the map (cancelAreaSummary
+  // clears gExp.areaModel BEFORE calling this, so this is a no-op in that path).
+  if (gExp.areaModel) cleanupAreaSummary();
+}
 window.closeExportModal = closeExportModal;
 
 // Seed the wizard with a fixed feature set (e.g. the current selection) and open
@@ -258,9 +294,9 @@ function buildLayerModel() {
   return GIS.layers.getLayers().then(function (layers) {
     var cats = {}, prev = gExp.layers || {};
     (layers || []).forEach(function (l) {
-      var idx = l.name.indexOf(' · ');
-      var cat = idx >= 0 ? l.name.slice(idx + 3) : l.name;
-      var village = idx >= 0 ? l.name.slice(0, idx) : '';
+      var parsed = parseLayerName(l.name);   // hoisted helper (defined below)
+      var cat = parsed.category;
+      var village = parsed.village || '';
       if (!cats[cat]) cats[cat] = {
         label: (window.GISLayerLabel ? window.GISLayerLabel(cat) : (LABELS[cat] || cat)),
         count: 0, visible: false, selected: prev[cat] ? prev[cat].selected : true, layerIds: []
@@ -272,8 +308,7 @@ function buildLayerModel() {
     try {
       var act = (window.GISEngineSidebar && window.GISEngineSidebar.activeLayers) ? window.GISEngineSidebar.activeLayers() : [];
       act.forEach(function (l) {
-        var idx = l.name.indexOf(' · ');
-        var c = idx >= 0 ? l.name.slice(idx + 3) : l.name;
+        var c = parseLayerName(l.name).category;
         if (cats[c]) cats[c].visible = true;
       });
     } catch (e) { /* visibility is optional */ }
@@ -292,24 +327,62 @@ function buildLayerModel() {
   });
 }
 
-// Fetch features for the selected categories from the engine (only what's needed for export).
-// Optionally filter to draw `bounds`. Calls cb(features) with WGS84 GeoJSON features.
-function fetchFeaturesForCats(cats, bounds, cb) {
-  var GIS = window.GIS;
+// One { cat, id, village } job per (category, engine layer) pair among `cats` —
+// shared by fetchFeaturesForCats, the area-summary RPC call and the draw-scope
+// server bbox fetch, so the category→layer mapping is defined in exactly one place.
+function catsJobs(cats) {
   var jobs = [];
-  cats.forEach(function (cat) {
+  (cats || []).forEach(function (cat) {
     var L = gExp.layers[cat];
     if (!L) return;
     L.layerIds.forEach(function (lyr) { jobs.push({ cat: cat, id: lyr.id, village: lyr.village }); });
   });
+  return jobs;
+}
+
+// Distinct layer ids referenced by `jobs`, in first-seen order.
+function uniqueLayerIds(jobs) {
+  var seen = {}, out = [];
+  jobs.forEach(function (j) { if (!seen[j.id]) { seen[j.id] = true; out.push(j.id); } });
+  return out;
+}
+
+// Fetch ALL features for the selected categories from the engine (used by the
+// "כל הנתונים" / DWG / seeded flows — never bounds-filtered; the draw scope
+// uses fetchAreaFeaturesServerSide instead, a real DB bbox query). Calls
+// cb(features) with WGS84 GeoJSON features.
+function fetchFeaturesForCats(cats, cb) {
+  var GIS = window.GIS;
+  var jobs = catsJobs(cats);
   var all = [];
   runPool(jobs, 4, function (job) {
     return GIS.features.getFeatures(job.id, 1000000).then(function (fc) {
       ((fc && fc.features) || []).forEach(function (f) {
         if (!f.geometry) return;
-        if (bounds && !isInBounds(f.geometry, bounds)) return;
         if (!f.properties) f.properties = {};
         f.properties._category = job.cat;       // authoritative (from layer name)
+        if (job.village) f.properties._village = job.village;
+        all.push(f);
+      });
+    });
+  }).then(function () { cb(all); });
+}
+
+// Fetch features for `cats` restricted to `bounds` = {minLng,minLat,maxLng,maxLat}
+// via a REAL DB bbox query (features_in_bbox, through GIS.features.getInBBox) —
+// one call per engine layer, capped at AREA_FETCH_CAP each. Unlike the old
+// client-side isInBounds filter, this reaches features that were never loaded
+// as map tiles. Calls cb(features) with WGS84 GeoJSON features.
+function fetchAreaFeaturesServerSide(cats, bounds, cb) {
+  var GIS = window.GIS;
+  var jobs = catsJobs(cats);
+  var all = [];
+  runPool(jobs, 4, function (job) {
+    return GIS.features.getInBBox(job.id, bounds, AREA_FETCH_CAP).then(function (fc) {
+      ((fc && fc.features) || []).forEach(function (f) {
+        if (!f.geometry) return;
+        if (!f.properties) f.properties = {};
+        f.properties._category = job.cat;
         if (job.village) f.properties._village = job.village;
         all.push(f);
       });
@@ -390,11 +463,16 @@ function step2HTML() {
       F.icon + ' ' + F.label + '<span class="exp-fmt-sub">' + F.sub + '</span></button>';
   }).join('');
   var note = '';
-  if (gExp.format === 'csv' || gExp.format === 'excel')
+  var wktRow = '';
+  if (gExp.format === 'csv' || gExp.format === 'excel') {
     note = '<div class="exp-note">פורמטים טבלאיים — מתאימים בעיקר לשכבות נקודה (מדי מים, שוחות וכו\'). עבור גאומטריה מורכבת תישמר הקואורדינטה הראשונה בלבד; הגאומטריה המלאה נשמרת בעמודת JSON.</div>';
-  else if (gExp.format === 'shapefile')
+    wktRow = '<label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12px;color:#334155;cursor:pointer;user-select:none;">' +
+      '<input type="checkbox" ' + (gExp.wkt ? 'checked' : '') + ' onchange="expToggleWkt(this)" style="cursor:pointer;accent-color:#0d3b5e;margin:0;">' +
+      'כלול גיאומטריה מלאה (WKT)</label>';
+  } else if (gExp.format === 'shapefile') {
     note = '<div class="exp-note">לכל שכבה נוצר Shapefile נפרד בתוך קובץ ZIP אחד, בקואורדינטות רשת ישראל החדשה (ITM / EPSG:2039).</div>';
-  return '<div class="exp-sec">פורמט ייצוא</div><div class="exp-fmts">' + pills + '</div>' + note;
+  }
+  return '<div class="exp-sec">פורמט ייצוא</div><div class="exp-fmts">' + pills + '</div>' + note + wktRow;
 }
 
 // Step 3 — review summary (rendered from gExp only)
@@ -464,6 +542,7 @@ window.expSelNone    = function () { Object.keys(gExp.layers).forEach(function (
 window.expSelVisible = function () { Object.keys(gExp.layers).forEach(function (c) { gExp.layers[c].selected = gExp.layers[c].visible; }); renderWizard(); };
 window.expSetFmt     = function (f) { gExp.format = f; renderWizard(); };
 window.expSetScope   = function (sc) { gExp.scope = sc; renderWizard(); };
+window.expToggleWkt  = function (input) { gExp.wkt = !!input.checked; };
 window.expBack  = function () { if (gExp.step > 1) { gExp.step--; renderWizard(); } };
 window.expNext  = function () { if (gExp.step < 3) { gExp.step++; renderWizard(); } };
 window.expBackTo3 = function () { gExp.step = 3; renderWizard(); };
@@ -489,7 +568,7 @@ window.expRun = function () {
   // DWG keeps its dedicated wait modal exactly as before — fetch first, then hand off.
   if (gExp.format === 'dwg') {
     closeExportModal();
-    fetchFeaturesForCats(cats, null, function (features) {
+    fetchFeaturesForCats(cats, function (features) {
       if (!features.length) { alert('לא נמצאו אובייקטים'); return; }
       generateAndDownload(features);
     });
@@ -500,7 +579,7 @@ window.expRun = function () {
   gExp.step = 4; gExp.busy = true;
   renderWizard();
   setGenMsg('אוסף נתונים…');
-  fetchFeaturesForCats(cats, null, function (features) {
+  fetchFeaturesForCats(cats, function (features) {
     if (!features.length) { finishGen(false, 'לא נמצאו אובייקטים'); return; }
     setGenMsg('מייצא…');
     // defer so the spinner paints before a potentially heavy synchronous build (DXF/CSV)
@@ -593,14 +672,9 @@ function finishDraw(endLatLng, selectedCatsArg) {
   gRect = L.rectangle([gDrawStart, endLatLng], { color: '#16a34a', weight: 2, fillOpacity: 0.08 }).addTo(window.gMap);
   var bounds = gRect.getBounds();
   gDrawStart = null;
-  showBusy('אוסף נתונים…');
-  fetchFeaturesForCats(selectedCatsArg, bounds, function (features) {
-    if (gRect) { window.gMap.removeLayer(gRect); gRect = null; }
-    if (!features.length) { closeBusy(); alert('לא נמצאו אובייקטים באזור שנבחר'); return; }
-    setBusyMsg('מייצא…');
-    // defer so the spinner repaints before a potentially heavy synchronous build
-    setTimeout(function () { generateAndDownload(features); }, 30);
-  });
+  // Rectangle drawn — show the area-summary modal BEFORE running any export
+  // (was: fetch+export immediately here, client-filtered against loaded tiles).
+  startAreaSummary(selectedCatsArg, bounds);
 }
 
 function cancelDrawing() {
@@ -613,6 +687,259 @@ function cancelDrawing() {
   window.gMap.off('mousemove', onDrawMove);
 }
 window.cancelDrawing = cancelDrawing;
+
+// ── AREA-SUMMARY MODAL (W2.2) ───────────────────────────────────────────────
+// Plain object → {minLng,minLat,maxLng,maxLat}, the shape GIS.spatial.exportAreaSummary
+// / GIS.features.getInBBox expect. `b` is a Leaflet LatLngBounds (duck-typed —
+// only getWest/getSouth/getEast/getNorth are used, so a test stub works too).
+function leafletBoundsToPlain(b) {
+  return { minLng: b.getWest(), minLat: b.getSouth(), maxLng: b.getEast(), maxLat: b.getNorth() };
+}
+
+// "village · category" → category, via window.LayerNaming.parse when available
+// (js/layer-naming.js — NOT currently in index.html's load order, see that
+// file's own header note), else an inline fallback splitting on the same
+// ' · ' separator LayerNaming.compose() uses. Kept tolerant of a missing
+// separator (whole name treated as the category) to match LayerNaming.parse's
+// own contract.
+function parseLayerName(name) {
+  if (window.LayerNaming && typeof window.LayerNaming.parse === 'function') return window.LayerNaming.parse(name);
+  var SEP = ' · ';
+  name = String(name == null ? '' : name);
+  var idx = name.indexOf(SEP);
+  if (idx === -1) return { village: null, category: name };
+  return { village: name.slice(0, idx), category: name.slice(idx + SEP.length) };
+}
+
+// Distinct PostGIS geometry types (e.g. ['POINT'], ['LINESTRING','MULTILINESTRING'])
+// → a Hebrew label ("נקודות" / "קווים · פוליגונים" for a mixed layer / '—' if unknown).
+function geometryTypesLabel(types) {
+  var set = {};
+  (types || []).forEach(function (t) { set[GEOM_TYPE_HE[String(t || '').toUpperCase()] || t] = true; });
+  var keys = Object.keys(set);
+  return keys.length ? keys.join(' · ') : '—';
+}
+
+// Rough estimated output size in bytes for `count` features of format `format`
+// with geometry types `geomTypes` (see BYTES_PER_FEATURE above for the tiers).
+// Lines/polygons carry materially more coordinate data than points, so bump
+// the per-feature estimate for layers that aren't pure point layers.
+function estimateBytes(format, count, geomTypes) {
+  var perFeature = BYTES_PER_FEATURE[format] || 200;
+  var hasLineOrPoly = (geomTypes || []).some(function (t) { return /LINE|POLY/i.test(t); });
+  if (hasLineOrPoly) perFeature = Math.round(perFeature * 1.6);
+  return Math.max(0, Math.round((count || 0) * perFeature));
+}
+function fmtBytes(n) {
+  n = n || 0;
+  if (n < 1024) return n + ' B';
+  if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+  return (n / 1024 / 1024).toFixed(1) + ' MB';
+}
+function crsLabelFor(format) { return ITM_FORMATS[format] ? 'ITM · EPSG:2039' : 'WGS84 · EPSG:4326'; }
+
+// Build the area-summary modal MODEL from the export_area_summary RPC rows —
+// one row per SELECTED category (aggregating village layers within a category,
+// same granularity as the rest of the wizard). Every category in `cats` gets a
+// row even if the RPC returned nothing for it (0-count area). Pure function —
+// no RPC calls, no DOM — so it's unit-testable on its own.
+function buildAreaSummaryModel(rpcRows, cats, format) {
+  var byCat = {};
+  (cats || []).forEach(function (c) {
+    byCat[c] = {
+      cat: c,
+      label: (window.GISLayerLabel ? window.GISLayerLabel(c) : (LABELS[c] || c)),
+      count: 0, geomTypes: {}
+    };
+  });
+  (rpcRows || []).forEach(function (row) {
+    var cat = parseLayerName(row.name).category;
+    if (!byCat[cat]) return;   // defensive: ignore rows outside the requested categories
+    byCat[cat].count += (row.count || 0);
+    (row.geometry_types || []).forEach(function (gt) { if (gt) byCat[cat].geomTypes[gt] = true; });
+  });
+  var rows = (cats || []).map(function (c) {
+    var r = byCat[c];
+    var geomTypes = Object.keys(r.geomTypes);
+    return {
+      cat: r.cat, label: r.label, count: r.count,
+      geomTypes: geomTypes, geomTypesLabel: geometryTypesLabel(geomTypes),
+      enabled: true,
+      overCap: r.count > AREA_FETCH_CAP,     // true export fetch would be truncated — warn up front
+      previewPartial: false                   // set later by loadAreaPreview() if the on-map preview was capped
+    };
+  });
+  return { rows: rows, format: format };
+}
+
+// Derived totals over the CURRENTLY ENABLED rows of a model (recomputed after
+// every checkbox toggle — exclusions never mutate the RPC-sourced counts).
+function areaSummaryTotals(model) {
+  var count = 0, typesSet = {};
+  (model.rows || []).forEach(function (r) {
+    if (!r.enabled) return;
+    count += r.count;
+    (r.geomTypes || []).forEach(function (t) { typesSet[t] = true; });
+  });
+  var bytes = estimateBytes(model.format, count, Object.keys(typesSet));
+  return { count: count, sizeBytes: bytes, sizeLabel: fmtBytes(bytes), empty: count === 0 };
+}
+
+// Kick off the area-summary flow right after the rectangle is drawn: fetch the
+// fast per-category COUNT summary, render the modal, then lazily load the
+// (capped) on-map preview in the background.
+function startAreaSummary(cats, leafletBounds) {
+  var GIS = window.GIS;
+  var bounds = leafletBoundsToPlain(leafletBounds);
+  var jobs = catsJobs(cats);
+  var layerIds = uniqueLayerIds(jobs);
+  showBusy('מחשב סיכום אזור…');
+  GIS.spatial.exportAreaSummary(bounds, layerIds).then(function (rows) {
+    closeBusy();
+    gExp.areaCats = cats;
+    gExp.areaBounds = bounds;
+    gExp.areaModel = buildAreaSummaryModel(rows, cats, gExp.format);
+    openAreaSummaryModal();
+    loadAreaPreview(jobs, bounds);
+  }).catch(function (e) {
+    closeBusy();
+    if (gRect) { window.gMap.removeLayer(gRect); gRect = null; }
+    alert('שגיאה בחישוב סיכום האזור: ' + (e && e.message ? e.message : String(e)));
+  });
+}
+
+function openAreaSummaryModal() {
+  document.getElementById('exp-modal').classList.add('open');
+  renderAreaSummaryModal();
+}
+function renderAreaSummaryModal() {
+  var body = document.getElementById('exp-body'), foot = document.getElementById('exp-foot');
+  if (!body || !gExp.areaModel) return;
+  body.innerHTML = areaSummaryHTML(gExp.areaModel);
+  foot.innerHTML = areaSummaryFootHTML(gExp.areaModel);
+}
+
+function areaSummaryHTML(model) {
+  var totals = areaSummaryTotals(model);
+  var F = FORMATS[model.format] || { label: model.format };
+  // "Empty area" = the drawn rectangle itself has 0 features across every
+  // selected category — independent of which checkboxes are currently on
+  // (that's a separate, enabled-only check that only disables the Confirm
+  // button; see areaSummaryFootHTML/areaSummaryTotals).
+  var areaIsEmpty = !(model.rows || []).length || model.rows.every(function (r) { return r.count === 0; });
+  if (areaIsEmpty) {
+    return '<div class="exp-sec">🗺️ סיכום אזור מסומן</div>' +
+      '<div class="exp-empty">לא נמצאו אובייקטים באזור שסומן</div>';
+  }
+  var rowsHtml = model.rows.map(function (r) {
+    var warn = r.overCap
+      ? '<div class="exp-warn">⚠️ באזור שסומן יש ' + fmtNum(r.count) + ' אובייקטים בשכבה "' + r.label + '" — הייצוא יכלול רק את ' + fmtNum(AREA_FETCH_CAP) + ' הראשונים</div>'
+      : '';
+    return '<label class="exp-lrow' + (r.enabled ? ' on' : '') + '">' +
+      '<input type="checkbox" ' + (r.enabled ? 'checked' : '') + ' onchange="expAreaToggle(\'' + r.cat + '\',this)">' +
+      '<span class="exp-lname">' + r.label + '</span>' +
+      '<span class="exp-lcount">' + fmtNum(r.count) + '</span>' +
+      '<span class="exp-lvis vis">' + r.geomTypesLabel + '</span>' +
+    '</label>' + warn;
+  }).join('');
+  var previewNote = model.rows.some(function (r) { return r.previewPartial; })
+    ? '<div class="exp-note">התצוגה המקדימה על המפה חלקית (עד ' + fmtNum(AREA_PREVIEW_CAP) + ' אובייקטים לכל שכבה) — הייצוא בפועל אינו מוגבל בכך (עד ' + fmtNum(AREA_FETCH_CAP) + ' לשכבה).</div>'
+    : '';
+  return '<div class="exp-sec">🗺️ סיכום אזור מסומן</div>' +
+    '<div class="exp-layers" style="max-height:240px">' + rowsHtml + '</div>' +
+    '<div class="exp-sum">' +
+      '<div class="exp-sum-row exp-sum-total"><span>סה"כ אובייקטים לייצוא</span><span class="v">' + fmtNum(totals.count) + '</span></div>' +
+      '<div class="exp-sum-row"><span>גודל משוער</span><span class="v">' + totals.sizeLabel + ' (משוער)</span></div>' +
+      '<div class="exp-sum-row"><span>מערכת קואורדינטות פלט</span><span class="v">' + crsLabelFor(model.format) + '</span></div>' +
+      '<div class="exp-sum-row"><span>פורמט</span><span class="v">' + F.label + '</span></div>' +
+    '</div>' + previewNote;
+}
+
+function areaSummaryFootHTML(model) {
+  var totals = areaSummaryTotals(model);
+  var dis = totals.empty ? ' disabled' : '';
+  return '<button class="exp-btn exp-btn-secondary" onclick="cancelAreaSummary()">ביטול</button>' +
+    '<button class="exp-btn exp-btn-primary" onclick="confirmAreaSummaryExport()"' + dis + '>📥 ייצא</button>';
+}
+
+window.expAreaToggle = function (cat, input) {
+  var row = gExp.areaModel && (gExp.areaModel.rows || []).filter(function (r) { return r.cat === cat; })[0];
+  if (row) row.enabled = input.checked;
+  renderAreaSummaryModal();
+};
+
+// Remove the drawn rectangle + preview layer and clear the area-summary state
+// (called by both Cancel and the modal's ✕ close button — see closeExportModal).
+function cleanupAreaSummary() {
+  if (gRect) { window.gMap.removeLayer(gRect); gRect = null; }
+  removeAreaPreview();
+  gExp.areaCats = null; gExp.areaBounds = null; gExp.areaModel = null;
+}
+function cancelAreaSummary() { cleanupAreaSummary(); closeExportModal(); }
+window.cancelAreaSummary = cancelAreaSummary;
+
+function confirmAreaSummaryExport() {
+  var model = gExp.areaModel;
+  if (!model) return;
+  var enabledCats = model.rows.filter(function (r) { return r.enabled; }).map(function (r) { return r.cat; });
+  if (!enabledCats.length) return;   // Confirm is disabled in this state; defensive no-op
+  var bounds = gExp.areaBounds;
+  if (gRect) { window.gMap.removeLayer(gRect); gRect = null; }
+  removeAreaPreview();
+  gExp.areaCats = null; gExp.areaBounds = null; gExp.areaModel = null;
+  closeExportModal();
+  showBusy('אוסף נתונים…');
+  fetchAreaFeaturesServerSide(enabledCats, bounds, function (features) {
+    if (!features.length) { closeBusy(); alert('לא נמצאו אובייקטים באזור שנבחר'); return; }
+    setBusyMsg('מייצא…');
+    setTimeout(function () { generateAndDownload(features); }, 30);
+  });
+}
+window.confirmAreaSummaryExport = confirmAreaSummaryExport;
+
+// ── AREA PREVIEW LAYER (temporary, semi-transparent cyan) ─────────────────────
+function ensurePreviewPane() {
+  if (window.gMap && !window.gMap.getPane('expAreaPreview')) {
+    var p = window.gMap.createPane('expAreaPreview');
+    p.style.zIndex = 440; p.style.pointerEvents = 'none';
+  }
+}
+// Lazily loads up to AREA_PREVIEW_CAP features per engine layer (job) and
+// renders them on a dedicated pane behind the modal. Non-blocking — the
+// summary modal is already visible by the time this resolves. If a layer's
+// true count (from the already-rendered model) exceeds what the preview
+// fetched, flags that category's row `previewPartial` and re-renders the
+// modal note (only if it's still open).
+function loadAreaPreview(jobs, bounds) {
+  if (!window.gMap || typeof L === 'undefined') return;
+  var GIS = window.GIS;
+  ensurePreviewPane();
+  removeAreaPreview();
+  var group = L.layerGroup().addTo(window.gMap);
+  gAreaPreview = group;
+  runPool(jobs, 4, function (job) {
+    return GIS.features.getInBBox(job.id, bounds, AREA_PREVIEW_CAP).then(function (fc) {
+      var feats = ((fc && fc.features) || []).filter(function (f) { return f.geometry; });
+      var row = gExp.areaModel && gExp.areaModel.rows.filter(function (r) { return r.cat === job.cat; })[0];
+      if (row && feats.length < row.count) row.previewPartial = true;
+      if (!feats.length) return;
+      L.geoJSON({ type: 'FeatureCollection', features: feats }, {
+        pane: 'expAreaPreview',
+        style: { color: '#06b6d4', weight: 2, opacity: 0.5, fillColor: '#22d3ee', fillOpacity: 0.15 },
+        pointToLayer: function (f, ll) {
+          return L.circleMarker(ll, { radius: 4, color: '#06b6d4', weight: 1, fillColor: '#22d3ee', fillOpacity: 0.5, pane: 'expAreaPreview' });
+        }
+      }).addTo(group);
+    }).catch(function () {});
+  }).then(function () {
+    var modal = document.getElementById('exp-modal');
+    if (gExp.areaModel && modal && modal.classList.contains('open')) renderAreaSummaryModal();
+  });
+}
+function removeAreaPreview() {
+  if (gAreaPreview && window.gMap) window.gMap.removeLayer(gAreaPreview);
+  gAreaPreview = null;
+}
 
 // ── LAZY SCRIPT LOADER ────────────────────────────────────────────────────────
 var _scriptCache = {};
@@ -648,14 +975,13 @@ async function generateAndDownload(features) {
       closeBusy();                               // DWG has its own dedicated wait modal
       _exportDWG(features, filename);            // own wait modal; success/error handled inside
     } else if (gExp.format === 'dxf') {
-      triggerDownload(new Blob([await buildDXF(features, onProg)], { type: 'application/dxf' }), filename + '.dxf');
+      await _exportDXF(features, filename, onProg);   // rejection → outer catch → finishGen(false)
       finishGen(true);
     } else if (gExp.format === 'geojson') {
-      await _yieldUI();   // JSON.stringify can't be chunked; yield so the spinner paints first
-      triggerDownload(new Blob([JSON.stringify({ type: 'FeatureCollection', features: features }, null, 2)], { type: 'application/geo+json' }), filename + '.geojson');
+      triggerDownload(new Blob([await buildGeoJSON(features, onProg)], { type: 'application/geo+json' }), filename + '.geojson');
       finishGen(true);
     } else if (gExp.format === 'csv') {
-      triggerDownload(new Blob(['﻿' + await buildCSV(features, onProg)], { type: 'text/csv;charset=utf-8' }), filename + '.csv');
+      triggerDownload(new Blob(['﻿' + await buildCSV(features, onProg, { wkt: gExp.wkt })], { type: 'text/csv;charset=utf-8' }), filename + '.csv');
       finishGen(true);
     } else if (gExp.format === 'kml') {
       triggerDownload(new Blob([await buildKML(features, onProg)], { type: 'application/vnd.google-earth.kml+xml' }), filename + '.kml');
@@ -672,6 +998,38 @@ async function generateAndDownload(features) {
   } catch (e) {
     finishGen(false, e && e.message ? e.message : String(e));
   }
+}
+
+// ── DXF: server-primary with client fallback ─────────────────────────────────
+// Wires window.exportDXFSmart (js/backend-client.js — read its CONTRACT block):
+//   • resolves a Blob  → the richer server-built R2018 DXF; download it as-is.
+//   • resolves null    → conversion service unavailable (cold Render/offline;
+//     negative ping cached 60s there) → fall back to the existing client-side
+//     R12 buildDXF() path unchanged, with a ONE-TIME (per session) Hebrew
+//     notice toast so the user knows why the file is the basic variant.
+//   • REJECTS          → a real post-ping error (auth/4xx/5xx) — propagate to
+//     generateAndDownload's catch → finishGen(false, msg), the wizard's normal
+//     error surface. NEVER a silent fallback.
+// backend-client.js is lazy-loaded (see index.html's LAZY list), so the global
+// is feature-detected — absent behaves like today's client-only path (same
+// defensive pattern as parseLayerName's window.LayerNaming detection).
+// The smart path's progress goes through setGenMsg (already routed to the
+// step-4 pane OR the draw-scope busy overlay), because exportDXFSmart reports
+// (stage, percent, hebrewMessage) — not the chunked builders' (done, total).
+var _dxfFallbackNoticed = false;
+function notifyDxfFallback() {
+  if (_dxfFallbackNoticed) return;
+  _dxfFallbackNoticed = true;
+  if (window.showToast) window.showToast('נוצר DXF בסיסי (R12) — שירות ההמרה המתקדם אינו זמין כרגע');
+}
+async function _exportDXF(features, filename, onProg) {
+  if (typeof window.exportDXFSmart === 'function') {
+    var blob = await window.exportDXFSmart(features, filename, function (stage, pct, msg) { setGenMsg(msg); });
+    if (blob) { triggerDownload(blob, filename + '.dxf'); return; }   // richer server R2018 DXF
+    notifyDxfFallback();                                              // null → service unavailable
+  }
+  // Client-side R12 fallback (service unavailable, or backend-client.js not loaded yet)
+  triggerDownload(new Blob([await buildDXF(features, onProg)], { type: 'application/dxf' }), filename + '.dxf');
 }
 
 function _exportDWG(features, filename) {
@@ -773,100 +1131,53 @@ function showDwgWait(onCancel) {
   };
 }
 
-// ── HELPERS ───────────────────────────────────────────────────────────────────
-function isInBounds(g, b) {
-  if (g.type === 'Point') return b.contains([g.coordinates[1], g.coordinates[0]]);
-  if (g.type === 'LineString') return g.coordinates.some(function (c) { return b.contains([c[1], c[0]]); });
-  if (g.type === 'MultiLineString') return g.coordinates.some(function (line) { return line.some(function (c) { return b.contains([c[1], c[0]]); }); });
-  if (g.type === 'Polygon') return g.coordinates[0] && g.coordinates[0].some(function (c) { return b.contains([c[1], c[0]]); });
-  return false;
-}
+// ── ITM CONVERSION, category grouping, coordinate reprojection, prop cleanup ──
+// makeToITM/groupByCategory/reprojCoords/cleanProps moved to js/export-formats.js
+// (loaded before this file — see index.html) so they're real globals reachable
+// from both files; used below by plain identifier via normal scope-chain lookup.
 
-// ── ITM CONVERSION ────────────────────────────────────────────────────────────
-function makeToITM() {
-  if (window.proj4 && !window.proj4.defs('EPSG:2039')) {
-    // EXACT "Israel 1993 to WGS 84 (2)" 7-param Helmert that PROJ/pyproj uses (~0.5 m);
-    // the old 3-param -48,55,52 was ~10 m off. Keep in sync with search/upload.
-    window.proj4.defs('EPSG:2039',
-      '+proj=tmerc +lat_0=31.7343936111111 +lon_0=35.2045169444444 ' +
-      '+k=1.0000067 +x_0=219529.584 +y_0=626907.39 +ellps=GRS80 ' +
-      '+towgs84=23.772,17.49,17.859,-0.3132,-1.85274,1.67299,-5.4262 +units=m +no_defs');
-  }
-  return function (lng, lat) {
-    if (window.proj4) { try { return window.proj4('EPSG:4326', 'EPSG:2039', [lng, lat]); } catch (e) {} }
-    return [lng, lat];
-  };
-}
-
-// ── DXF / CSV / KML serializers extracted to js/export-formats.js (loaded alongside; globals) ──
+// ── DXF / CSV / KML / GeoJSON serializers, and the chunked Shapefile/Excel data-prep
+//    (buildShapefileCollections / buildExcelRows), all live in js/export-formats.js
+//    (loaded alongside; globals). This file keeps only the CDN-dependent parts
+//    (script loading + shp-write/JSZip/XLSX calls) that need the real DOM. ──────
 
 // ── Shapefile (ZIP) — one shapefile per category, ITM coords + .prj ───────────
-function groupByCategory(features) {
-  var by = {};
-  features.forEach(function (f) {
-    var c = (f.properties && f.properties._category) || 'other';
-    (by[c] = by[c] || []).push(f);
-  });
-  return by;
-}
-function reprojCoords(g, t) {
-  function pt(c) { var p = t(c[0], c[1]); return (c.length > 2) ? [p[0], p[1], c[2]] : [p[0], p[1]]; }
-  function arr(a) { return a.map(pt); }
-  if (g.type === 'Point') return { type: 'Point', coordinates: pt(g.coordinates) };
-  if (g.type === 'LineString') return { type: 'LineString', coordinates: arr(g.coordinates) };
-  if (g.type === 'MultiLineString') return { type: 'MultiLineString', coordinates: g.coordinates.map(arr) };
-  if (g.type === 'Polygon') return { type: 'Polygon', coordinates: g.coordinates.map(arr) };
-  if (g.type === 'MultiPolygon') return { type: 'MultiPolygon', coordinates: g.coordinates.map(function (poly) { return poly.map(arr); }) };
-  return g;
-}
-function cleanProps(p) {  // shp/dbf can't hold nested objects; drop internal _keys
-  var out = {};
-  Object.keys(p || {}).forEach(function (k) {
-    if (k.charAt(0) === '_') return;
-    var v = p[k];
-    if (v === null || v === undefined) return;
-    out[k] = (typeof v === 'object') ? JSON.stringify(v) : v;
-  });
-  return out;
-}
-function exportShapefile(features, filename) {
-  return loadScript(URL_JSZIP)
-    .then(function () { return loadScript(URL_SHPWRITE); })
-    .then(function () {
-      var JSZip = window.JSZip, shpwrite = window.shpwrite;
-      if (!JSZip || !shpwrite) throw new Error('ספריית Shapefile לא נטענה');
-      var toITM = makeToITM();
-      var byCat = groupByCategory(features);
-      var master = new JSZip();
-      var cats = Object.keys(byCat);
+async function exportShapefile(features, filename) {
+  await loadScript(URL_JSZIP);
+  await loadScript(URL_SHPWRITE);
+  var JSZip = window.JSZip, shpwrite = window.shpwrite;
+  if (!JSZip || !shpwrite) throw new Error('ספריית Shapefile לא נטענה');
 
-      return cats.reduce(function (chain, c) {
-        return chain.then(function () {
-          var safe = (c || 'other').replace(/[^a-zA-Z0-9_]/g, '_');
-          var fc = { type: 'FeatureCollection', features: byCat[c].map(function (f) {
-            return { type: 'Feature', properties: cleanProps(f.properties), geometry: reprojCoords(f.geometry, toITM) };
-          }) };
-          var opts = {
-            outputType: 'blob', compression: 'STORE', prj: ITM_WKT,
-            types: { point: safe, polygon: safe, polyline: safe, line: safe, multipolygon: safe }
-          };
-          // zip() may return a Blob/ArrayBuffer/base64 synchronously, or (older builds) a Promise
-          return Promise.resolve(shpwrite.zip(fc, opts)).then(function (res) {
-            if (typeof res === 'string') return JSZip.loadAsync(res, { base64: true });
-            return JSZip.loadAsync(res);   // Blob or ArrayBuffer
-          }).then(function (sub) {
-            return Promise.all(Object.keys(sub.files).map(function (path) {
-              if (sub.files[path].dir) return null;
-              return sub.files[path].async('uint8array').then(function (content) {
-                master.file(safe + '/' + path.split('/').pop(), content);
-              });
-            }));
-          });
-        });
-      }, Promise.resolve())
-      .then(function () { return master.generateAsync({ type: 'blob' }); })
-      .then(function (zipBlob) { triggerDownload(zipBlob, filename + '.zip'); });
-    });
+  // Heavy part (ITM reprojection + attribute flattening for every feature) is chunked/async —
+  // see buildShapefileCollections in export-formats.js. Only the shp-write + JSZip assembly
+  // below (which need the CDN libs) stay synchronous per category.
+  var byCat = await buildShapefileCollections(features, function (done, total) {
+    if (total > 4000) setGenMsg('בונה Shapefile… ' + Math.round(done / total * 100) + '%');
+  });
+
+  var master = new JSZip();
+  var cats = Object.keys(byCat);
+  for (var i = 0; i < cats.length; i++) {
+    var c = cats[i];
+    var safe = (c || 'other').replace(/[^a-zA-Z0-9_]/g, '_');
+    var fc = { type: 'FeatureCollection', features: byCat[c] };
+    var opts = {
+      outputType: 'blob', compression: 'STORE', prj: ITM_WKT,
+      types: { point: safe, polygon: safe, polyline: safe, line: safe, multipolygon: safe }
+    };
+    // zip() may return a Blob/ArrayBuffer/base64 synchronously, or (older builds) a Promise
+    var res = await shpwrite.zip(fc, opts);
+    var sub = (typeof res === 'string') ? await JSZip.loadAsync(res, { base64: true }) : await JSZip.loadAsync(res);
+    var paths = Object.keys(sub.files);
+    for (var j = 0; j < paths.length; j++) {
+      var path = paths[j];
+      if (sub.files[path].dir) continue;
+      var content = await sub.files[path].async('uint8array');
+      master.file(safe + '/' + path.split('/').pop(), content);
+    }
+  }
+  var zipBlob = await master.generateAsync({ type: 'blob' });
+  triggerDownload(zipBlob, filename + '.zip');
 }
 
 // ── Excel (XLSX via SheetJS) — one worksheet per category ─────────────────────
@@ -877,35 +1188,41 @@ function sheetName(name, used) {
   used[s2] = 1;
   return s2;
 }
-function exportExcel(features, filename) {
-  return loadScript(URL_XLSX).then(function () {
-    var XLSX = window.XLSX;
-    if (!XLSX) throw new Error('ספריית Excel לא נטענה');
-    var byCat = groupByCategory(features);
-    var wb = XLSX.utils.book_new();
-    var used = {};
-    Object.keys(byCat).forEach(function (c) {
-      var rows = byCat[c].map(function (f) {
-        var p = f.properties || {}, g = f.geometry, lon = '', lat = '';
-        if (g) {
-          if (g.type === 'Point') { lon = g.coordinates[0]; lat = g.coordinates[1]; }
-          else if (g.type === 'LineString' && g.coordinates.length) { lon = g.coordinates[0][0]; lat = g.coordinates[0][1]; }
-          else if (g.type === 'Polygon' && g.coordinates[0] && g.coordinates[0].length) { lon = g.coordinates[0][0][0]; lat = g.coordinates[0][0][1]; }
-        }
-        var row = { village: p._village || '', category: p._category || '', lon: lon, lat: lat, geometry_type: g ? g.type : '' };
-        Object.keys(p).forEach(function (k) {
-          if (k.charAt(0) === '_') return;
-          var v = p[k];
-          row[k] = (v && typeof v === 'object') ? JSON.stringify(v) : v;
-        });
-        return row;
-      });
-      var ws = XLSX.utils.json_to_sheet(rows);
-      XLSX.utils.book_append_sheet(wb, ws, sheetName(LABELS[c] || c, used));
-    });
-    XLSX.writeFile(wb, filename + '.xlsx');
+async function exportExcel(features, filename) {
+  await loadScript(URL_XLSX);
+  var XLSX = window.XLSX;
+  if (!XLSX) throw new Error('ספריית Excel לא נטענה');
+
+  // Heavy part (per-category row building) is chunked/async — see buildExcelRows in
+  // export-formats.js. Only XLSX.write below (needs the CDN lib) stays synchronous.
+  var byCat = await buildExcelRows(features, function (done, total) {
+    if (total > 4000) setGenMsg('בונה Excel… ' + Math.round(done / total * 100) + '%');
+  }, { wkt: gExp.wkt });
+
+  var wb = XLSX.utils.book_new();
+  var used = {};
+  Object.keys(byCat).forEach(function (c) {
+    var ws = XLSX.utils.json_to_sheet(byCat[c]);
+    XLSX.utils.book_append_sheet(wb, ws, sheetName(LABELS[c] || c, used));
   });
+  XLSX.writeFile(wb, filename + '.xlsx');
 }
+
+// Exposed for unit tests only (test/export/*.test.js) — not used by the app itself.
+// gExp is included (by reference) so tests can flip gExp.wkt to exercise the WKT-on
+// path through the real wizard state without needing to drive the UI. The
+// area-summary internals (W2.2) below are the pure/testable pieces of the
+// draw-scope flow — see test/export/export-area.test.js.
+window.__exportTestHooks = {
+  exportShapefile: exportShapefile, exportExcel: exportExcel, gExp: gExp,
+  catsJobs: catsJobs, uniqueLayerIds: uniqueLayerIds,
+  leafletBoundsToPlain: leafletBoundsToPlain, parseLayerName: parseLayerName,
+  geometryTypesLabel: geometryTypesLabel, estimateBytes: estimateBytes, fmtBytes: fmtBytes,
+  crsLabelFor: crsLabelFor, buildAreaSummaryModel: buildAreaSummaryModel, areaSummaryTotals: areaSummaryTotals,
+  fetchAreaFeaturesServerSide: fetchAreaFeaturesServerSide,
+  AREA_FETCH_CAP: AREA_FETCH_CAP, AREA_PREVIEW_CAP: AREA_PREVIEW_CAP,
+  _exportDXF: _exportDXF
+};
 
 // ── INIT ──────────────────────────────────────────────────────────────────────
 if (document.readyState === 'loading') {

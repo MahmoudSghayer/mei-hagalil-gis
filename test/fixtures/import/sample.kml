@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>מי הגליל — דוגמה</name>
+    <Folder>
+      <name>קווי מים</name>
+      <Placemark>
+        <name>מד מים 1</name>
+        <description>נקודת מד לדוגמה</description>
+        <Point>
+          <coordinates>35.2978,32.8650,0</coordinates>
+        </Point>
+      </Placemark>
+      <Placemark>
+        <name>קו הזנה 1</name>
+        <LineString>
+          <coordinates>35.2960,32.8630,0 35.3000,32.8670,0 35.3020,32.8690,0</coordinates>
+        </LineString>
+      </Placemark>
+    </Folder>
+    <Folder>
+      <name>מגופים</name>
+      <Placemark>
+        <name>מגוף 1</name>
+        <Point>
+          <coordinates>35.3339,32.8514,0</coordinates>
+        </Point>
+      </Placemark>
+    </Folder>
+  </Document>
+</kml>

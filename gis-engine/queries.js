@@ -151,6 +151,50 @@
         p_limit: GIS.config.defaultFeatureLimit
       }), 'query features');
       return fc || GIS.emptyFC();
+    },
+
+    // Normalise an opts.filters value (string | {logic,conditions} | null) into
+    // the { logic, conditions } shape the paging RPCs expect.
+    _normalizeFilters: function (filters) {
+      if (filters && typeof filters === 'object' && filters.conditions) return filters;
+      if (filters) return GIS.queries.parseFilterToSQL(filters);
+      return { logic: 'and', conditions: [] };
+    },
+
+    // One page of a layer's features — server-side filter + search + sort +
+    // limit/offset (via the features_page RPC; see
+    // gis-engine/sql/migrations/2026-07-14-feature-table-pagination.sql).
+    // opts = { filters, search, sortKey, sortDir, limit, offset }. Returns
+    // GeoJSON (drop straight into L.geoJSON, same as the other reads).
+    featuresPage: async function (layerId, opts) {
+      GIS._assert(layerId, 'featuresPage requires a layerId');
+      opts = opts || {};
+      var sb = GIS.sb();
+      var fc = GIS._unwrap(await sb.rpc('features_page', {
+        p_layer_id: layerId,
+        p_filters: GIS.queries._normalizeFilters(opts.filters),
+        p_search: opts.search || null,
+        p_sort_key: opts.sortKey || null,
+        p_sort_dir: opts.sortDir === 'desc' ? 'desc' : 'asc',
+        p_limit: opts.limit || 500,
+        p_offset: opts.offset || 0
+      }), 'load feature page');
+      return fc || GIS.emptyFC();
+    },
+
+    // Exact row count for the same predicate as featuresPage (filters +
+    // search) — drives "X מתוך Y" page indicators. opts = { filters, search }
+    // (sortKey/limit/offset, if present, are ignored).
+    featuresPageCount: async function (layerId, opts) {
+      GIS._assert(layerId, 'featuresPageCount requires a layerId');
+      opts = opts || {};
+      var sb = GIS.sb();
+      var count = GIS._unwrap(await sb.rpc('features_page_count', {
+        p_layer_id: layerId,
+        p_filters: GIS.queries._normalizeFilters(opts.filters),
+        p_search: opts.search || null
+      }), 'count features');
+      return count || 0;
     }
   };
 })();

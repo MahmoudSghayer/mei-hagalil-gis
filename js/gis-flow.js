@@ -79,11 +79,16 @@
     return NaN;
   }
 
-  // engine layer name → { id, village, cat }
+  // engine layer name → { id, village, cat }. Uses LayerNaming when loaded;
+  // identical inline fallback (load-order safety). NOTE the historical quirk
+  // preserved here: with no separator, village falls back to the FULL name
+  // (not null/'') — flow grouping relied on that before the consolidation.
   function parseLayer(l) {
-    var i = l.name.indexOf(' · ');
-    var cat = i >= 0 ? l.name.slice(i + 3) : l.name;
-    return { id: l.id, village: i >= 0 ? l.name.slice(0, i) : l.name, cat: cat };
+    var p = window.LayerNaming ? LayerNaming.parse(l.name) : (function (name) {
+      var i = name.indexOf(' · ');
+      return i >= 0 ? { village: name.slice(0, i), category: name.slice(i + 3) } : { village: null, category: name };
+    })(l.name);
+    return { id: l.id, village: p.village != null ? p.village : l.name, cat: p.category };
   }
 
   // (Multi)LineString → array of coord arrays

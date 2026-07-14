@@ -39,18 +39,29 @@
   }
   // esc() centralized in auth.js (window.escHtml)
 
+  // מפרק "<כפר> · <category>" דרך LayerNaming כשהוא טעון; נופל בחזרה לפירוק
+  // inline זהה מבחינה סמנטית אם הסקריפט טרם נטען (בטיחות סדר-טעינה).
+  function parseLayerName(name) {
+    name = name || '';
+    if (window.LayerNaming) return LayerNaming.parse(name);
+    var idx = name.indexOf(' · ');
+    return idx >= 0 ? { village: name.slice(0, idx), category: name.slice(idx + 3) } : { village: null, category: name };
+  }
   async function engineLayers() {
     var ls = await GIS.layers.getLayers();
     return ls.map(function (l) {
-      var i = l.name.indexOf(' · ');
-      var cat = i >= 0 ? l.name.slice(i + 3) : l.name;
+      var parsed = parseLayerName(l.name);
+      var cat = parsed.category;
       var label = window.GISLayerLabel ? window.GISLayerLabel(cat) : cat;
-      return { id: l.id, name: l.name, village: i >= 0 ? l.name.slice(0, i) : '', label: label, geometry_type: l.geometry_type };
+      return { id: l.id, name: l.name, village: parsed.village != null ? parsed.village : '', label: label, geometry_type: l.geometry_type };
     });
   }
   function layerOptions(layers, extraFirst) {
     var html = extraFirst || '';
-    layers.forEach(function (l) { html += '<option value="' + esc(l.id) + '">' + esc(l.village ? l.village + ' · ' + l.label : l.label) + '</option>'; });
+    layers.forEach(function (l) {
+      var text = l.village ? (window.LayerNaming ? LayerNaming.compose(l.village, l.label) : l.village + ' · ' + l.label) : l.label;
+      html += '<option value="' + esc(l.id) + '">' + esc(text) + '</option>';
+    });
     return html;
   }
   function fieldsOf(features) {
@@ -61,8 +72,18 @@
     return out;
   }
   var _cache = {};
+  var FEATURES_FETCH_CAP = 100000;
   async function featuresOf(layerId) {
-    if (!_cache[layerId]) _cache[layerId] = ((await GIS.features.getFeatures(layerId, 100000)).features) || [];
+    if (!_cache[layerId]) {
+      var fc = await GIS.features.getFeatures(layerId, FEATURES_FETCH_CAP);
+      var feats = fc.features || [];
+      // Layer truncated at the fetch cap — attribute/location/buffer results
+      // below may be missing features beyond the cap.
+      if (feats.length === FEATURES_FETCH_CAP && typeof window.showToast === 'function') {
+        window.showToast('הרשת גדולה מדי — התוצאות עשויות להיות חלקיות', 'error');
+      }
+      _cache[layerId] = feats;
+    }
     return _cache[layerId];
   }
 
@@ -393,6 +414,9 @@
     selectByLocation: selectByLocation,
     buffer: buffer,
     clear: clearAll,
-    getSelection: function () { return state.selection; }
+    getSelection: function () { return state.selection; },
+    // Exposed so the layer-name parsing (LayerNaming-backed, with an inline
+    // load-order-safety fallback) is independently unit-testable.
+    _parseLayerName: parseLayerName
   };
 })();

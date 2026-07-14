@@ -87,7 +87,7 @@
         var cat = cats[ci];
         var raw = byCat[cat];
         if (!raw.length) continue;
-        var layerName = village.village_name + ' · ' + cat;
+        var layerName = window.LayerNaming ? LayerNaming.compose(village.village_name, cat) : village.village_name + ' · ' + cat;
         var layerId = GIS._unwrap(await sb.rpc('ensure_layer', {
           p_name: layerName, p_geometry_type: geomTypeOf(raw)
         }), 'ensure layer');
@@ -120,7 +120,7 @@
       for (var ci = 0; ci < cats.length; ci++) {
         var cat = cats[ci];
         var raw = byCat[cat];
-        var layerName = villageName + ' · ' + cat;
+        var layerName = window.LayerNaming ? LayerNaming.compose(villageName, cat) : villageName + ' · ' + cat;
         var layerId = GIS._unwrap(await sb.rpc('ensure_layer', {
           p_name: layerName, p_geometry_type: geomTypeOf(raw)
         }), 'ensure layer');

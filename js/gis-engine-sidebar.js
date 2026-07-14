@@ -28,6 +28,22 @@ function defaultColor(t) { return t === 'Point' ? '#0d3b5e' : t === 'Polygon' ? 
 function colorFor(layer) { return (layer && layer.color) || defaultColor(layer && layer.geometry_type); }
 function toHex(c) { return /^#[0-9a-fA-F]{6}$/.test(c || '') ? c : defaultColor(); }
 
+// מפרק "<כפר> · <category>" דרך LayerNaming כשהוא טעון; נופל בחזרה לפירוק
+// inline זהה מבחינה סמנטית אם הסקריפט טרם נטען (בטיחות סדר-טעינה).
+function parseLayerName(name) {
+  name = name || '';
+  if (window.LayerNaming) return LayerNaming.parse(name);
+  var idx = name.indexOf(' · ');
+  return idx >= 0 ? { village: name.slice(0, idx), category: name.slice(idx + 3) } : { village: null, category: name };
+}
+// שם הכפר מתוך שם השכבה, עם נפילה לשם המלא כשאין מפריד (תואם את
+// ההתנהגות המקורית של layer.name.split(' · ')[0]).
+function layerVillage(layer) {
+  var name = (layer && layer.name) || '';
+  var v = parseLayerName(name).village;
+  return v != null ? v : name;
+}
+
 var css = document.createElement('style');
 css.textContent = `
 #gis-eng-panel .ge-village{border:1px solid #eef2f6;border-radius:9px;margin-bottom:6px;overflow:hidden;}
@@ -64,7 +80,18 @@ css.textContent = `
 #gis-eng-panel .ge-lc-btn{background:none;border:none;cursor:pointer;color:#64748b;font-size:12px;line-height:1;padding:0 2px;}
 #gis-eng-panel .ge-lc-btn:hover{color:#1a7fc1;}
 #gis-eng-panel .ge-lc .ge-op{flex:1;width:96px;max-width:120px;height:4px;accent-color:#0d3b5e;cursor:pointer;}
-#gis-eng-panel.collapsed .ge-body{display:none;}`;
+#gis-eng-panel.collapsed .ge-body{display:none;}
+#gis-eng-panel .ge-search-wrap{display:flex;align-items:center;gap:6px;padding:6px 2px 8px;}
+#gis-eng-panel .ge-search-in{flex:1;min-width:0;box-sizing:border-box;border:1px solid #dbe2ea;border-radius:7px;padding:5px 8px;font-size:12.5px;font-family:inherit;color:#1e293b;background:#fff;}
+#gis-eng-panel .ge-search-in:focus{outline:none;border-color:#1a7fc1;box-shadow:0 0 0 2px rgba(26,127,193,.15);}
+#gis-eng-panel .ge-search-clear{display:none;background:none;border:none;cursor:pointer;color:#94a3b8;font-size:12px;padding:2px 4px;flex-shrink:0;}
+#gis-eng-panel .ge-search-clear.show{display:inline-block;}
+#gis-eng-panel .ge-search-clear:hover{color:#475569;}
+#gis-eng-panel .ge-handle{cursor:grab;color:#b6c0cc;font-size:12px;line-height:1;flex-shrink:0;padding:0 1px;letter-spacing:-1px;touch-action:none;}
+#gis-eng-panel .ge-handle:hover{color:#64748b;}
+#gis-eng-panel .ge-row.ge-dragging{opacity:.4;}
+#gis-eng-panel .ge-row.ge-drop-before{box-shadow:inset 0 2px 0 0 #1a7fc1;}
+#gis-eng-panel .ge-row.ge-drop-after{box-shadow:inset 0 -2px 0 0 #1a7fc1;}`;
 document.head.appendChild(css);
 
 // Non-blocking error toast — NEVER a blocking alert() (a backend hiccup must not
@@ -229,8 +256,8 @@ function openPanelFor(f, layer) {
     _lastPanelKey = key; _lastPanelTs = now;
   }
   if (window.GISIdentify) GISIdentify.highlight(f);
-  if (window.GISPanel) window.GISPanel.open(f, { layerId: layer.id, sub: layer.name.split(' · ')[0] });
-  else if (window.GISTable) GISTable.openLayer(layer.id, f.properties && f.properties.asset_code, { title: '📋 ' + catLabel(layer._cat), sub: layer.name.split(' · ')[0] });
+  if (window.GISPanel) window.GISPanel.open(f, { layerId: layer.id, sub: layerVillage(layer) });
+  else if (window.GISTable) GISTable.openLayer(layer.id, f.properties && f.properties.asset_code, { title: '📋 ' + catLabel(layer._cat), sub: layerVillage(layer) });
 }
 
 // ── Map-click / hover "Identify" for MVT canvas layers ────────────────────
@@ -453,6 +480,10 @@ async function build() {
         '<span id="ge-chev" style="font-size:11px">▾</span>' +
       '</span>' +
     '</div>' +
+    '<div class="ge-search-wrap">' +
+      '<input type="text" id="ge-search" class="ge-search-in" placeholder="חיפוש שכבה..." aria-label="חיפוש שכבה">' +
+      '<button id="ge-search-clear" class="ge-search-clear" title="נקה" aria-label="נקה חיפוש">✕</button>' +
+    '</div>' +
     '<div class="ge-body" id="ge-body"><div class="ge-empty">טוען…</div></div>';
   host.appendChild(panel);
 
@@ -462,7 +493,58 @@ async function build() {
     document.getElementById('ge-chev').textContent = panel.classList.contains('collapsed') ? '▸' : '▾';
   };
   document.getElementById('ge-refresh').onclick = function (e) { e.stopPropagation(); render(); };
+
+  var searchIn = document.getElementById('ge-search');
+  var searchClear = document.getElementById('ge-search-clear');
+  var searchTimer = null;
+  searchIn.oninput = function () {
+    searchClear.classList.toggle('show', !!searchIn.value);
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(function () { applySearchFilter(searchIn.value); }, 150);
+  };
+  searchClear.onclick = function () {
+    searchIn.value = '';
+    searchClear.classList.remove('show');
+    clearTimeout(searchTimer);
+    applySearchFilter('');
+    searchIn.focus();
+  };
+
   render();
+}
+
+// ── layer search filter (category label + village name) ──────────────────
+// Hides non-matching `.ge-row`s and force-collapses village groups left with
+// zero matches; a matching group is force-expanded so results are visible
+// without the user having to click it open. Re-applied after every render()
+// (a refresh rebuilds `#ge-body` from scratch) using the last query typed.
+var searchQuery = '';
+function normSearch(s) { return String(s == null ? '' : s).trim().toLowerCase(); }
+function applySearchFilter(q) {
+  searchQuery = normSearch(q);
+  var villages = document.querySelectorAll('#ge-body .ge-village');
+  for (var i = 0; i < villages.length; i++) {
+    var wrap = villages[i];
+    var villageName = normSearch(wrap.dataset.village);
+    var villageMatches = !searchQuery || villageName.indexOf(searchQuery) !== -1;
+    var rows = wrap.querySelectorAll('.ge-row');
+    var anyVisible = false;
+    for (var j = 0; j < rows.length; j++) {
+      var row = rows[j];
+      var label = normSearch(row.dataset.searchLabel);
+      var matches = !searchQuery || villageMatches || label.indexOf(searchQuery) !== -1;
+      row.style.display = matches ? '' : 'none';
+      if (matches) anyVisible = true;
+    }
+    if (!searchQuery) {
+      // restore the user's own open/collapsed preference
+      wrap.classList.toggle('collapsed', !openVillages[wrap.dataset.village]);
+      wrap.querySelector('.ge-vchev').textContent = openVillages[wrap.dataset.village] ? '▾' : '▸';
+    } else {
+      wrap.classList.toggle('collapsed', !anyVisible);
+      wrap.querySelector('.ge-vchev').textContent = anyVisible ? '▾' : '▸';
+    }
+  }
 }
 
 async function render() {
@@ -474,9 +556,9 @@ async function render() {
     // קבץ לפי כפר (שם השכבה: "<כפר> · <category>")
     var groups = {}, order = [];
     layers.forEach(function (l) {
-      var idx = l.name.indexOf(' · ');
-      var village = idx >= 0 ? l.name.slice(0, idx) : 'שכבות כלליות';
-      var cat = idx >= 0 ? l.name.slice(idx + 3) : l.name;
+      var parsed = parseLayerName(l.name);
+      var village = parsed.village != null ? parsed.village : 'שכבות כלליות';
+      var cat = parsed.category;
       l._cat = cat;
       if (!groups[village]) { groups[village] = []; order.push(village); }
       groups[village].push(l);
@@ -496,14 +578,114 @@ async function render() {
     Object.keys(VILLAGE_CENTERS).forEach(function (v) {
       if (order.indexOf(v) === -1) body.appendChild(villageBlock(v, []));
     });
+    if (searchQuery) applySearchFilter(searchQuery);   // re-apply across a refresh/rebuild
   } catch (e) {
     body.innerHTML = '<div class="ge-empty" style="color:#dc2626">' + esc(e.message) + '</div>';
+  }
+}
+
+// ── per-village layer order (drag-to-reorder) ──────────────────────────────
+// Persisted as an array of category keys (stable across sessions even if a
+// layer is recreated), keyed per village so villages don't share ordering.
+function orderStorageKey(village) { return 'gis_layer_order_' + village; }
+function getSavedOrder(village) {
+  try {
+    var raw = window.localStorage && localStorage.getItem(orderStorageKey(village));
+    var arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) { return []; }
+}
+function saveOrder(village, catOrder) {
+  try { if (window.localStorage) localStorage.setItem(orderStorageKey(village), JSON.stringify(catOrder)); } catch (e) {}
+}
+// Sorts `layers` in place: saved order first (in saved sequence), then any
+// category not yet in the saved order, alphabetically (matches the old default).
+function sortLayersByOrder(layers, village) {
+  var saved = getSavedOrder(village);
+  if (!saved.length) {
+    layers.sort(function (a, b) { return catLabel(a._cat).localeCompare(catLabel(b._cat), 'he'); });
+    return layers;
+  }
+  var idx = {};
+  saved.forEach(function (cat, i) { idx[cat] = i; });
+  layers.sort(function (a, b) {
+    var ia = Object.prototype.hasOwnProperty.call(idx, a._cat) ? idx[a._cat] : Infinity;
+    var ib = Object.prototype.hasOwnProperty.call(idx, b._cat) ? idx[b._cat] : Infinity;
+    if (ia !== ib) return ia - ib;
+    return catLabel(a._cat).localeCompare(catLabel(b._cat), 'he');
+  });
+  return layers;
+}
+// z-order cascade in DOM order: topmost row = frontmost. Walk bottom→top
+// calling toFront() on each ACTIVE layer's controller, so the LAST call (the
+// top row) ends up above everything else. Inactive (unloaded) rows are skipped.
+function applyZOrderFromDOM(bodyEl) {
+  var rows = bodyEl.querySelectorAll('.ge-row[data-layer-id]');
+  var ids = [];
+  for (var i = 0; i < rows.length; i++) ids.push(rows[i].dataset.layerId);
+  for (var j = ids.length - 1; j >= 0; j--) {
+    var c = loaded[ids[j]];
+    if (c && c.toFront) { try { c.toFront(); } catch (e) {} }
+  }
+}
+// Native HTML5 drag-and-drop, scoped to one village's row list. Only rows
+// carrying data-layer-id (real engine layers) participate — the meters row
+// isn't part of the z-order model and stays fixed at the bottom.
+function wireDragReorder(bodyEl, village) {
+  var draggingId = null;
+  var rows = bodyEl.querySelectorAll('.ge-row[data-layer-id]');
+  var clearDropMarkers = function () {
+    var all = bodyEl.querySelectorAll('.ge-row');
+    for (var k = 0; k < all.length; k++) all[k].classList.remove('ge-drop-before', 'ge-drop-after');
+  };
+  for (var i = 0; i < rows.length; i++) {
+    (function (rowEl) {
+      rowEl.addEventListener('dragstart', function (e) {
+        draggingId = rowEl.dataset.layerId;
+        rowEl.classList.add('ge-dragging');
+        try { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', draggingId); } catch (err) {}
+      });
+      rowEl.addEventListener('dragend', function () {
+        rowEl.classList.remove('ge-dragging');
+        rowEl.draggable = false;
+        draggingId = null;
+        clearDropMarkers();
+      });
+      rowEl.addEventListener('dragover', function (e) {
+        if (!draggingId || draggingId === rowEl.dataset.layerId) return;
+        e.preventDefault();
+        try { e.dataTransfer.dropEffect = 'move'; } catch (err) {}
+        var rect = rowEl.getBoundingClientRect();
+        var before = (e.clientY - rect.top) < rect.height / 2;
+        rowEl.classList.toggle('ge-drop-before', before);
+        rowEl.classList.toggle('ge-drop-after', !before);
+      });
+      rowEl.addEventListener('dragleave', function () {
+        rowEl.classList.remove('ge-drop-before', 'ge-drop-after');
+      });
+      rowEl.addEventListener('drop', function (e) {
+        e.preventDefault();
+        var before = rowEl.classList.contains('ge-drop-before');
+        clearDropMarkers();
+        if (!draggingId || draggingId === rowEl.dataset.layerId) return;
+        var dragged = bodyEl.querySelector('.ge-row[data-layer-id="' + draggingId + '"]');
+        if (!dragged) return;
+        if (before) bodyEl.insertBefore(dragged, rowEl);
+        else bodyEl.insertBefore(dragged, rowEl.nextSibling);
+        var newRows = bodyEl.querySelectorAll('.ge-row[data-layer-id]');
+        var catOrder = [];
+        for (var k = 0; k < newRows.length; k++) catOrder.push(newRows[k].dataset.cat);
+        saveOrder(village, catOrder);
+        applyZOrderFromDOM(bodyEl);
+      });
+    })(rows[i]);
   }
 }
 
 function villageBlock(village, layers) {
   var wrap = document.createElement('div');
   wrap.className = 'ge-village' + (openVillages[village] ? '' : ' collapsed');
+  wrap.dataset.village = village;
   var head = document.createElement('div');
   head.className = 'ge-vhead';
   head.innerHTML =
@@ -521,11 +703,12 @@ function villageBlock(village, layers) {
 
   var bodyEl = document.createElement('div');
   bodyEl.className = 'ge-vbody';
-  layers.sort(function (a, b) { return catLabel(a._cat).localeCompare(catLabel(b._cat), 'he'); });
+  sortLayersByOrder(layers, village);   // saved drag-order first, new categories appended alphabetically
   layers.forEach(function (l) { bodyEl.appendChild(row(l)); });
   // Water meters for this village (own table, placed by coordinates).
   if (VILLAGE_CENTERS[village]) bodyEl.appendChild(meterVillageRow(village));
   wrap.appendChild(bodyEl);
+  wireDragReorder(bodyEl, village);
   return wrap;
 }
 
@@ -568,7 +751,11 @@ function row(layer) {
   var color = colorFor(layer);
   var el = document.createElement('div');
   el.className = 'ge-row';
+  el.dataset.layerId = layer.id;
+  el.dataset.cat = layer._cat;
+  el.dataset.searchLabel = catLabel(layer._cat) + ' ' + layer.name;
   el.innerHTML =
+    '<span class="ge-handle" title="גרור לשינוי סדר" aria-label="גרור לשינוי סדר">⋮⋮</span>' +
     '<input type="checkbox">' +
     '<input type="color" class="ge-color" value="' + toHex(color) + '" title="שנה צבע שכבה">' +
     '<span class="ge-name" title="' + esc(layer.name) + '">' + esc(catLabel(layer._cat)) + '</span>' +
@@ -636,6 +823,12 @@ function row(layer) {
     }
     scheduleVpCache();   // refresh the hover/click feature cache for the new active set
   };
+
+  // Drag-to-reorder: only the ⋮⋮ handle arms `draggable`, so dragging never
+  // fights the checkbox / color-picker / opacity slider clicks in the same row.
+  var handle = el.querySelector('.ge-handle');
+  handle.addEventListener('mousedown', function () { el.draggable = true; });
+  handle.addEventListener('mouseup', function () { el.draggable = false; });
   return el;
 }
 
@@ -727,19 +920,26 @@ function meterPopup(f) {
   return html + '</div>';
 }
 
+// Server cap on GIS.meters.getMetersInBBox (mirrors gis-engine/meters.js
+// getInBBox's `p_limit: limit || 8000` — we call it with no explicit limit).
+var METERS_BBOX_CAP = 8000;
+
 // A "🔢 מדי מים" toggle inside a village block. Loads only that village's meters
 // (bbox RPC) and keeps the ones whose nearest village centre is this village,
 // so each meter sits under exactly one (its correct) village by coordinates.
 function meterVillageRow(village) {
   var el = document.createElement('div');
   el.className = 'ge-row';
+  el.dataset.searchLabel = 'מדי מים Arad';
   el.innerHTML =
     '<input type="checkbox">' +
     '<span class="ge-dot" style="background:' + METER_COLOR + '"></span>' +
     '<span class="ge-name" title="מדי מים מתוך מערכת Arad (עם קריאות), ממוקמים לפי קואורדינטות"><svg class="ge-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></svg> מדי מים (Arad)</span>' +
-    '<span class="ge-count"></span>';
+    '<span class="ge-count"></span>' +
+    '<span class="ge-stat"></span>';
   var cb = el.querySelector('input[type=checkbox]');
   var cnt = el.querySelector('.ge-count');
+  var stat = el.querySelector('.ge-stat');
   el.querySelector('.ge-name').onclick = function () { cb.checked = !cb.checked; cb.onchange(); };
   cb.onchange = async function () {
     if (cb.checked) {
@@ -747,22 +947,30 @@ function meterVillageRow(village) {
       try {
         if (!meterLayers[village]) {
           var fc = await GIS.meters.getMetersInBBox(villageBbox(village));
-          var feats = (fc.features || []).filter(function (f) {
+          var rawFeats = fc.features || [];
+          // Defensive: use fc.truncated if a worker adds it to meters.js; else
+          // fall back to the length-equals-cap heuristic (raw, BEFORE the
+          // per-village coordinate filter below — that's what the server capped).
+          var truncated = fc.truncated === true || (fc.truncated == null && rawFeats.length >= METERS_BBOX_CAP);
+          var feats = rawFeats.filter(function (f) {
             var c = f.geometry && f.geometry.coordinates;
             return c && nearestVillage(c[0], c[1]) === village;
           });
           meterLayers[village] = buildMeterLayer(feats);
           meterLayers[village]._count = feats.length;
+          meterLayers[village]._truncated = truncated;
         }
         meterLayers[village].addTo(window.gMap);
         cnt.textContent = meterLayers[village]._count;
+        stat.innerHTML = meterLayers[village]._truncated
+          ? '<span class="ge-more" title="מוצגים חלק מהמדים — התקרב למפה">⊕</span>' : '';
       } catch (e) {
         cb.checked = false; cnt.textContent = '✕';
         geToast('שגיאה בטעינת מדי מים — ייתכן עומס זמני בשרת, נסה שוב: ' + (e && e.message || e));
       } finally { cb.disabled = false; }
     } else {
       if (meterLayers[village]) window.gMap.removeLayer(meterLayers[village]);
-      cnt.textContent = '';
+      cnt.textContent = ''; stat.innerHTML = '';
     }
   };
   return el;
@@ -779,7 +987,11 @@ window.GISEngineSidebar = {
   reloadAll: function () { Object.keys(loaded).forEach(function (id) { loaded[id].invalidate(); }); }, // re-style all active (labels toggle)
   activeLayers: function () { return Object.keys(active).map(function (id) { return active[id]; }); },
   refresh: function () { try { render(); } catch (e) {} },
-  villageAt: function (lng, lat) { return nearestVillage(lng, lat); }
+  villageAt: function (lng, lat) { return nearestVillage(lng, lat); },
+  // Exposed so the layer-name parsing (LayerNaming-backed, with an inline
+  // load-order-safety fallback) is independently unit-testable — mirrors the
+  // window.GISEditHistory precedent in js/gis-edit.js.
+  _parseLayerName: parseLayerName
 };
 
 })();

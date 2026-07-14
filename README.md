@@ -23,7 +23,7 @@
 
 ## 🇮🇱 עברית — סקירה בעברית
 
-**מי הגליל GIS** היא מערכת web לניהול, עריכה ושיתוף של מפות תשתית המים והביוב של תאגיד המים — שבעה יישובים בצפון הארץ. המערכת מאפשרת לצוותי ההנדסה והתחזוקה לנהל תקלות בזמן אמת, להציג ולערוך שכבות תשתית שמקורן בקבצי **DWG / Shapefile / GeoJSON**, לחבר את שכבות הרשת למוני המים של **ארד (Arad)**, ולייצא נתונים לפורמטים הסטנדרטיים בענף — **DXF (AutoCAD), GeoJSON ו-CSV**.
+**מי הגליל GIS** היא מערכת web לניהול, עריכה ושיתוף של מפות תשתית המים והביוב של תאגיד המים — שבעה יישובים בצפון הארץ. המערכת מאפשרת לצוותי ההנדסה והתחזוקה לנהל תקלות בזמן אמת, להציג ולערוך שכבות תשתית שמקורן בקבצי **DWG / DXF / Shapefile / GeoJSON / KML / KMZ / CSV**, לחבר את שכבות הרשת למוני המים של **ארד (Arad)**, ולייצא נתונים לפורמטים הסטנדרטיים בענף — **DXF/DWG (AutoCAD), Shapefile, GeoJSON, KML ו-CSV/Excel**.
 
 המערכת בנויה ב-**JavaScript טהור ללא שלב build**, מעל **Supabase (PostgreSQL + PostGIS)**, מתארחת ב-**Vercel**, ונעזרת ב-**מיקרו-שירות המרת DWG על Render**. כל הממשק בעברית עם תמיכת **RTL** מלאה ונגישות **WCAG 2.1 AA**.
 
@@ -32,10 +32,10 @@
 - **מפה אינטראקטיבית** — Leaflet, ארבעה רקעי מפה (Google לוויין/היברידי/רחובות, CartoDB), זום עד רמה 20, **30 קטגוריות שכבות**, שכבת קדסטרה (ממ"ג / data.gov.il) לחיפוש גוש-חלקה, כלי מדידה, חיפוש לפי כתובת/קואורדינטה.
 - **ניהול תקלות בזמן אמת** — פתיחה ממוקמת גאוגרפית, שלוש רמות עדיפות, workflow (פתוחה → בטיפול → סגורה), שיוך מטפל, עדכוני **Supabase Realtime**, ויומן ביקורת עם מדידת זמן טיפול.
 - **הרשאות תלת-שכבתיות (RBAC)** — `viewer` (דיווח שטח/צפייה) · `engineer` (עריכה + אישור) · `admin` (ניהול מלא).
-- **העלאת שכבות חכמה** — GeoJSON ו-Shapefile ZIP, זיהוי יישוב אוטומטי, פיצול לרב-יישובי, מיפוי שכבות AutoCAD לפי חוקים, והמרת **ITM (EPSG:2039) → WGS84** אוטומטית.
-- **מנוע GIS** — עריכת אובייקטים (יצירה/עדכון/מחיקה), טבלת מאפיינים, שדות מחושבים (ללא `eval`), שאילתות מסוננות, וניתוח מרחבי.
+- **העלאת שכבות חכמה** — GeoJSON/JSON, Shapefile ZIP, DWG, DXF, KML/KMZ ו-CSV (עם מיפוי עמודות אוטומטי/ידני, כולל זיהוי עמודת WKT), זיהוי יישוב אוטומטי, פיצול לרב-יישובי, מיפוי שכבות AutoCAD לפי חוקים, והמרת **ITM (EPSG:2039) → WGS84** אוטומטית.
+- **מנוע GIS** — עריכת אובייקטים (יצירה/עדכון/מחיקה) עם **בטל/בצע שוב**, טבלת מאפיינים עם **דפדוף בצד השרת + עריכה מרובה + ייצוא CSV**, סנכרון **בזמן אמת** בין המפה לטבלה, שדות מחושבים (ללא `eval`), שאילתות מסוננות, וניתוח מרחבי.
 - **אינטגרציית מוני מים (ארד)** — ייבוא CSV/JSON עם מיפוי כותרות עבריות, קישור מונה-לאובייקט, וזיהוי חריגות צריכה.
-- **יצוא ל-DWG/DXF/GeoJSON/CSV**, **התראות Web Push**, ו-**PWA** הניתן להתקנה ועובד גם במצב לא-מקוון.
+- **יצוא ל-DXF/DWG/Shapefile/GeoJSON/KML/CSV/Excel** (כולל תקציר שטח-ייצוא וטור WKT אופציונלי), **התראות Web Push**, ו-**PWA** הניתן להתקנה ועובד גם במצב לא-מקוון.
 
 ### היישובים הנתמכים
 
@@ -153,14 +153,17 @@ in one continuously-deployed, low-cost, mobile-friendly web app, with a full aud
 - Append-only **incident log** capturing who did what, when.
 
 ### 📥 Smart Layer Upload
-- **GeoJSON** (up to 100 MB) and **Shapefile ZIP** (`.shp/.dbf/.prj` auto-detected).
-- **Automatic CRS transform** ITM (EPSG:2039) → WGS84 (EPSG:4326) via proj4.
+- **Seven input formats**, up to 100 MB: **GeoJSON/JSON**, **Shapefile ZIP** (`.shp/.dbf/.prj` auto-detected), **DWG**, **DXF**, **KML**, **KMZ**, and **CSV** (column-mapping step; lon/lat *or* a WKT column, auto-guessed from header names).
+- **Automatic CRS detection + transform** — ITM (EPSG:2039) → WGS84 (EPSG:4326) via a single canonical proj4 definition (`js/crs-utils.js`, `CRSUtils`).
 - **Automatic village detection** by feature centroid; **auto-split** of multi-village files.
 - **Layer mapping rules** classify AutoCAD layer names into the 30 categories (contains / exact / starts_with / regex, with priority), and newly-learned rules are saved.
+- A dedicated **import pipeline** (`js/import-pipeline.js` + one parser per format under `js/importers/`) runs parse → validate → reproject → map-to-layers → commit as independently-testable stages.
 
 ### 🧰 GIS Engine (editing & analysis)
-- Feature **create / update / delete** with on-map geometry drawing (Leaflet-Geoman).
-- **Attribute panel** + paginated **attribute table**.
+- Feature **create / update / delete** with on-map geometry drawing (Leaflet-Geoman), backed by a bounded **undo/redo** stack (50 deep) that reverses create/delete/geometry edits.
+- **Attribute table** with **server-side pagination** (`features_page` / `features_page_count` RPCs — only one page is ever held in memory, even for 18k+-feature layers), search/sort/filter, **bulk edit** across a multi-row selection, and a page-by-page **CSV export** (capped at 20,000 rows).
+- **Realtime map ↔ table sync** (`window.GISRealtime`) — scoped, ref-counted Supabase Realtime channels per watched layer (capped at 2 concurrent), with the editing client's own writes suppressed so a save doesn't trigger a redundant self-refresh.
+- **Layer picker** with live **search** (by village or category name) and per-village **drag-to-reorder**.
 - **Calculated fields** evaluated by a **safe tokenized expression engine — no `eval`**.
 - **SQL-like filtering** with whitelisted operators and regex-checked field names (no injection surface).
 - **Spatial helpers** — geodesic length, haversine distance, within-radius, buffer/intersect (Turf.js).
@@ -177,7 +180,11 @@ in one continuously-deployed, low-cost, mobile-friendly web app, with a full aud
 - Viewer↔engineer assignments route submissions to the right reviewer.
 
 ### 📤 Export
-- Draw a rectangle, filter by category, and export to **GeoJSON**, **DXF** (AutoCAD, via the Render service), or **CSV** (Excel-friendly, UTF-8 BOM).
+- Draw an export area (or use a feature selection), filter by category, and export to **DXF**, **DWG**, **Shapefile** (ZIP, ITM-projected `.prj`), **GeoJSON**, **KML**, **CSV**, or **Excel** (XLSX).
+- **DXF** is built **entirely client-side** (lightweight R12/AC1009 text, no server round-trip). **DWG** round-trips through the Render service, which builds a full **R2018 DXF** (ezdxf) and converts it via ODA — if ODA is unavailable or the selection exceeds the feature cap, the server-generated R2018 DXF is downloaded instead (`X-Fallback-Reason` header).
+- An **export-area summary** (`export_area_summary` RPC) previews a per-layer feature count + geometry-type breakdown for the drawn rectangle **before** running the real export.
+- Optional **WKT column** (CSV/Excel) embeds full geometry as Well-Known Text alongside the flattened attributes.
+- Large exports (DXF/CSV/KML/Shapefile-prep) are built in **chunked async batches** so the tab doesn't freeze on big selections.
 
 ### 🔔 Notifications
 - In-app **realtime notification bell** + toasts.
@@ -386,13 +393,19 @@ mei-hagalil-gis/
 │   ├── shared.css             # Design tokens, RTL, components, motion
 │   └── pages/                 # Per-page styles (incl. arcgis-pro.css ribbon)
 │
-├── js/                        # ~40 single-purpose feature modules
+├── js/                        # ~45 single-purpose feature modules
 │   ├── auth.js                # Supabase client + profile + 25-min idle timer
 │   ├── backend-client.js      # DWG/DXF export client (calls Render, JWT)
-│   ├── export-feature.js      # Export wizard (GeoJSON/DXF/CSV)
+│   ├── export-feature.js + export-formats.js   # Export wizard + format builders
+│   │                          #   (DXF/DWG/Shapefile/GeoJSON/KML/CSV/Excel)
+│   ├── import-pipeline.js     # parse → validate → reproject → map → commit
+│   ├── importers/             # one parser per format: geojson, shapefile, dwg, kml, csv
+│   ├── crs-utils.js           # canonical EPSG:2039 (ITM) ⇄ WGS84 proj4 def + helpers
+│   ├── layer-naming.js        # "<village> · <category>" layer-name compose/parse
+│   ├── gis-realtime.js        # Realtime map↔table sync (window.GISRealtime)
 │   ├── monitoring.js          # Sentry (optional), a11y.js, pwa.js
-│   ├── gis-*.js               # edit, attribute-panel, feature-table, identify,
-│   │                          #   notifications, push, routing, symbology,
+│   ├── gis-*.js               # edit (+ undo/redo), attribute-panel, feature-table,
+│   │                          #   identify, notifications, push, routing, symbology,
 │   │                          #   bookmarks, print, geocode-assist, meter-connect…
 │   ├── arcgis-ribbon.js       # ArcGIS-Pro-style toolbar
 │   └── pages/                 # Per-page controllers (index.js ≈ 1,100 LOC, upload.js ≈ 800 LOC)
@@ -406,6 +419,7 @@ mei-hagalil-gis/
 │   ├── README.md              # Engine API reference
 │   └── sql/                   # schema.sql, mvt.sql, editing.sql, meter_connect.sql,
 │                              #   audit.sql, domains.sql, tasks.sql, push.sql…
+│       └── migrations/        # dated, idempotent follow-up migrations (see Database ▸ Migrations)
 │
 ├── api/                       # Vercel serverless functions
 │   ├── tiles.js               # GET MVT proxy (PostGIS → Mapbox Vector Tiles)
@@ -591,9 +605,12 @@ GIST spatial indexes on every geometry column (`features.geometry`, `meters.geom
 - Incident-log actor stamping — pins `user_id`/`user_name` so logs can't be forged.
 
 ### Migrations
-There is **no migration framework**. The SQL files are the source of truth and are **idempotent /
-safe to re-run**; apply them in the Supabase SQL Editor in the order listed under
-[Installation](#-installation).
+There is **no migration framework**. The core SQL files (under [Installation](#-installation)) are the
+source of truth and are **idempotent / safe to re-run**. Follow-up changes ship as dated, individually
+idempotent files under `gis-engine/sql/migrations/` (e.g. `2026-07-14-feature-table-pagination.sql`,
+`2026-07-14-export-area-summary.sql`, `2026-07-14-features-realtime.sql`,
+`2026-07-14-import-meters-admin-guard.sql`) — apply each once in the Supabase SQL Editor after the base
+schema; re-running one is safe (`CREATE OR REPLACE FUNCTION`, `IF NOT EXISTS` guards throughout).
 
 ### Backup strategy
 Supabase managed backups (daily; the project is on the Pro tier as of 2026-06, with PITR available when
@@ -640,6 +657,9 @@ Append-only `incident_logs` and `audit_log` provide an independent forensic trai
 | `features_in_bbox(layer_id, bbox…, limit)` | Viewport (bbox) lazy-loading. | read |
 | `features_mvt(layer_id, z, x, y)` | Vector tile bytes (used by `/api/tiles`). | read |
 | `query_features(layer_id, conditions, logic, limit)` | Safe SQL-like filter (whitelisted ops). | read |
+| `features_page(layer_id, filters, search, sort_key, sort_dir, limit, offset)` | One server-side page of the attribute table. | read |
+| `features_page_count(layer_id, filters, search)` | Exact row count for the same page predicate. | read |
+| `export_area_summary(min_lng, min_lat, max_lng, max_lat, layer_ids)` | Per-layer feature count + geometry types inside a drawn export area. | read |
 | `create_feature(layer_id, asset_code, geometry, properties)` | Insert a feature. | admin\|engineer |
 | `import_features(layer_id, features)` | Bulk import (upload). | admin |
 | `meters_geojson(limit)` / `search_meters(q, limit)` | Meter read/search. | read |
@@ -765,7 +785,7 @@ docker run -p 8000:8000 --env-file .env mhg-dwg
 ## 🧪 Testing
 | Layer | Framework | Scope |
 |---|---|---|
-| **Unit** | Vitest 3.2.6 | `api/*` handlers (CORS, validation, admin role gates) and GIS-engine logic — ~25 tests. |
+| **Unit** | Vitest 3.2.6 | `api/*` handlers (CORS, validation, admin role gates), GIS-engine logic, import/export builders (DXF/CSV/KML/Shapefile/Excel), CRS + layer-naming consolidation, and undo/redo — 190+ tests. |
 | **E2E** | Playwright | `tests/e2e/` smoke (no-auth) + RBAC (credential-gated) against the live deploy. |
 | **Service** | pytest | `dwg-export/tests/` — JWT/role enforcement (viewer 403, engineer/admin allowed, invalid/no token 401). |
 
@@ -798,10 +818,10 @@ automated tests yet for the map UI / GIS rendering layer.
 - Interactive map with 30 layer categories and 4 basemaps.
 - Real-time incident management with full audit log and time-to-close.
 - **3-tier RBAC** (viewer/engineer/admin) with RLS on every table.
-- Smart GeoJSON + Shapefile ZIP upload (auto village detection/split, ITM→WGS84, layer mapping rules).
-- GIS engine: feature editing, attribute table, calculated fields, safe filtering, spatial analysis.
+- Smart multi-format upload — GeoJSON/JSON, Shapefile ZIP, DWG, DXF, KML/KMZ, CSV (auto village detection/split, ITM→WGS84, layer mapping rules).
+- GIS engine: feature editing with undo/redo, server-paginated + bulk-editable attribute table, realtime map↔table sync, calculated fields, safe filtering, spatial analysis.
 - Vector tiles (PostGIS MVT) with edge caching; cadastre lookup.
-- DWG/DXF/GeoJSON/CSV export via the Render microservice.
+- Multi-format export — DXF, DWG, Shapefile, GeoJSON, KML, CSV, Excel — with an export-area summary, via the Render microservice for DWG.
 - Arad meter import (Hebrew header mapping), linking, and anomaly detection.
 - Field-submission → review workflow; in-app + Web Push notifications.
 - Installable PWA (offline), Hebrew RTL, WCAG 2.1 AA accessibility.

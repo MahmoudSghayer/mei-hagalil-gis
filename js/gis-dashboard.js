@@ -9,6 +9,13 @@
   function sb() { return window.GIS ? GIS.sb() : window.gSb; }
   // esc() centralized in auth.js (window.escHtml)
   function toast(m) { var t = document.getElementById('toast'); if (!t) return; t.textContent = m; t.className = 'show'; setTimeout(function () { t.className = ''; }, 2200); }
+  // "<village> · <category>" via LayerNaming when loaded; identical inline fallback (load-order safety)
+  function parseLayerName(name) {
+    name = name || '';
+    if (window.LayerNaming) return LayerNaming.parse(name);
+    var i = name.indexOf(' · ');
+    return i >= 0 ? { village: name.slice(0, i), category: name.slice(i + 3) } : { village: null, category: name };
+  }
 
   var css = document.createElement('style');
   css.textContent =
@@ -58,7 +65,7 @@
 
     // group layers by village (name = "<village> · <category>")
     var byV = {};
-    layers.forEach(function (l) { var i = l.name.indexOf(' · '); var v = i >= 0 ? l.name.slice(0, i) : 'כללי'; byV[v] = (byV[v] || 0) + 1; });
+    layers.forEach(function (l) { var v = parseLayerName(l.name).village || 'כללי'; byV[v] = (byV[v] || 0) + 1; });
     var vEntries = Object.keys(byV).map(function (v) { return [v, byV[v]]; }).sort(function (a, b) { return b[1] - a[1]; });
     var maxv = vEntries.reduce(function (m, e) { return Math.max(m, e[1]); }, 1);
 

@@ -12,7 +12,14 @@
 --  --------------
 --  • All reads return GeoJSON via RPCs that run SECURITY INVOKER, so RLS
 --    decides what each user can see.
---  • All writes go through RLS:  GIS = admin|engineer, meters = admin only.
+--  • All writes go through RLS:  GIS = admin|engineer, meters = admin|engineer
+--    too (can_edit_meters() = is_editor(), same admin|engineer set as GIS —
+--    NOT admin-only, despite this comment previously claiming otherwise).
+--    Bulk meter IMPORT is further restricted to admin-only, but only at the
+--    client (gis-engine/meters.js importMeters gates on ['admin']) — the
+--    import_meters RPC itself has no SECURITY DEFINER role check of its own,
+--    so it is DB-gated by the same admin|engineer "meters write" RLS policy
+--    as any other meters write, not by a separate admin-only rule.
 --  • The filter RPC (query_features) NEVER receives raw SQL. It takes a
 --    structured jsonb array; operators are whitelisted, field names are
 --    regex-checked, and values are passed through quote_literal. No eval,

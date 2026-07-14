@@ -234,40 +234,49 @@
 <!-- Leaflet-Geoman (free): on-map editing — must load before index.js so map.pm auto-attaches -->
 <script defer src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.3/dist/leaflet-geoman.min.js" integrity="sha384-poTDWI/tmUEt0KLQICK55no+TBavCdngfb6kTay+hdEmU0SkVrXiYpu8OBDmAHf3" crossorigin="anonymous"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.11.0/proj4.js" integrity="sha384-BIsA8GBrihzaRmijjpqTCihj8D5Vox3hyBFg9sJiTGAEOv6KusZ8QOCKbTFEAfhm" crossorigin="anonymous"></script>
+<!-- Shared conventions: canonical EPSG:2039 def + "<village> · <category>" naming.
+     Loaded before every consumer (search/symbology/sidebar/edit + lazy tools);
+     consumers feature-detect and fall back if absent, so order is belt-and-braces. -->
+<script defer src="js/crs-utils.js?v=1"></script>
+<script defer src="js/layer-naming.js?v=1"></script>
 <!-- Turf is lazy-loaded by gis-analysis.js on first buffer/location-select use (perf) -->
 <script defer src="js/motion-utils.js"></script>
-<script defer src="js/pages/index.js?v=13"></script>
-<script defer src="js/search-feature.js?v=1"></script>
+<script defer src="js/pages/index.js?v=14"></script>
+<script defer src="js/search-feature.js?v=2"></script>
 <!-- GIS Engine layer (UI → GIS.* → Supabase) + attribute panel + map control -->
 <script defer src="gis-engine/core.js?v=2"></script>
-<script defer src="gis-engine/spatial.js?v=1"></script>
+<script defer src="gis-engine/spatial.js?v=2"></script>
 <script defer src="gis-engine/layers.js?v=2"></script>
-<script defer src="gis-engine/features.js?v=2"></script>
+<script defer src="gis-engine/features.js?v=4"></script>
 <script defer src="gis-engine/fields.js?v=1"></script>
 <script defer src="gis-engine/calculator.js?v=1"></script>
-<script defer src="gis-engine/queries.js?v=1"></script>
-<script defer src="gis-engine/meters.js?v=8"></script>
+<script defer src="gis-engine/queries.js?v=2"></script>
+<script defer src="gis-engine/meters.js?v=9"></script>
 <script defer src="gis-engine/villages.js?v=1"></script>
-<script defer src="gis-engine/migrate.js?v=1"></script>
+<script defer src="gis-engine/migrate.js?v=2"></script>
+<!-- Realtime map↔table sync (W2.3): scoped postgres_changes channels on public.features,
+     watched only while a layer's attribute table is open. Needs GIS.sb()/GIS.config from
+     core.js above; consumed by gis-feature-table.js and gis-engine/features.js below. -->
+<script defer src="js/gis-realtime.js?v=1"></script>
 <!-- Coded-value domains (Phase 4): integer codes → Hebrew labels + edit dropdowns -->
 <script defer src="js/gis-domains.js?v=2"></script>
 <script defer src="js/gis-attribute-panel.js?v=4"></script>
-<script defer src="js/gis-feature-table.js?v=4"></script>
+<script defer src="js/gis-feature-table.js?v=6"></script>
 <!-- Symbology (Phase 3): attribute-driven rendering + legend + diameter labels -->
-<script defer src="js/gis-symbology.js?v=2"></script>
+<script defer src="js/gis-symbology.js?v=3"></script>
 <!-- Tile loader: viewport tile cache + feature cache + request queue + prefetch + AbortController -->
 <script defer src="js/gis-tile-cache.js?v=1"></script>
-<script defer src="js/gis-tile-loader.js?v=4"></script>
+<script defer src="js/gis-tile-loader.js?v=5"></script>
 <!-- VectorGrid: MUST be eager — it powers the MVT fast path; idle-loading it risks
      the MVT probe caching "off" on an early layer toggle (→ heavy per-feature render). -->
 <script defer src="https://unpkg.com/leaflet.vectorgrid@1.3.0/dist/Leaflet.VectorGrid.bundled.js" integrity="sha384-FON5fTjCTtPuBgUS1r2H/PGXstH0Rk23YKjZmB6qITkbFqBcqtey/rPo9eXwOWpx" crossorigin="anonymous"></script>
-<script defer src="js/gis-mvt-layer.js?v=5"></script>
+<script defer src="js/gis-mvt-layer.js?v=6"></script>
 <!-- Identify highlight: click a feature → white casing + cyan line (no endpoint dots) -->
 <script defer src="js/gis-identify.js?v=2"></script>
-<script defer src="js/gis-engine-sidebar.js?v=26"></script>
+<script defer src="js/gis-engine-sidebar.js?v=27"></script>
 <!-- ribbon-only tools (trace/analysis/bookmarks/find/print/meter-connect) → idle-loaded below (perf) -->
 <!-- On-map editing (Edit tab): Geoman-driven add / move-geometry / delete / snap -->
-<script defer src="js/gis-edit.js?v=5"></script>
+<script defer src="js/gis-edit.js?v=6"></script>
 <!-- ArcGIS Pro UI shell (Phase 1): ribbon + Contents pane + scale status bar -->
 <script defer src="js/arcgis-ribbon.js?v=24"></script>
 <!-- Field mode (F3/F4): viewer-only minimal shell — create/submit entities + issues -->
@@ -275,7 +284,7 @@
 <!-- In-app notifications (F6): topbar bell + Realtime feed -->
 <script defer src="js/gis-notifications.js?v=1"></script>
 <!-- Flow-direction arrows (L4a): sewer arrows from manhole invert levels (lower invert = downstream) -->
-<script defer src="js/gis-flow.js?v=3"></script>
+<script defer src="js/gis-flow.js?v=4"></script>
 <!-- Geocode assist (Phase 3): ArcGIS reverse-geocode on incident pick → auto-village + address hint -->
 <script defer src="js/gis-geocode-assist.js?v=2"></script>
 <!-- PERF: ribbon-only tools load AFTER first paint (idle). The ribbon already
@@ -285,18 +294,18 @@
 (function () {
   var LAZY = [
     'js/measure-tools.js',
-    'js/backend-client.js?v=7',
-    'js/export-formats.js?v=2',
-    'js/export-feature.js?v=18',
+    'js/backend-client.js?v=8',
+    'js/export-formats.js?v=3',
+    'js/export-feature.js?v=19',
     'js/stats-feature.js?v=1',
-    'js/gis-network-trace.js?v=2',
-    'js/gis-analysis.js?v=4',
+    'js/gis-network-trace.js?v=3',
+    'js/gis-analysis.js?v=5',
     'js/gis-bookmarks.js?v=1',
-    'js/gis-find.js?v=6',
+    'js/gis-find.js?v=7',
     'js/gis-routing.js?v=1',
     'js/gis-print.js?v=10',
-    'js/gis-meter-connect.js?v=5',
-    'js/gis-dashboard.js?v=1',
+    'js/gis-meter-connect.js?v=6',
+    'js/gis-dashboard.js?v=2',
     'js/gis-tasks.js?v=7',
     'js/gis-onboarding.js?v=1'
   ];

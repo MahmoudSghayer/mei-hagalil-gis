@@ -131,6 +131,17 @@
     return {
       update: function () {},
       invalidate: rebuild,
+      // Bbox-scoped invalidate (W2.3 — realtime): kept for API symmetry with
+      // gis-tile-loader.js's controller, but Leaflet.VectorGrid's canvas
+      // tiles (rendererFactory: L.canvas.tile) aren't individually
+      // addressable from outside the plugin — there is no per-tile cache
+      // this file owns to selectively evict, only the CDN/browser HTTP
+      // cache behind the whole tile URL template. So this is an ALIAS for
+      // a full cache-busted rebuild() (bumps `ver`, forcing every tile —
+      // on screen or not — to be refetched), same as invalidate(). The bbox
+      // argument is accepted (and ignored) so callers can treat both
+      // controller types uniformly.
+      invalidateBBox: function () { rebuild(); },
       restyle: rebuild,
       destroy: function () { dead = true; if (map.hasLayer(group)) map.removeLayer(group); group.clearLayers(); vg = null; },
       group: group,

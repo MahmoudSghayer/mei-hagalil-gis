@@ -13,6 +13,21 @@
   var GIS = window.GIS;
   GIS._assert(GIS, 'core.js must load before features.js');
 
+  // Own-write dedupe hook (W2.3 — realtime): called right after every
+  // successful write below, regardless of WHICH UI triggered it
+  // (js/gis-feature-table.js's cell edit / bulk edit / add-row / delete-row,
+  // AND js/gis-edit.js's on-map add / edit-geometry / delete / undo-redo —
+  // all of them funnel through GIS.features.*, so hooking it here ONCE
+  // covers every call site instead of duplicating a suppress() call at
+  // each one). Opens a short window in js/gis-realtime.js during which the
+  // inevitable realtime ECHO of this very write is dropped instead of
+  // triggering a second refresh. No-op (and never throws) if gis-realtime.js
+  // isn't loaded — e.g. pages that only ever read features.
+  function suppressEcho(layerId) {
+    if (!layerId) return;
+    try { if (window.GISRealtime && GISRealtime.suppress) GISRealtime.suppress(layerId); } catch (e) {}
+  }
+
   GIS.features = {
 
     // GeoJSON FeatureCollection for a layer (via PostGIS RPC).
@@ -74,9 +89,11 @@
       GIS._assert(code, 'createFeature requires an asset_code (primary link key)');
       delete props.asset_code;
       var sb = GIS.sb();
-      return GIS._unwrap(await sb.rpc('create_feature', {
+      var created = GIS._unwrap(await sb.rpc('create_feature', {
         p_layer_id: layerId, p_asset_code: code, p_geometry: geometry, p_properties: props
       }), 'create feature');
+      suppressEcho(layerId);
+      return created;
     },
 
     // Update a feature's attributes (geometry unchanged). RLS: admin|engineer.
@@ -84,9 +101,11 @@
       GIS._assert(id && properties, 'updateFeature requires (id, properties)');
       await GIS._requireRole(['admin', 'engineer'],'edit features');
       var sb = GIS.sb();
-      return GIS._unwrap(
+      var updated = GIS._unwrap(
         await sb.from('features').update({ properties: properties }).eq('id', id).select().single(),
         'update feature');
+      suppressEcho(updated && updated.layer_id);
+      return updated;
     },
 
     // Update a feature's GEOMETRY (attributes unchanged). geometry = GeoJSON
@@ -97,17 +116,44 @@
       GIS._assert(id && geometry, 'updateGeometry requires (id, geometry)');
       await GIS._requireRole(['admin', 'engineer'],'edit geometry');
       var sb = GIS.sb();
-      return GIS._unwrap(await sb.rpc('update_feature_geometry', {
+      var updated = GIS._unwrap(await sb.rpc('update_feature_geometry', {
         p_id: id, p_geometry: geometry
       }), 'update geometry');
+      suppressEcho(updated && updated.layer_id);
+      return updated;
     },
 
     deleteFeature: async function (id) {
       GIS._assert(id, 'deleteFeature requires an id');
       await GIS._requireRole(['admin', 'engineer'],'delete features');
       var sb = GIS.sb();
-      GIS._unwrap(await sb.from('features').delete().eq('id', id), 'delete feature');
+      // .select('layer_id') asks PostgREST to return the deleted row's
+      // representation (Prefer: return=representation) in the SAME request —
+      // the only way to learn which layer this delete belongs to, since
+      // deleteFeature() only takes an id (no layerId param) and the row is
+      // gone after the delete.
+      var rows = GIS._unwrap(await sb.from('features').delete().eq('id', id).select('layer_id'), 'delete feature');
+      suppressEcho(rows && rows[0] && rows[0].layer_id);
       return { id: id, deleted: true };
+    },
+
+    // Merge `patch` into properties for up to 1000 feature ids at once (the
+    // attribute table's multi-row select + bulk edit). RLS: admin|engineer.
+    // Goes through the features_bulk_update RPC — see
+    // gis-engine/sql/migrations/2026-07-14-feature-table-pagination.sql —
+    // which flows through the same features_autocalc/gis_audit triggers as a
+    // normal update. Returns { updated: <row count> }.
+    bulkUpdate: async function (layerId, ids, patch) {
+      GIS._assert(layerId, 'bulkUpdate requires a layerId');
+      GIS._assert(ids && ids.length, 'bulkUpdate requires a non-empty ids array');
+      GIS._assert(patch && typeof patch === 'object', 'bulkUpdate requires a patch object');
+      await GIS._requireRole(['admin', 'engineer'], 'bulk-edit features');
+      var sb = GIS.sb();
+      var count = GIS._unwrap(await sb.rpc('features_bulk_update', {
+        p_layer_id: layerId, p_ids: ids, p_patch: patch
+      }), 'bulk update features');
+      suppressEcho(layerId);
+      return { updated: count || 0 };
     }
   };
 })();

@@ -79,10 +79,18 @@ _SRC_CANDIDATES = [
 ]
 
 
-def _detect_crs_and_sign(sample: list[tuple[float, float]]):
+def _detect_crs_and_sign(sample: list[tuple[float, float]], fallback_crs: str = "EPSG:2039"):
     """Try every candidate source CRS × sign convention and pick the combo that
     lands the most sample points inside Israel. Returns (Transformer, sx, sy).
-    Falls back to ITM (1, 1) when nothing matches."""
+
+    Falls back to `fallback_crs` (sign +, +) when nothing matches confidently.
+    BUG FIX (2026-07-14): this used to hardcode the fallback to EPSG:2039
+    regardless of what the caller asked for — dxf_to_geojson() built a
+    Transformer from its `source_crs` argument (e.g. the CRS a user picks on
+    the upload form) but then unconditionally discarded it in favour of this
+    function's return value, silently ignoring an explicit user choice
+    whenever auto-detection was inconclusive. The fallback now honors the
+    caller-supplied CRS instead."""
     best = None  # (hits, transformer, sx, sy, crs)
     for crs in _SRC_CANDIDATES:
         try:
@@ -101,7 +109,13 @@ def _detect_crs_and_sign(sample: list[tuple[float, float]]):
             if best is None or hits > best[0]:
                 best = (hits, tr, sx, sy, crs)
     if best is None or best[0] < max(1, int(0.3 * len(sample))):
-        return Transformer.from_crs("EPSG:2039", "EPSG:4326", always_xy=True), 1, 1, "EPSG:2039?"
+        fallback_crs = fallback_crs or "EPSG:2039"
+        try:
+            tr = Transformer.from_crs(fallback_crs, "EPSG:4326", always_xy=True)
+        except Exception:
+            fallback_crs = "EPSG:2039"
+            tr = Transformer.from_crs(fallback_crs, "EPSG:4326", always_xy=True)
+        return tr, 1, 1, f"{fallback_crs}?"
     return best[1], best[2], best[3], best[4]
 
 
@@ -115,7 +129,6 @@ def dxf_to_geojson(dxf_bytes: bytes, source_crs: str = "EPSG:2039") -> dict:
     finally:
         os.unlink(path)
 
-    t = Transformer.from_crs(source_crs or "EPSG:2039", "EPSG:4326", always_xy=True)
     msp = doc.modelspace()
 
     # ── Pass 1: collect each entity's RAW model-space geometry ──────────────
@@ -209,7 +222,9 @@ def dxf_to_geojson(dxf_bytes: bytes, source_crs: str = "EPSG:2039") -> dict:
         if len(sample) >= 800:
             break
     # Auto-detect the real source CRS (ITM vs old Cassini grid) AND sign.
-    t, sx, sy, src_crs = _detect_crs_and_sign(sample)
+    # `source_crs` (the caller's explicit choice, e.g. from the upload form)
+    # is used only as the fallback when auto-detection is inconclusive.
+    t, sx, sy, src_crs = _detect_crs_and_sign(sample, fallback_crs=source_crs)
 
     # ── Pass 2: transform every coordinate with the chosen sign ────────────
     def conv(c):

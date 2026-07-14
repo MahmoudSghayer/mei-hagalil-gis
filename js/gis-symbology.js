@@ -21,8 +21,14 @@
     hydrants: 'hydrant', water_meters: 'meter',
     sewage_manholes: 'manhole', fittings: 'fitting'
   };
+  // מפרק "<כפר> · <category>" דרך LayerNaming כשהוא טעון; נופל בחזרה לפירוק
+  // inline זהה מבחינה סמנטית אם הסקריפט טרם נטען (בטיחות סדר-טעינה).
+  function layerCategory(name) {
+    if (window.LayerNaming) return LayerNaming.parse(name).category;
+    return name ? name.split(' · ').pop() : '';
+  }
   function roleOf(layer) {
-    var cat = layer && (layer._cat || (layer.name ? layer.name.split(' · ').pop() : ''));
+    var cat = layer && (layer._cat || (layer.name ? layerCategory(layer.name) : ''));
     return ROLE_BY_CAT[cat] || (layer && layer.geometry_type === 'Point' ? 'point' : 'line');
   }
 
@@ -183,6 +189,9 @@
 
   window.GISSymbology = {
     roleOf: roleOf,
+    // Exposed so the layer-name category parsing (LayerNaming-backed, with an
+    // inline load-order-safety fallback) is independently unit-testable.
+    _layerCategory: layerCategory,
     lineStyle: lineStyle,
     pointToLayer: pointToLayer,
     zoomScale: zoomScale,

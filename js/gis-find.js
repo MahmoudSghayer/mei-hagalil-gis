@@ -36,12 +36,18 @@
   function toast(m) { var t = document.getElementById('toast'); if (!t) return; t.textContent = m; t.className = 'show'; setTimeout(function () { t.className = ''; }, 2200); }
   function hint(m) { return '<div class="gf-hint">' + esc(m) + '</div>'; }
 
+  // "<village> · <category>" via LayerNaming when loaded; identical inline fallback (load-order safety)
+  function parseLayerName(name) {
+    name = name || '';
+    if (window.LayerNaming) return LayerNaming.parse(name);
+    var i = name.indexOf(' · ');
+    return i >= 0 ? { village: name.slice(0, i), category: name.slice(i + 3) } : { village: null, category: name };
+  }
   function layerLabel(layer) {
-    var i = layer.name.indexOf(' · ');
-    var cat = i >= 0 ? layer.name.slice(i + 3) : layer.name;
-    var v = i >= 0 ? layer.name.slice(0, i) : '';
-    var l = window.GISLayerLabel ? window.GISLayerLabel(cat) : cat;
-    return v ? v + ' · ' + l : l;
+    var p = parseLayerName(layer.name);
+    var v = p.village || '';
+    var l = window.GISLayerLabel ? window.GISLayerLabel(p.category) : p.category;
+    return v ? v + ' · ' + l : l;   // display string (village · Hebrew label), not the storage convention
   }
   async function candidateLayers() {
     var act = (window.GISEngineSidebar && window.GISEngineSidebar.activeLayers) ? window.GISEngineSidebar.activeLayers() : [];

@@ -247,6 +247,40 @@
       update();
     }
 
+    // Bbox-scoped invalidate (W2.3 — realtime): evicts + re-fetches ONLY the
+    // cached tiles that intersect `bbox` ({minLng,minLat,maxLng,maxLat}) —
+    // every tile elsewhere on the map is left completely alone (no clear,
+    // no flash/redraw), unlike invalidate()'s clear-everything sweep. Falls
+    // back to a full invalidate() when no bbox is given.
+    //
+    // NOTE: the durable (IndexedDB) tile cache has no bbox-scoped clear
+    // primitive — GISTileCache only exposes clearPrefix(layerId), whole-
+    // layer — so opts.onInvalidate() is still called here to bust it (same
+    // as invalidate()), otherwise fetchTile() would happily re-serve the
+    // stale bytes for a tile we just evicted from memory. So the WIN here
+    // is purely "no visual disturbance outside the changed area"; the
+    // network-fetch savings of a durable cache are not preserved for a
+    // bbox-scoped call any more than for a full invalidate().
+    function invalidateBBox(bbox) {
+      if (!bbox) { invalidate(); return; }
+      function intersects(a, b) {
+        return a.minLng <= b.maxLng && a.maxLng >= b.minLng && a.minLat <= b.maxLat && a.maxLat >= b.minLat;
+      }
+      if (opts.onInvalidate) try { opts.onInvalidate(); } catch (e) {}
+      var victims = [];
+      tiles.forEach(function (t, key) {
+        var parts = key.split('/');
+        var tb = tileBBox(+parts[1], +parts[2], +parts[0]);
+        if (intersects(tb, bbox)) victims.push(key);
+      });
+      victims.forEach(function (key) {
+        var v = inflight.get(key);
+        if (v) { v.ctrl.abort(); inflight.delete(key); }
+        evictTile(key);
+      });
+      update();   // re-syncs desired tiles — re-fetches the evicted ones, leaves the rest untouched
+    }
+
     function destroy() {
       dead = true;
       inflight.forEach(function (v) { v.ctrl.abort(); });
@@ -260,6 +294,7 @@
     return {
       update: update,
       invalidate: invalidate,
+      invalidateBBox: invalidateBBox,
       restyle: restyle,
       destroy: destroy,
       group: group,

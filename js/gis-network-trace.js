@@ -119,12 +119,20 @@
     return { minLng: latlng.lng - dLng, minLat: latlng.lat - dLat, maxLng: latlng.lng + dLng, maxLat: latlng.lat + dLat };
   }
 
+  // מפרק "<כפר> · <category>" דרך LayerNaming כשהוא טעון; נופל בחזרה לפירוק
+  // inline זהה מבחינה סמנטית אם הסקריפט טרם נטען (בטיחות סדר-טעינה).
   function parseLayer(l) {
-    var i = l.name.indexOf(' · ');
-    var village = i >= 0 ? l.name.slice(0, i) : l.name;
-    var cat = i >= 0 ? l.name.slice(i + 3) : l.name;
+    var parsed = window.LayerNaming ? LayerNaming.parse(l.name) : (function () {
+      var i = l.name.indexOf(' · ');
+      return i >= 0 ? { village: l.name.slice(0, i), category: l.name.slice(i + 3) } : { village: null, category: l.name };
+    })();
+    var village = parsed.village != null ? parsed.village : l.name;
+    var cat = parsed.category;
     return { id: l.id, name: l.name, village: village, cat: cat, role: GISTrace.roles[cat] || null, color: l.color };
   }
+  // Exposed so the layer-name parsing (LayerNaming-backed, with an inline
+  // load-order-safety fallback) is independently unit-testable.
+  GISTrace._parseLayer = parseLayer;
 
   async function onPick(e) {
     var st = GISTrace._state; if (!st) return;
@@ -161,10 +169,28 @@
       var valveLs = vlayers.filter(function (l) { return l.role === 'valve'; });
       var deviceLs = vlayers.filter(function (l) { return l.role === 'device' || l.role === 'snode'; });
 
-      var pipeFeats = [], valveFeats = [], deviceFeats = [];
-      for (var p = 0; p < pipes.length; p++) (await GIS.features.getFeatures(pipes[p].id, 100000)).features.forEach(function (f) { pipeFeats.push(f); });
-      for (var v = 0; v < valveLs.length; v++) (await GIS.features.getFeatures(valveLs[v].id, 100000)).features.forEach(function (f) { valveFeats.push(f); });
-      for (var d = 0; d < deviceLs.length; d++) (await GIS.features.getFeatures(deviceLs[d].id, 100000)).features.forEach(function (f) { deviceFeats.push(f); });
+      var pipeFeats = [], valveFeats = [], deviceFeats = [], capped = false;
+      var NET_FETCH_CAP = 100000;
+      for (var p = 0; p < pipes.length; p++) {
+        var pfc = await GIS.features.getFeatures(pipes[p].id, NET_FETCH_CAP);
+        if (pfc.features.length === NET_FETCH_CAP) capped = true;
+        pfc.features.forEach(function (f) { pipeFeats.push(f); });
+      }
+      for (var v = 0; v < valveLs.length; v++) {
+        var vfc = await GIS.features.getFeatures(valveLs[v].id, NET_FETCH_CAP);
+        if (vfc.features.length === NET_FETCH_CAP) capped = true;
+        vfc.features.forEach(function (f) { valveFeats.push(f); });
+      }
+      for (var d = 0; d < deviceLs.length; d++) {
+        var dfc = await GIS.features.getFeatures(deviceLs[d].id, NET_FETCH_CAP);
+        if (dfc.features.length === NET_FETCH_CAP) capped = true;
+        dfc.features.forEach(function (f) { deviceFeats.push(f); });
+      }
+      // The village network was truncated at the fetch cap — isolation/trace
+      // results below may be missing pipes/valves/devices beyond the cap.
+      if (capped && typeof window.showToast === 'function') {
+        window.showToast('הרשת גדולה מדי — התוצאות עשויות להיות חלקיות', 'error');
+      }
 
       var g = buildGraph(pipeFeats, valveFeats, sc);
 

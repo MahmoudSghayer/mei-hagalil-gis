@@ -1,10 +1,23 @@
 // ════════════════════════════════════════════════════════════════
-//  Mei HaGalil GIS — Export format serializers (DXF / CSV / KML)
-//  Extracted from export-feature.js for readability. Plain globals,
-//  loaded alongside export-feature.js; buildDXF/buildCSV/buildKML are
-//  called from its generateAndDownload(). Shared helpers (makeToITM,
-//  groupByCategory, LABELS) stay in export-feature.js and resolve at
-//  call time (both files are loaded well before any export runs).
+//  Mei HaGalil GIS — Export format serializers (DXF / CSV / KML / GeoJSON /
+//  Shapefile-prep / Excel-prep / WKT)
+//  Extracted from export-feature.js for readability. Plain globals, loaded
+//  BEFORE export-feature.js (see index.html) so the shared helpers below are
+//  visible from both files as real globals.
+//
+//  IMPORTANT — why the shared helpers (LABELS/makeToITM/groupByCategory/
+//  reprojCoords/cleanProps) live HERE and not in export-feature.js: that file
+//  wraps its entire body in an IIFE `(function(){ 'use strict'; ... })()`, so
+//  any `var`/`function` declared there is local to that closure and NOT a
+//  property of `window` — a separate script (like this one) cannot see it.
+//  A previous version of this file assumed otherwise ("both are plain
+//  globals") which was wrong: buildDXF() calling makeToITM() and buildKML()
+//  reading LABELS both threw ReferenceError at runtime (verified: exporting
+//  DXF or KML was completely broken). Keeping these pure, DOM-free helpers in
+//  this un-wrapped script — which genuinely does put its top-level
+//  declarations on `window` — fixes that for good and lets export-feature.js
+//  keep reading them by plain identifier (global scope is always reachable
+//  from inside its IIFE).
 // ════════════════════════════════════════════════════════════════
 
 // ── async chunking ─────────────────────────────────────────────────────────────
@@ -18,6 +31,76 @@ async function _forEachChunked(arr, chunk, fn, onProgress) {
     if ((i + 1) % chunk === 0) { if (onProgress) onProgress(i + 1, arr.length); await _yieldUI(); }
   }
   if (onProgress) onProgress(arr.length, arr.length);
+}
+
+// ── SHARED HELPERS (moved from export-feature.js — see note above) ─────────────
+var LABELS = {
+  sewage_pipe:'קווי ביוב (DWG)', manhole:'שוחות ביוב (DWG)', sleeve:'שרוולים',
+  control_point:'נקודות בקרה', pipe_label:'תוויות צנרת', elevation_label:'גבהים TL/IL',
+  attribute_label:'תוויות שוחות', distance_label:'מרחקים', dimension_line:'קווי מידה',
+  manhole_drawing:'שרטוטי שוחות', buildings:'בניינים', parcels:'חלקות',
+  water_meters:'מדי מים', water_pipes:'קווי מים', sewage_pipes:'קווי ביוב',
+  sewage_manholes:'שוחות ביוב', hydrants:'הידרנטים', valves:'מגופים',
+  control_valves:'מגופים שולטים', connection_points:'נקודות חיבור מקורות',
+  reservoirs:'מאגרי מים', pump_stations:'תחנות שאיבה',
+  sampling_points:'נקודות דיגום',
+  main_sewer:'ביב ראשי', supply_pipe:'קו הספקה',
+  sewage_cascade:'מפל ביוב', fittings:'מתאמים',
+  annotation_points:'נקודות להערות', sewer_exit:'יציאה מרשת ביוב',
+  annotation_polygons:'פוליגונים להערות', annotation_lines:'קווים להערות',
+  valve_chamber:'תא מגופים', block:'גוש',
+  other:'אחר'
+};
+
+// EPSG:4326 → EPSG:2039 (ITM) converter factory. Returns a plain (lng,lat)->[x,y]
+// function; falls back to identity if proj4 isn't loaded.
+function makeToITM() {
+  if (window.proj4 && !window.proj4.defs('EPSG:2039')) {
+    // Canonical def now lives in js/crs-utils.js (CRSUtils.EPSG2039_DEF); the
+    // literal string is kept ONLY as a load-order-safety fallback for when
+    // that script hasn't loaded yet. EXACT "Israel 1993 to WGS 84 (2)" 7-param
+    // Helmert that PROJ/pyproj uses (~0.5 m); the old 3-param -48,55,52 was
+    // ~10 m off. Keep the fallback string in sync with search/upload/CRSUtils.
+    window.proj4.defs('EPSG:2039', window.CRSUtils ? window.CRSUtils.EPSG2039_DEF :
+      '+proj=tmerc +lat_0=31.7343936111111 +lon_0=35.2045169444444 ' +
+      '+k=1.0000067 +x_0=219529.584 +y_0=626907.39 +ellps=GRS80 ' +
+      '+towgs84=23.772,17.49,17.859,-0.3132,-1.85274,1.67299,-5.4262 +units=m +no_defs');
+  }
+  return function (lng, lat) {
+    if (window.proj4) { try { return window.proj4('EPSG:4326', 'EPSG:2039', [lng, lat]); } catch (e) {} }
+    return [lng, lat];
+  };
+}
+
+function groupByCategory(features) {
+  var by = {};
+  features.forEach(function (f) {
+    var c = (f.properties && f.properties._category) || 'other';
+    (by[c] = by[c] || []).push(f);
+  });
+  return by;
+}
+
+function reprojCoords(g, t) {
+  function pt(c) { var p = t(c[0], c[1]); return (c.length > 2) ? [p[0], p[1], c[2]] : [p[0], p[1]]; }
+  function arr(a) { return a.map(pt); }
+  if (g.type === 'Point') return { type: 'Point', coordinates: pt(g.coordinates) };
+  if (g.type === 'LineString') return { type: 'LineString', coordinates: arr(g.coordinates) };
+  if (g.type === 'MultiLineString') return { type: 'MultiLineString', coordinates: g.coordinates.map(arr) };
+  if (g.type === 'Polygon') return { type: 'Polygon', coordinates: g.coordinates.map(arr) };
+  if (g.type === 'MultiPolygon') return { type: 'MultiPolygon', coordinates: g.coordinates.map(function (poly) { return poly.map(arr); }) };
+  return g;
+}
+
+function cleanProps(p) {  // shp/dbf can't hold nested objects; drop internal _keys
+  var out = {};
+  Object.keys(p || {}).forEach(function (k) {
+    if (k.charAt(0) === '_') return;
+    var v = p[k];
+    if (v === null || v === undefined) return;
+    out[k] = (typeof v === 'object') ? JSON.stringify(v) : v;
+  });
+  return out;
 }
 
 // ── DXF ───────────────────────────────────────────────────────────────────────
@@ -218,15 +301,38 @@ function dxfPolyline(lines, coords, layer, closed, toITM, props) {
   lines.push('0','SEQEND','8',layer);
 }
 
+// ── WKT (Well-Known Text), WGS84 — optional "geometry_wkt" column for CSV/Excel ─
+function wktCoord(c) { return c[0] + ' ' + c[1]; }
+function wktRing(ring) { return '(' + ring.map(wktCoord).join(', ') + ')'; }
+function toWKT(g) {
+  if (!g) return '';
+  switch (g.type) {
+    case 'Point':            return 'POINT (' + wktCoord(g.coordinates) + ')';
+    case 'MultiPoint':       return 'MULTIPOINT (' + g.coordinates.map(wktCoord).join(', ') + ')';
+    case 'LineString':       return 'LINESTRING (' + g.coordinates.map(wktCoord).join(', ') + ')';
+    case 'MultiLineString':  return 'MULTILINESTRING (' + g.coordinates.map(function (l) { return '(' + l.map(wktCoord).join(', ') + ')'; }).join(', ') + ')';
+    case 'Polygon':          return 'POLYGON (' + g.coordinates.map(wktRing).join(', ') + ')';
+    case 'MultiPolygon':     return 'MULTIPOLYGON (' + g.coordinates.map(function (poly) { return '(' + poly.map(wktRing).join(', ') + ')'; }).join(', ') + ')';
+    default: return '';
+  }
+}
+
 // ── CSV ───────────────────────────────────────────────────────────────────────
-async function buildCSV(features, onProgress) {
-  var rows = [['village','category','lon','lat','geometry_type','text','layer','properties_json']];
+// opts.wkt (bool, default false) — append a `geometry_wkt` column with the full
+// WGS84 WKT geometry. Off by default so existing output is unchanged.
+async function buildCSV(features, onProgress, opts) {
+  var includeWkt = !!(opts && opts.wkt);
+  var header = ['village','category','lon','lat','geometry_type','text','layer','properties_json'];
+  if (includeWkt) header.push('geometry_wkt');
+  var rows = [header];
   await _forEachChunked(features, 5000, function (f) {
     var p = f.properties || {}, g = f.geometry, lon = '', lat = '';
     if (g.type === 'Point') { lon = g.coordinates[0]; lat = g.coordinates[1]; }
     else if (g.type === 'LineString' && g.coordinates.length) { lon = g.coordinates[0][0]; lat = g.coordinates[0][1]; }
     else if (g.type === 'Polygon' && g.coordinates[0] && g.coordinates[0].length) { lon = g.coordinates[0][0][0]; lat = g.coordinates[0][0][1]; }
-    rows.push([p._village||'', p._category||'', lon, lat, g.type, p.Text||'', p.Layer||'', JSON.stringify(p)]);
+    var row = [p._village||'', p._category||'', lon, lat, g.type, p.Text||'', p.Layer||'', JSON.stringify(p)];
+    if (includeWkt) row.push(toWKT(g));
+    rows.push(row);
   }, onProgress);
   return rows.map(function (r) {
     return r.map(function (v) {
@@ -234,6 +340,8 @@ async function buildCSV(features, onProgress) {
       // CSV/formula-injection guard (CWE-1236): a cell whose first char is = + - @
       // TAB or CR is run as a live formula by Excel/Sheets. Attribute values here can
       // come from uploaded DWG/Shapefile/GeoJSON, so prefix ' to force plain text.
+      // (The WKT column always starts with a geometry keyword — a letter — so it
+      // never matches this pattern and is never prefixed; no special-casing needed.)
       if (/^[=+\-@\t\r]/.test(s2)) s2 = "'" + s2;
       s2 = s2.replace(/"/g,'""');
       return '"'+s2+'"';
@@ -296,4 +404,86 @@ async function buildKML(features, onProgress) {
   if (onProgress) onProgress(features.length, features.length);
   out.push('</Document></kml>');
   return out.join('\n');
+}
+
+// ── GeoJSON ───────────────────────────────────────────────────────────────────
+// Chunked clone/strip loop: drops internal bookkeeping keys (_category, _village,
+// …) that fetchFeaturesForCats stamps onto properties — every other serializer
+// (KML ExtendedData, Shapefile cleanProps, DXF XDATA) already skips `_`-prefixed
+// keys, so GeoJSON now matches instead of leaking internal fields into the file.
+// The final JSON.stringify is one synchronous call at the end — it can't be
+// chunked/yielded mid-call, so the chunked loop above is what keeps the tab
+// responsive for large exports; the stringify itself is an accepted sync cost.
+async function buildGeoJSON(features, onProgress) {
+  var out = [];
+  await _forEachChunked(features, 5000, function (f) {
+    var props = {};
+    var src = f.properties || {};
+    Object.keys(src).forEach(function (k) { if (k.charAt(0) !== '_') props[k] = src[k]; });
+    out.push({ type: 'Feature', properties: props, geometry: f.geometry });
+  }, onProgress);
+  return JSON.stringify({ type: 'FeatureCollection', features: out }, null, 2);
+}
+
+// ── Shapefile prep (pure data transform) ───────────────────────────────────────
+// Chunked per-feature ITM reprojection + attribute flattening, grouped by
+// category. Returns { category: Feature[] } ready to hand to shp-write — the
+// CDN load + shpwrite.zip()/JSZip assembly (which need the DOM/CDN scripts)
+// stay in export-feature.js and remain synchronous per call.
+async function buildShapefileCollections(features, onProgress) {
+  var toITM = makeToITM();
+  var byCat = groupByCategory(features);
+  var cats = Object.keys(byCat);
+  var out = {};
+  var total = features.length, doneBase = 0;
+  for (var ci = 0; ci < cats.length; ci++) {
+    var c = cats[ci];
+    var catFeatures = byCat[c];
+    var feats = [];
+    out[c] = feats;
+    await _forEachChunked(catFeatures, 2000, function (f) {
+      feats.push({ type: 'Feature', properties: cleanProps(f.properties), geometry: reprojCoords(f.geometry, toITM) });
+    }, onProgress ? (function (base) { return function (done) { onProgress(base + done, total); }; })(doneBase) : null);
+    doneBase += catFeatures.length;
+  }
+  if (onProgress) onProgress(total, total);
+  return out;
+}
+
+// ── Excel prep (pure data transform) ───────────────────────────────────────────
+// Chunked per-category row-building (first-coord columns + flattened attributes,
+// optional geometry_wkt). Returns { category: row[] } — XLSX.utils.json_to_sheet
+// + XLSX.writeFile (which need the CDN script) stay in export-feature.js.
+// opts.wkt (bool, default false) — mirrors the CSV option.
+async function buildExcelRows(features, onProgress, opts) {
+  var includeWkt = !!(opts && opts.wkt);
+  var byCat = groupByCategory(features);
+  var cats = Object.keys(byCat);
+  var out = {};
+  var total = features.length, doneBase = 0;
+  for (var ci = 0; ci < cats.length; ci++) {
+    var c = cats[ci];
+    var catFeatures = byCat[c];
+    var rows = [];
+    out[c] = rows;
+    await _forEachChunked(catFeatures, 2000, function (f) {
+      var p = f.properties || {}, g = f.geometry, lon = '', lat = '';
+      if (g) {
+        if (g.type === 'Point') { lon = g.coordinates[0]; lat = g.coordinates[1]; }
+        else if (g.type === 'LineString' && g.coordinates.length) { lon = g.coordinates[0][0]; lat = g.coordinates[0][1]; }
+        else if (g.type === 'Polygon' && g.coordinates[0] && g.coordinates[0].length) { lon = g.coordinates[0][0][0]; lat = g.coordinates[0][0][1]; }
+      }
+      var row = { village: p._village || '', category: p._category || '', lon: lon, lat: lat, geometry_type: g ? g.type : '' };
+      Object.keys(p).forEach(function (k) {
+        if (k.charAt(0) === '_') return;
+        var v = p[k];
+        row[k] = (v && typeof v === 'object') ? JSON.stringify(v) : v;
+      });
+      if (includeWkt) row.geometry_wkt = g ? toWKT(g) : '';
+      rows.push(row);
+    }, onProgress ? (function (base) { return function (done) { onProgress(base + done, total); }; })(doneBase) : null);
+    doneBase += catFeatures.length;
+  }
+  if (onProgress) onProgress(total, total);
+  return out;
 }
