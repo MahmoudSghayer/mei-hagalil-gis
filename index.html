@@ -22,15 +22,15 @@
   <link rel="preconnect" href="https://server.arcgisonline.com"/>
   <link rel="dns-prefetch" href="https://basemaps.cartocdn.com"/>
   <link rel="dns-prefetch" href="https://mt0.google.com"/>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" integrity="sha384-c6Rcwz4e4CITMbu/NBmnNS8yN2sC3cUElMEMfP3vqqKFp7GOYaaBBCqmaWBjmkjb" crossorigin="anonymous"/>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css" integrity="sha384-pmjIAcz2bAn0xukfxADbZIb3t8oRT9Sv0rvO+BR5Csr6Dhqq+nZs59P0pPKQJkEV" crossorigin="anonymous"/>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css" integrity="sha384-wgw+aLYNQ7dlhK47ZPK7FRACiq7ROZwgFNg0m04avm4CaXS+Z9Y7nMu8yNjBKYC+" crossorigin="anonymous"/>
-  <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.18.3/dist/leaflet-geoman.css" integrity="sha384-gSVA7ZQriVGEfOMW54uY96acRPyZy0cleKq9KVWNxYYR+GWzYmr/o51k9iA5pfQA" crossorigin="anonymous"/>
-  <link rel="stylesheet" href="css/shared.css"/>
-  <link rel="stylesheet" href="css/pages/index.css"/>
+  <link rel="stylesheet" href="css/vendor/leaflet.min.css?v=1"/>
+  <link rel="stylesheet" href="css/vendor/MarkerCluster.css?v=1"/>
+  <link rel="stylesheet" href="css/vendor/MarkerCluster.Default.css?v=1"/>
+  <link rel="stylesheet" href="css/vendor/leaflet-geoman.css?v=1"/>
+  <link rel="stylesheet" href="css/shared.css?v=1"/>
+  <link rel="stylesheet" href="css/pages/index.css?v=1"/>
   <link rel="stylesheet" href="css/pages/arcgis-pro.css?v=15"/>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2/dist/umd/supabase.js" integrity="sha384-nD3dwv4+ZqdYnmZKe/249ImlV04om7xTCcsoSeQYI+RO+XlKPoqAWaJR1M5SJH9p" crossorigin="anonymous"></script>
-  <script defer src="js/auth.js"></script>
+  <script defer src="js/auth.js?v=1"></script>
   <script defer src="js/pwa.js?v=1"></script>
   <script>window.GIS_VAPID_PUBLIC='BCIxYFtCQoo2A58Sz3q0vLcy9cZpTGZ9q_vNog4Shqm5zQnDnqQSqtD93xS7_SUhQ0vNnNJv9dBVisvk2XgWzw4';</script>
   <script defer src="js/gis-push.js?v=1"></script>
@@ -69,6 +69,9 @@
       <a href="pages/review.html" id="review-link" class="admin-link" style="display:none">
         <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
         <span>בדיקה</span></a>
+      <a href="pages/reports.html" id="reports-link" class="admin-link" style="display:none">
+        <svg class="nav-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
+        <span>דוח ניהולי</span></a>
       <div class="user-area">
         <button class="user-btn" id="user-btn" onclick="toggleDD()">
           <div class="user-avatar" id="user-avatar">—</div>
@@ -240,8 +243,8 @@
 <script defer src="js/crs-utils.js?v=1"></script>
 <script defer src="js/layer-naming.js?v=1"></script>
 <!-- Turf is lazy-loaded by gis-analysis.js on first buffer/location-select use (perf) -->
-<script defer src="js/motion-utils.js"></script>
-<script defer src="js/pages/index.js?v=14"></script>
+<script defer src="js/motion-utils.js?v=1"></script>
+<script defer src="js/pages/index.js?v=15"></script>
 <script defer src="js/search-feature.js?v=2"></script>
 <!-- GIS Engine layer (UI → GIS.* → Supabase) + attribute panel + map control -->
 <script defer src="gis-engine/core.js?v=2"></script>
@@ -293,7 +296,7 @@
 <script>
 (function () {
   var LAZY = [
-    'js/measure-tools.js',
+    'js/measure-tools.js?v=1',
     'js/backend-client.js?v=9',
     'js/export-formats.js?v=3',
     'js/export-feature.js?v=19',

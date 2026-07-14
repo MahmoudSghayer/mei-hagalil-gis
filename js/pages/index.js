@@ -101,6 +101,7 @@ function setUserUI(p) {
   }
   if (p.role === 'admin' || p.role === 'engineer') {
     var rl = document.getElementById('review-link'); if (rl) rl.style.display = 'inline-block';
+    var rp = document.getElementById('reports-link'); if (rp) rp.style.display = 'inline-block';
   }
   // Viewers are read-only: hide the "new incident" button (DB RLS also blocks it).
   var canEdit = (p.role === 'admin' || p.role === 'engineer');

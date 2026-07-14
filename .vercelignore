@@ -1,0 +1,23 @@
+# Zero-build static deploy: everything in the repo is otherwise served
+# verbatim by Vercel. Keep repo internals off the public site — schema files,
+# service source, ops docs and test suites are not runtime assets and would
+# disclose internals (found in the W4.1 perf/security pass).
+# NOTE: api/ (serverless), js/, css/, gis-engine/*.js, pages/, index.html,
+# sw.js, manifest.webmanifest, robots.txt, icon.svg must stay deployed.
+Data/
+db/
+dwg-export/
+supabase/
+gis-engine/sql/
+gis-engine/README.md
+docs/
+test/
+tests/
+test-results/
+*.md
+.claude/
+.vscode/
+.github/
+render.yaml
+playwright.config.js
+vitest.config.mjs
