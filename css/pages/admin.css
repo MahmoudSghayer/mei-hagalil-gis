@@ -22,3 +22,76 @@ body { opacity: 0; }
 
 /* Email field direction (LTR inside RTL form) */
 input[type=email] { direction: ltr; text-align: right; }
+
+/* ─────────────────────────────────────────────────────────
+   ADMIN HUB — card grid linking to every management tool
+───────────────────────────────────────────────────────── */
+.hub-section { margin-bottom: var(--sp-8); }
+
+.hub-heading {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--blue-dark);
+  letter-spacing: -0.3px;
+  margin-block-end: var(--sp-1);
+}
+
+.hub-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--sp-4);
+}
+
+.hub-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-1);
+  padding: var(--sp-5);
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  text-decoration: none;
+  color: inherit;
+  transition: transform var(--dur-normal) var(--ease-out),
+              box-shadow var(--dur-normal) var(--ease-out),
+              border-color var(--dur-normal) var(--ease-out);
+}
+.hub-card:hover,
+.hub-card:focus-visible {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+  border-color: var(--blue-mid);
+}
+
+.hub-ic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--r-md);
+  background: var(--blue-pale);
+  color: var(--blue-mid);
+  margin-block-end: var(--sp-2);
+  flex-shrink: 0;
+}
+.hub-ic svg { width: 20px; height: 20px; }
+
+.hub-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--blue-dark);
+}
+
+.hub-desc {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+@media (max-width: 480px) {
+  .hub-grid { grid-template-columns: 1fr 1fr; gap: var(--sp-3); }
+  .hub-card { padding: var(--sp-4); }
+}
