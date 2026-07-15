@@ -1,0 +1,8 @@
+# Local dev / splitter working files (never commit)
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+data/
+*_parts/

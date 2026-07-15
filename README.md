@@ -350,6 +350,20 @@ flowchart LR
     F --> O
 ```
 
+**Splitting oversized DWGs.** DWGs larger than the server can convert (they OOM the ODA child
+on the 512 MB free tier) can be split into smaller valid DWG parts at the CAD-entity level —
+coordinates preserved, parts merge back into the same layers on import. Run it locally where
+ODA has full RAM:
+
+```bash
+cd dwg-export
+docker compose run --rm dwg-export \
+  python -m dwg_splitter split /data/city.dwg --out /data/city_parts --max-mb 2.5
+```
+
+See [`dwg-export/DWG_SPLITTER_ARCHITECTURE.md`](dwg-export/DWG_SPLITTER_ARCHITECTURE.md) for the
+full design, technology decision, strategies, and CLI reference.
+
 **Component structure.** The frontend is ~40 small, single-purpose modules under `js/` (each owns one
 feature: editing, table, identify, notifications, push, routing, symbology, print, geocode…), a reusable
 **GIS engine** namespace under `gis-engine/` (`core`, `layers`, `features`, `fields`, `calculator`,

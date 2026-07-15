@@ -1,1 +1,4 @@
 pytest==8.3.3
+# Required by starlette/fastapi's TestClient (test_oda_limits, test_dwg_fallback,
+# test_dxf_passthrough, test_limits). Not a hard dependency of fastapi itself.
+httpx==0.28.1

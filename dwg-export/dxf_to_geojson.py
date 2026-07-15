@@ -158,6 +158,28 @@ def dxf_to_geojson(dxf_bytes: bytes, source_crs: str = "EPSG:2039") -> dict:
             if lt and lt.upper() not in ("BYLAYER", "BYBLOCK", "CONTINUOUS"):
                 props["LineType"] = lt
 
+            # Restore MGIS XDATA: attributes written by the DWG exporter
+            # (dxf_builder._attach_xdata) and the stable per-entity GISID stamped
+            # by the splitter. GISID → EntityHand feeds the import pipeline's
+            # asset_code synthesis (js/gis-engine/migrate.js synthAssetCode), so
+            # a drawing split into parts merges into one layer instead of parts
+            # overwriting each other, and an app-exported DWG round-trips its
+            # attributes on re-import. setdefault: never clobber Layer/Color/etc.
+            try:
+                if e.has_xdata("MGIS"):
+                    for code, val in e.get_xdata("MGIS"):
+                        if code != 1000 or not isinstance(val, str) or "=" not in val:
+                            continue
+                        k, v = val.split("=", 1)
+                        if not k:
+                            continue
+                        if k == "GISID":
+                            props.setdefault("EntityHand", v)
+                        else:
+                            props.setdefault(k, v)
+            except Exception:
+                pass
+
             if kind == "POINT":
                 loc = e.dxf.location
                 add({"type": "Point", "coordinates": [float(loc.x), float(loc.y)]}, props)

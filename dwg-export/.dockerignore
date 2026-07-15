@@ -1,0 +1,18 @@
+# Keep the build context (and image) lean — never ship the local dev venv,
+# caches, or DWG working files into the Docker image.
+.venv/
+venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+tests/
+requirements-dev.txt
+data/
+*_parts/
+*.dwg
+*.dxf
+.git/
+.gitignore
+docker-compose.yml
+DWG_SPLITTER_ARCHITECTURE.md

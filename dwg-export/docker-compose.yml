@@ -1,0 +1,37 @@
+# Run the DWG service — including the entity-level splitter — LOCALLY, with the
+# ODA File Converter bundled in the image and a generous memory budget. This is
+# the answer to the chicken-and-egg limit: an oversized DWG that OOMs on the
+# 512 MB Render free tier can be analyzed and split here, where ODA has real RAM.
+#
+#   1. Put the ODA .deb in vendor/  (see vendor/README.md)
+#   2. mkdir data  &&  copy your big DWG into ./data
+#   3. Split it (writes parts + manifest.json back into ./data/<name>_parts):
+#        docker compose run --rm dwg-export \
+#          python -m dwg_splitter split /data/city.dwg --out /data/city_parts --max-mb 2.5
+#   4. Upload the generated parts through the app as usual — each clears the
+#      server limits and they merge into the same layers.
+#
+# Or run the HTTP API locally (analyze/split/convert endpoints) with:
+#        docker compose up
+
+services:
+  dwg-export:
+    build: .
+    image: mei-hagalil-dwg-export:local
+    ports:
+      - "8000:8000"
+    environment:
+      # No free-tier squeeze locally — give ODA room so big drawings convert.
+      ODA_MAX_MEMORY_MB: "6000"
+      MAX_BODY_BYTES: "209715200"     # 200 MB uploads
+      MAX_DWG_FEATURES: "1000000"
+      MAX_DWG_PART_MB: "2.5"
+      ALLOWED_ORIGINS: "*"
+      # The CLI (docker compose run … python -m dwg_splitter) needs no auth.
+      # The HTTP API does — set these to validate a real Supabase token:
+      # SUPABASE_URL: "https://xxxx.supabase.co"
+      # SUPABASE_ANON_KEY: "your-anon-key"
+    volumes:
+      - ./data:/data                  # big DWGs in, parts + manifest out
+    # Reasonable local memory ceiling for the container (raise if needed).
+    mem_limit: 8g
