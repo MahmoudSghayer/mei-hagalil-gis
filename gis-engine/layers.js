@@ -12,14 +12,17 @@
     // Lightweight layer list — id, name, geometry_type, color, village,
     // category only (NO fields join). Use for the Contents pane / pickers
     // that never read layer.fields, so first paint doesn't pull every field
-    // of every layer. village/category are the DB-derived columns (W5.2 —
-    // gis-engine/sql/migrations/2026-07-15-layers-village-category.sql);
-    // included here so callers can prefer them via LayerNaming.fromRow()
-    // instead of re-parsing `name`.
+    // of every layer. Uses select('*') — NOT an explicit column list — so that
+    // the DB-derived village/category columns (W5.2 — migration
+    // 2026-07-15-layers-village-category.sql) are returned WHEN PRESENT but
+    // their absence (migration not yet applied) does NOT error the whole query
+    // with "column layers.village does not exist". Callers prefer the columns
+    // via LayerNaming.fromRow(), which falls back to parsing `name` when they
+    // aren't on the row — so this works identically before and after the migration.
     list: async function () {
       var sb = GIS.sb();
       return GIS._unwrap(
-        await sb.from('layers').select('id, name, geometry_type, color, village, category').order('name'), 'load layers') || [];
+        await sb.from('layers').select('*').order('name'), 'load layers') || [];
     },
 
     // List all layers (each enriched with its field definitions).
