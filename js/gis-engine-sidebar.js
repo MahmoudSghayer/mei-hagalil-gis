@@ -36,11 +36,21 @@ function parseLayerName(name) {
   var idx = name.indexOf(' · ');
   return idx >= 0 ? { village: name.slice(0, idx), category: name.slice(idx + 3) } : { village: null, category: name };
 }
+// { village, category } for a FULL layer row — prefers the DB-derived
+// columns (layer.village/category — W5.2) via LayerNaming.fromRow when
+// loaded; falls back to parsing layer.name (parseLayerName above) when
+// LayerNaming isn't loaded yet or the row has no category column (e.g. an
+// older cache/RPC). layers here always come from GIS.layers.list(), which
+// now selects village/category too.
+function rowVC(layer) {
+  if (window.LayerNaming && LayerNaming.fromRow) return LayerNaming.fromRow(layer);
+  return parseLayerName(layer && layer.name);
+}
 // שם הכפר מתוך שם השכבה, עם נפילה לשם המלא כשאין מפריד (תואם את
 // ההתנהגות המקורית של layer.name.split(' · ')[0]).
 function layerVillage(layer) {
   var name = (layer && layer.name) || '';
-  var v = parseLayerName(name).village;
+  var v = rowVC(layer).village;
   return v != null ? v : name;
 }
 
@@ -556,7 +566,7 @@ async function render() {
     // קבץ לפי כפר (שם השכבה: "<כפר> · <category>")
     var groups = {}, order = [];
     layers.forEach(function (l) {
-      var parsed = parseLayerName(l.name);
+      var parsed = rowVC(l);
       var village = parsed.village != null ? parsed.village : 'שכבות כלליות';
       var cat = parsed.category;
       l._cat = cat;
@@ -991,7 +1001,10 @@ window.GISEngineSidebar = {
   // Exposed so the layer-name parsing (LayerNaming-backed, with an inline
   // load-order-safety fallback) is independently unit-testable — mirrors the
   // window.GISEditHistory precedent in js/gis-edit.js.
-  _parseLayerName: parseLayerName
+  _parseLayerName: parseLayerName,
+  // Exposed so the row-preferring lookup (LayerNaming.fromRow-backed, with a
+  // name-parse fallback) is independently unit-testable (W5.2).
+  _rowVC: rowVC
 };
 
 })();

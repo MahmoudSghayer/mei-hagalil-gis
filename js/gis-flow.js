@@ -79,12 +79,15 @@
     return NaN;
   }
 
-  // engine layer name → { id, village, cat }. Uses LayerNaming when loaded;
-  // identical inline fallback (load-order safety). NOTE the historical quirk
-  // preserved here: with no separator, village falls back to the FULL name
-  // (not null/'') — flow grouping relied on that before the consolidation.
+  // engine layer row → { id, village, cat }. Prefers the DB-derived
+  // village/category columns (W5.2) via LayerNaming.fromRow when loaded;
+  // identical inline fallback (load-order safety) when it isn't. NOTE the
+  // historical quirk preserved here: with no separator, village falls back
+  // to the FULL name (not null/'') — flow grouping relied on that before
+  // the consolidation, and still does regardless of which path derived
+  // { village, category }.
   function parseLayer(l) {
-    var p = window.LayerNaming ? LayerNaming.parse(l.name) : (function (name) {
+    var p = (window.LayerNaming && LayerNaming.fromRow) ? LayerNaming.fromRow(l) : (function (name) {
       var i = name.indexOf(' · ');
       return i >= 0 ? { village: name.slice(0, i), category: name.slice(i + 3) } : { village: null, category: name };
     })(l.name);
@@ -209,7 +212,12 @@
 
   // Entry point is the ribbon (the floating #layer-toggles panel is hidden by the
   // ArcGIS-Pro theme). The ribbon's "כיוון זרימה" command calls GISFlow.toggle().
-  window.GISFlow = { toggle: toggle, isOn: function () { return ON; } };
+  window.GISFlow = {
+    toggle: toggle, isOn: function () { return ON; },
+    // Exposed so the row-preferring lookup (LayerNaming.fromRow-backed, with
+    // an inline load-order-safety fallback) is independently unit-testable.
+    _parseLayer: parseLayer
+  };
 
   var tries = 0;
   var timer = setInterval(function () {

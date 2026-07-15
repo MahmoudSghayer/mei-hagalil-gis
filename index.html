@@ -30,7 +30,7 @@
   <link rel="stylesheet" href="css/pages/index.css?v=1"/>
   <link rel="stylesheet" href="css/pages/arcgis-pro.css?v=15"/>
   <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.108.2/dist/umd/supabase.js" integrity="sha384-nD3dwv4+ZqdYnmZKe/249ImlV04om7xTCcsoSeQYI+RO+XlKPoqAWaJR1M5SJH9p" crossorigin="anonymous"></script>
-  <script defer src="js/auth.js?v=1"></script>
+  <script defer src="js/auth.js?v=2"></script>
   <script defer src="js/pwa.js?v=1"></script>
   <script>window.GIS_VAPID_PUBLIC='BCIxYFtCQoo2A58Sz3q0vLcy9cZpTGZ9q_vNog4Shqm5zQnDnqQSqtD93xS7_SUhQ0vNnNJv9dBVisvk2XgWzw4';</script>
   <script defer src="js/gis-push.js?v=1"></script>
@@ -241,7 +241,7 @@
      Loaded before every consumer (search/symbology/sidebar/edit + lazy tools);
      consumers feature-detect and fall back if absent, so order is belt-and-braces. -->
 <script defer src="js/crs-utils.js?v=1"></script>
-<script defer src="js/layer-naming.js?v=1"></script>
+<script defer src="js/layer-naming.js?v=2"></script>
 <!-- Turf is lazy-loaded by gis-analysis.js on first buffer/location-select use (perf) -->
 <script defer src="js/motion-utils.js?v=1"></script>
 <script defer src="js/pages/index.js?v=15"></script>
@@ -249,7 +249,7 @@
 <!-- GIS Engine layer (UI → GIS.* → Supabase) + attribute panel + map control -->
 <script defer src="gis-engine/core.js?v=2"></script>
 <script defer src="gis-engine/spatial.js?v=2"></script>
-<script defer src="gis-engine/layers.js?v=2"></script>
+<script defer src="gis-engine/layers.js?v=3"></script>
 <script defer src="gis-engine/features.js?v=4"></script>
 <script defer src="gis-engine/fields.js?v=1"></script>
 <script defer src="gis-engine/calculator.js?v=1"></script>
@@ -266,7 +266,7 @@
 <script defer src="js/gis-attribute-panel.js?v=4"></script>
 <script defer src="js/gis-feature-table.js?v=6"></script>
 <!-- Symbology (Phase 3): attribute-driven rendering + legend + diameter labels -->
-<script defer src="js/gis-symbology.js?v=3"></script>
+<script defer src="js/gis-symbology.js?v=4"></script>
 <!-- Tile loader: viewport tile cache + feature cache + request queue + prefetch + AbortController -->
 <script defer src="js/gis-tile-cache.js?v=1"></script>
 <script defer src="js/gis-tile-loader.js?v=5"></script>
@@ -276,10 +276,10 @@
 <script defer src="js/gis-mvt-layer.js?v=6"></script>
 <!-- Identify highlight: click a feature → white casing + cyan line (no endpoint dots) -->
 <script defer src="js/gis-identify.js?v=2"></script>
-<script defer src="js/gis-engine-sidebar.js?v=27"></script>
+<script defer src="js/gis-engine-sidebar.js?v=28"></script>
 <!-- ribbon-only tools (trace/analysis/bookmarks/find/print/meter-connect) → idle-loaded below (perf) -->
 <!-- On-map editing (Edit tab): Geoman-driven add / move-geometry / delete / snap -->
-<script defer src="js/gis-edit.js?v=6"></script>
+<script defer src="js/gis-edit.js?v=7"></script>
 <!-- ArcGIS Pro UI shell (Phase 1): ribbon + Contents pane + scale status bar -->
 <script defer src="js/arcgis-ribbon.js?v=24"></script>
 <!-- Field mode (F3/F4): viewer-only minimal shell — create/submit entities + issues -->
@@ -287,7 +287,7 @@
 <!-- In-app notifications (F6): topbar bell + Realtime feed -->
 <script defer src="js/gis-notifications.js?v=1"></script>
 <!-- Flow-direction arrows (L4a): sewer arrows from manhole invert levels (lower invert = downstream) -->
-<script defer src="js/gis-flow.js?v=4"></script>
+<script defer src="js/gis-flow.js?v=5"></script>
 <!-- Geocode assist (Phase 3): ArcGIS reverse-geocode on incident pick → auto-village + address hint -->
 <script defer src="js/gis-geocode-assist.js?v=2"></script>
 <!-- PERF: ribbon-only tools load AFTER first paint (idle). The ribbon already
@@ -299,16 +299,16 @@
     'js/measure-tools.js?v=1',
     'js/backend-client.js?v=9',
     'js/export-formats.js?v=3',
-    'js/export-feature.js?v=19',
+    'js/export-feature.js?v=20',
     'js/stats-feature.js?v=1',
-    'js/gis-network-trace.js?v=3',
-    'js/gis-analysis.js?v=5',
+    'js/gis-network-trace.js?v=4',
+    'js/gis-analysis.js?v=6',
     'js/gis-bookmarks.js?v=1',
-    'js/gis-find.js?v=7',
+    'js/gis-find.js?v=8',
     'js/gis-routing.js?v=1',
     'js/gis-print.js?v=10',
-    'js/gis-meter-connect.js?v=6',
-    'js/gis-dashboard.js?v=2',
+    'js/gis-meter-connect.js?v=7',
+    'js/gis-dashboard.js?v=3',
     'js/gis-tasks.js?v=7',
     'js/gis-onboarding.js?v=2'
   ];

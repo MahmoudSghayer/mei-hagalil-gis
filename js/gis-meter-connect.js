@@ -62,12 +62,22 @@
     var i = name.indexOf(' · ');
     return i >= 0 ? { village: name.slice(0, i), category: name.slice(i + 3) } : { village: null, category: name };
   }
+  // { village, category } for a FULL layer row — prefers the DB-derived
+  // columns (layer.village/category — W5.2) via LayerNaming.fromRow when
+  // loaded; falls back to parsing layer.name (parseLayerName above)
+  // otherwise. Only used where a full row is available (pipeLayers below) —
+  // showCandidates()'s candidate rows carry `layer_name` only (a string, no
+  // row), so that call site keeps using parseLayerName directly.
+  function rowVC(layer) {
+    if (window.LayerNaming && LayerNaming.fromRow) return LayerNaming.fromRow(layer);
+    return parseLayerName(layer && layer.name);
+  }
 
   // pipe layers grouped by village, classified by category role.
   async function pipeLayers() {
     var ls = await GIS.layers.getLayers();
     return ls.map(function (l) {
-      var p = parseLayerName(l.name);
+      var p = rowVC(l);
       return {
         id: l.id, name: l.name,
         village: p.village || '',

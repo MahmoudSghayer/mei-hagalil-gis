@@ -119,10 +119,12 @@
     return { minLng: latlng.lng - dLng, minLat: latlng.lat - dLat, maxLng: latlng.lng + dLng, maxLat: latlng.lat + dLat };
   }
 
-  // מפרק "<כפר> · <category>" דרך LayerNaming כשהוא טעון; נופל בחזרה לפירוק
-  // inline זהה מבחינה סמנטית אם הסקריפט טרם נטען (בטיחות סדר-טעינה).
+  // מפרק "<כפר> · <category>" דרך LayerNaming.fromRow (מעדיף את עמודות ה-DB
+  // village/category — W5.2 — ונופל לפירוק שם דרך LayerNaming.parse) כשהוא
+  // טעון; נופל בחזרה לפירוק inline זהה מבחינה סמנטית אם הסקריפט טרם נטען
+  // (בטיחות סדר-טעינה). `l` הוא תמיד שורת שכבה מלאה מ-GIS.layers.getLayers().
   function parseLayer(l) {
-    var parsed = window.LayerNaming ? LayerNaming.parse(l.name) : (function () {
+    var parsed = (window.LayerNaming && LayerNaming.fromRow) ? LayerNaming.fromRow(l) : (function () {
       var i = l.name.indexOf(' · ');
       return i >= 0 ? { village: l.name.slice(0, i), category: l.name.slice(i + 3) } : { village: null, category: l.name };
     })();

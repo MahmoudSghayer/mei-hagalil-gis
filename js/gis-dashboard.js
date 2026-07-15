@@ -16,6 +16,14 @@
     var i = name.indexOf(' · ');
     return i >= 0 ? { village: name.slice(0, i), category: name.slice(i + 3) } : { village: null, category: name };
   }
+  // { village, category } for a FULL layer row — prefers the DB-derived
+  // columns (layer.village/category — W5.2) via LayerNaming.fromRow when
+  // loaded; falls back to parsing layer.name (parseLayerName above)
+  // otherwise. `layers` here always comes from GIS.layers.getLayers().
+  function rowVC(layer) {
+    if (window.LayerNaming && LayerNaming.fromRow) return LayerNaming.fromRow(layer);
+    return parseLayerName(layer && layer.name);
+  }
 
   var css = document.createElement('style');
   css.textContent =
@@ -63,9 +71,10 @@
       GIS.layers.getLayers().then(function (ls) { layers = ls || []; }).catch(function () {})
     ]);
 
-    // group layers by village (name = "<village> · <category>")
+    // group layers by village (prefers layer.village/category — W5.2 — via
+    // rowVC, falls back to parsing name = "<village> · <category>")
     var byV = {};
-    layers.forEach(function (l) { var v = parseLayerName(l.name).village || 'כללי'; byV[v] = (byV[v] || 0) + 1; });
+    layers.forEach(function (l) { var v = rowVC(l).village || 'כללי'; byV[v] = (byV[v] || 0) + 1; });
     var vEntries = Object.keys(byV).map(function (v) { return [v, byV[v]]; }).sort(function (a, b) { return b[1] - a[1]; });
     var maxv = vEntries.reduce(function (m, e) { return Math.max(m, e[1]); }, 1);
 
@@ -85,5 +94,11 @@
     body.innerHTML = html;
   }
 
-  window.GISDashboard = { open: open };
+  window.GISDashboard = {
+    open: open,
+    // Exposed so the row-preferring lookup (LayerNaming.fromRow-backed, with
+    // a name-parse fallback) is independently unit-testable (W5.2).
+    _rowVC: rowVC,
+    _parseLayerName: parseLayerName
+  };
 })();

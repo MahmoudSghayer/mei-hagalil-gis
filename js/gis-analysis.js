@@ -47,10 +47,19 @@
     var idx = name.indexOf(' · ');
     return idx >= 0 ? { village: name.slice(0, idx), category: name.slice(idx + 3) } : { village: null, category: name };
   }
+  // { village, category } for a FULL layer row — prefers the DB-derived
+  // columns (layer.village/category — W5.2) via LayerNaming.fromRow when
+  // loaded; falls back to parsing layer.name (parseLayerName above)
+  // otherwise. GIS.layers.getLayers() selects('*'), so village/category are
+  // already on the rows engineLayers() maps below.
+  function rowVC(layer) {
+    if (window.LayerNaming && LayerNaming.fromRow) return LayerNaming.fromRow(layer);
+    return parseLayerName(layer && layer.name);
+  }
   async function engineLayers() {
     var ls = await GIS.layers.getLayers();
     return ls.map(function (l) {
-      var parsed = parseLayerName(l.name);
+      var parsed = rowVC(l);
       var cat = parsed.category;
       var label = window.GISLayerLabel ? window.GISLayerLabel(cat) : cat;
       return { id: l.id, name: l.name, village: parsed.village != null ? parsed.village : '', label: label, geometry_type: l.geometry_type };
@@ -417,6 +426,9 @@
     getSelection: function () { return state.selection; },
     // Exposed so the layer-name parsing (LayerNaming-backed, with an inline
     // load-order-safety fallback) is independently unit-testable.
-    _parseLayerName: parseLayerName
+    _parseLayerName: parseLayerName,
+    // Exposed so the row-preferring lookup (LayerNaming.fromRow-backed, with
+    // a name-parse fallback) is independently unit-testable (W5.2).
+    _rowVC: rowVC
   };
 })();

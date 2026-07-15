@@ -1,3 +1,17 @@
+// Session-guard redirect (js/auth.js) sends users here with ?expired=1 when
+// a stale/invalid token was detected and cleared server-side. Show a notice
+// above the form, reusing the existing error-msg/.show styling.
+(function showExpiredNotice() {
+  if (location.search.indexOf('expired=1') < 0) return;
+  var notice = document.createElement('div');
+  notice.className = 'error-msg show';
+  notice.textContent = 'פג תוקף ההתחברות — נא להתחבר מחדש';
+  var formGroup = document.querySelector('.form-group');
+  if (formGroup && formGroup.parentNode) {
+    formGroup.parentNode.insertBefore(notice, formGroup);
+  }
+})();
+
 // Check if already logged in — only once, no loop
 window.addEventListener('load', async function() {
   var res = await gSb.auth.getSession();

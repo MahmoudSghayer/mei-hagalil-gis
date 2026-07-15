@@ -294,7 +294,7 @@ function buildLayerModel() {
   return GIS.layers.getLayers().then(function (layers) {
     var cats = {}, prev = gExp.layers || {};
     (layers || []).forEach(function (l) {
-      var parsed = parseLayerName(l.name);   // hoisted helper (defined below)
+      var parsed = rowVC(l);   // hoisted helper (defined below) — prefers l.village/category
       var cat = parsed.category;
       var village = parsed.village || '';
       if (!cats[cat]) cats[cat] = {
@@ -308,7 +308,7 @@ function buildLayerModel() {
     try {
       var act = (window.GISEngineSidebar && window.GISEngineSidebar.activeLayers) ? window.GISEngineSidebar.activeLayers() : [];
       act.forEach(function (l) {
-        var c = parseLayerName(l.name).category;
+        var c = rowVC(l).category;
         if (cats[c]) cats[c].visible = true;
       });
     } catch (e) { /* visibility is optional */ }
@@ -709,6 +709,18 @@ function parseLayerName(name) {
   var idx = name.indexOf(SEP);
   if (idx === -1) return { village: null, category: name };
   return { village: name.slice(0, idx), category: name.slice(idx + SEP.length) };
+}
+
+// { village, category } for a FULL layer row — prefers the DB-derived
+// columns (layer.village/category — W5.2) via LayerNaming.fromRow when
+// loaded; falls back to parsing layer.name (parseLayerName above)
+// otherwise. Used by buildLayerModel()/its visibility badge, both of which
+// have full rows from GIS.layers.getLayers() / GISEngineSidebar.activeLayers().
+// buildAreaSummaryModel() keeps using parseLayerName directly — its rows
+// come from the export_area_summary RPC, which carries `name` only.
+function rowVC(layer) {
+  if (window.LayerNaming && typeof window.LayerNaming.fromRow === 'function') return window.LayerNaming.fromRow(layer);
+  return parseLayerName(layer && layer.name);
 }
 
 // Distinct PostGIS geometry types (e.g. ['POINT'], ['LINESTRING','MULTILINESTRING'])
@@ -1216,7 +1228,7 @@ async function exportExcel(features, filename) {
 window.__exportTestHooks = {
   exportShapefile: exportShapefile, exportExcel: exportExcel, gExp: gExp,
   catsJobs: catsJobs, uniqueLayerIds: uniqueLayerIds,
-  leafletBoundsToPlain: leafletBoundsToPlain, parseLayerName: parseLayerName,
+  leafletBoundsToPlain: leafletBoundsToPlain, parseLayerName: parseLayerName, rowVC: rowVC,
   geometryTypesLabel: geometryTypesLabel, estimateBytes: estimateBytes, fmtBytes: fmtBytes,
   crsLabelFor: crsLabelFor, buildAreaSummaryModel: buildAreaSummaryModel, areaSummaryTotals: areaSummaryTotals,
   fetchAreaFeaturesServerSide: fetchAreaFeaturesServerSide,

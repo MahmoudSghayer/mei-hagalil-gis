@@ -27,8 +27,17 @@
     if (window.LayerNaming) return LayerNaming.parse(name).category;
     return name ? name.split(' · ').pop() : '';
   }
+  // category for a FULL layer row — prefers the DB-derived layer.category
+  // column (W5.2) via LayerNaming.fromRow when loaded; falls back to parsing
+  // layer.name (layerCategory above) otherwise. Mirrors roleOf's original
+  // '' fallback when the layer has no name at all.
+  function rowCategory(layer) {
+    if (!layer) return '';
+    if (window.LayerNaming && LayerNaming.fromRow) return LayerNaming.fromRow(layer).category;
+    return layer.name ? layerCategory(layer.name) : '';
+  }
   function roleOf(layer) {
-    var cat = layer && (layer._cat || (layer.name ? layerCategory(layer.name) : ''));
+    var cat = layer && (layer._cat || rowCategory(layer));
     return ROLE_BY_CAT[cat] || (layer && layer.geometry_type === 'Point' ? 'point' : 'line');
   }
 
@@ -192,6 +201,9 @@
     // Exposed so the layer-name category parsing (LayerNaming-backed, with an
     // inline load-order-safety fallback) is independently unit-testable.
     _layerCategory: layerCategory,
+    // Exposed so the row-preferring lookup (LayerNaming.fromRow-backed, with
+    // a name-parse fallback) is independently unit-testable (W5.2).
+    _rowCategory: rowCategory,
     lineStyle: lineStyle,
     pointToLayer: pointToLayer,
     zoomScale: zoomScale,

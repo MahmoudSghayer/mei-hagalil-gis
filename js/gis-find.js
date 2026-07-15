@@ -43,8 +43,17 @@
     var i = name.indexOf(' · ');
     return i >= 0 ? { village: name.slice(0, i), category: name.slice(i + 3) } : { village: null, category: name };
   }
+  // { village, category } for a FULL layer row — prefers the DB-derived
+  // columns (layer.village/category — W5.2) via LayerNaming.fromRow when
+  // loaded; falls back to parsing layer.name (parseLayerName above)
+  // otherwise. `layer` here always comes from GISEngineSidebar.activeLayers()
+  // or GIS.layers.getLayers(), both of which now carry village/category.
+  function rowVC(layer) {
+    if (window.LayerNaming && LayerNaming.fromRow) return LayerNaming.fromRow(layer);
+    return parseLayerName(layer && layer.name);
+  }
   function layerLabel(layer) {
-    var p = parseLayerName(layer.name);
+    var p = rowVC(layer);
     var v = p.village || '';
     var l = window.GISLayerLabel ? window.GISLayerLabel(p.category) : p.category;
     return v ? v + ' · ' + l : l;   // display string (village · Hebrew label), not the storage convention
