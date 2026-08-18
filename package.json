@@ -10,7 +10,7 @@
   },
   "devDependencies": {
     "@tmcw/togeojson": "^7.1.2",
-    "@xmldom/xmldom": "^0.9.10",
+    "@xmldom/xmldom": "^0.9.11",
     "proj4": "^2.20.9",
     "vitest": "^3.2.6"
   }
