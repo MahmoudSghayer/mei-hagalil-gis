@@ -7,8 +7,20 @@
 
 ## ✏️ Edit Mode (2026-09-13)
 
-**New migration to apply (after ALL existing migrations in `gis-engine/sql/migrations/`):**
-`gis-engine/sql/migrations/2026-09-13-edit-mode-geometry.sql`.
+**Migration:** `gis-engine/sql/migrations/2026-09-13-edit-mode-geometry.sql` —
+**APPLIED to production (project `hlbogufrdxpviyxlwqtf`) on 2026-09-13** via the
+Supabase migration tool (name `edit_mode_geometry_2026_09_13`); the full manual
+checklist passed against a throwaway test layer (admin save + audit geometry
+diff, token/stale-token/null-token concurrency, unknown/anon/viewer denied,
+engineer allowed, family change refused, MultiLineString accepted, invalid /
+zero-length / out-of-bounds / malformed / not-found / missing-layer errors) and
+all test rows were removed (91,250 features, 44 layers, 930,438 audit rows
+unchanged). Production data notes: 27,363 features live in a layer of a
+different declared geometry_type (hence the family rule is per-feature), and
+26 features fail ST_IsValid (see the sweep in the migration header, step 7).
+No engineer/viewer accounts exist yet (3 admins) — those roles were verified by
+simulation; create real accounts before relying on the viewer-hidden Edit tab
+in the browser.
 
 What it changes:
 - Adds `validate_feature_geometry()` — rejects invalid/empty geometry, too few
