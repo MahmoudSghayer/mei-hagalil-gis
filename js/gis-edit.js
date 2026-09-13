@@ -54,7 +54,9 @@
     beforeUnloadHandler: null,
     moveDrag: null,          // MultiPoint manual translate: {onDown,onMove,onUp}
     _extendHandler: null,
-    _shortenHandler: null
+    _shortenHandler: null,
+    pickArmed: false,        // one-shot map-click pick currently registered
+    saveSeq: 0               // bumps per save attempt — a stale save never touches newer state
   };
 
   // ── tiny helpers (mirrors gis-meter-connect) ────────────────────────────────
@@ -320,6 +322,8 @@
   // ── 1) ADD ──────────────────────────────────────────────────────────────────
   async function startAdd() {
     if (!ready() || !(await requireEditor())) return;
+    if (!(await confirmLeaveEditing())) return;
+    if (emState.mode !== 'off') disarmEditMode();
     disarm();
     var group = await pickCategory('➕ הוסף ישות — בחר קטגוריה', ['Point', 'LineString', 'Polygon']);
     if (!group) return;
@@ -531,6 +535,8 @@
   // ── 3) DELETE ───────────────────────────────────────────────────────────────
   async function startDelete() {
     if (!ready() || !(await requireEditor())) return;
+    if (!(await confirmLeaveEditing())) return;
+    if (emState.mode !== 'off') disarmEditMode();
     disarm();
     var group = await pickCategory('🗑 מחיקת ישות — בחר קטגוריה', ['Point', 'LineString', 'Polygon']);
     if (!group) return;
@@ -663,7 +669,12 @@
   async function toggleEditMode(on) {
     var currentlyOn = emState.mode !== 'off';
     var target = (typeof on === 'boolean') ? on : !currentlyOn;
-    if (!target) { disarmEditMode(); return false; }
+    if (!target) {
+      if (!currentlyOn) return false;
+      if (!(await confirmLeaveEditing())) return true;   // user kept editing → still on
+      disarmEditMode();
+      return false;
+    }
     if (currentlyOn) return true;
     if (!ready()) return false;
     if (!(await requireEditor())) return false;
@@ -672,6 +683,17 @@
     return true;
   }
 
+  // Data-safety gate shared by every path that would tear down an active edit
+  // session from OUTSIDE the HUD (ribbon toggle-off, ribbon "clear", add/delete
+  // tools): resolves true when there is nothing to lose or the user explicitly
+  // agreed to discard; false while a save is in flight or the user declined.
+  async function confirmLeaveEditing() {
+    if (emState.mode === 'saving') { toast('שומר… המתן לסיום השמירה'); return false; }
+    if (emState.mode === 'editing' && emState.dirty) {
+      return confirmDialog('ביטול עריכה', 'יש שינויים שלא נשמרו — לבטל אותם ולצאת ממצב העריכה?', 'בטל שינויים');
+    }
+    return true;
+  }
   function activateRibbonButton(on) {
     var btn = document.querySelector && document.querySelector('.ags-cmd[data-edit-toggle]');
     if (btn) btn.classList.toggle('active', !!on);
@@ -701,10 +723,16 @@
   // every geometry family), falling back to the old vertex-only distance if
   // the geometry engine script hasn't loaded.
   function armPickActive() {
-    if (!window.gMap) return;
+    if (!window.gMap || emState.pickArmed) return;   // never double-arm
+    emState.pickArmed = true;
     window.gMap.once('click', pickHandler);
   }
+  function disarmPick() {
+    if (window.gMap) { try { window.gMap.off('click', pickHandler); } catch (e) {} }
+    emState.pickArmed = false;
+  }
   async function pickHandler(e) {
+    emState.pickArmed = false;
     if (emState.mode !== 'armed') return;
     var latlng = e.latlng;
     var click = [latlng.lng, latlng.lat];
@@ -724,8 +752,9 @@
         if (best === null || d < best.d) best = { d: d, f: f, layerId: actives[i].id };
       });
     });
+    if (emState.mode !== 'armed') return;   // mode was turned off while the fetch was in flight
     if (!best || best.d > CLICK_FIND_M) { toast('לא נמצאה ישות סמוכה — לחץ קרוב יותר'); armPickActive(); return; }
-    beginEditFeature(best.f, best.layerId);
+    beginEditFeature(best.f, best.layerId).catch(function (err) { toast(cleanErr(err), 'error'); });
   }
 
   // Enter editing for a specific feature — from a map-click pick OR directly
@@ -734,7 +763,9 @@
   async function beginEditFeature(feature, layerId) {
     if (!feature || !feature.geometry) { toast('אין גאומטריה לעריכה', 'error'); return false; }
     if (!ready() || !(await requireEditor())) return false;
-    if (emState.mode === 'editing' || emState.mode === 'saving') {
+    if (emState.mode === 'saving') { toast('שומר… המתן לסיום השמירה'); return false; }
+    if (dialogOpen) return false;
+    if (emState.mode === 'editing') {
       if (emState.dirty) {
         var ok = await confirmDialog('ביטול עריכה', 'יש שינויים שלא נשמרו בישות הנוכחית — לבטל אותם ולעבור לישות אחרת?', 'בטל ועבור');
         if (!ok) return false;
@@ -744,7 +775,7 @@
       armEditModeCore();
     } else {
       // 'armed': cancel the pending one-shot click pick — we already have a target
-      try { if (window.gMap) window.gMap.off('click', pickHandler); } catch (e) {}
+      disarmPick();
     }
     await enterEditing(feature, layerId);
     return true;
@@ -848,22 +879,31 @@
   }
   // Switching sub-modes never sets dirty by itself — only an actual mutation
   // (vertex drag/add/remove, layer drag, extend/shorten click) does.
+  // Geoman edit options for the "vertices" sub-mode. draggable:false is
+  // deliberate: Geoman defaults it to TRUE, which would let a body-drag move
+  // the whole feature without any pm:dragend wiring (silent geometry change,
+  // Save never enabled) — whole-feature moves belong to the explicit "move"
+  // sub-mode only. NOTE: Geoman's limitMarkersToCount is a DISPLAY cap
+  // ("show only n markers closest to the cursor"), not a min-vertex guard —
+  // never pass it here; removeVertexValidation (plus Geoman's own built-in
+  // polyline≥2 / polygon≥3 floor) is what keeps a part above its minimum.
+  function vertexPmOptions() {
+    var minLL = leafletMinVertices(emState.originalType);
+    return {
+      allowSelfIntersection: false, allowSelfIntersectionEdit: false,
+      draggable: false,
+      snappable: state.snap, snapDistance: SNAP_DISTANCE,
+      addVertexOn: 'click', removeVertexOn: 'contextmenu',
+      removeVertexValidation: function (evt) { return leafletVertexCount(evt) > minLL; }
+    };
+  }
   function applySubMode(sub) {
     teardownSubModeHandlers();
     emState.sub = sub;
     var capsInfo = geomCaps(emState.originalType);
     if (sub === 'vertices' && capsInfo.vertices) {
-      var minLL = leafletMinVertices(emState.originalType);
       eachEditLayer(function (lyr) {
-        try {
-          lyr.pm.enable({
-            allowSelfIntersection: false, allowSelfIntersectionEdit: false,
-            snappable: state.snap, snapDistance: SNAP_DISTANCE,
-            addVertexOn: 'click', removeVertexOn: 'contextmenu',
-            limitMarkersToCount: minLL,
-            removeVertexValidation: function (evt) { return leafletVertexCount(evt) > minLL; }
-          });
-        } catch (e) {}
+        try { lyr.pm.enable(vertexPmOptions()); } catch (e) {}
         wireLayerEvent(lyr, 'pm:vertexadded', onEditMutated);
         wireLayerEvent(lyr, 'pm:vertexremoved', onEditMutated);
         wireLayerEvent(lyr, 'pm:markerdragend', onEditMutated);
@@ -935,11 +975,7 @@
     eachEditLayer(function (lyr) {
       if (!lyr.setLatLngs) return;
       try { lyr.setLatLngs(L.GeoJSON.coordsToLatLngs(geom.coordinates, levelsDeep)); } catch (e) {}
-      try {
-        if (lyr.pm && lyr.pm.enable) {
-          lyr.pm.enable({ allowSelfIntersection: false, allowSelfIntersectionEdit: false, snappable: state.snap, snapDistance: SNAP_DISTANCE });
-        }
-      } catch (e) {}
+      try { if (lyr.pm && lyr.pm.enable) lyr.pm.enable(vertexPmOptions()); } catch (e) {}
     });
   }
   function armExtendClick() {
@@ -1020,12 +1056,12 @@
     });
     var dirtyEl = document.createElement('span'); dirtyEl.className = 'geh-dirty'; dirtyEl.textContent = '● לא נשמר';
     var saveBtn = document.createElement('button'); saveBtn.type = 'button'; saveBtn.className = 'geh-save'; saveBtn.textContent = '💾 שמור'; saveBtn.disabled = true;
-    saveBtn.onclick = function () { saveEM(); };
+    saveBtn.onclick = function () { saveEM().catch(function (e) { toast(cleanErr(e), 'error'); }); };
     var cancelBtn = document.createElement('button'); cancelBtn.type = 'button'; cancelBtn.className = 'geh-cancel'; cancelBtn.textContent = 'ביטול';
-    cancelBtn.onclick = function () { cancelEM(); };
+    cancelBtn.onclick = function () { cancelEM().catch(function () {}); };
     root.appendChild(subsWrap); root.appendChild(dirtyEl); root.appendChild(saveBtn); root.appendChild(cancelBtn);
     document.body.appendChild(root);
-    hud = { root: root, saveBtn: saveBtn, dirtyEl: dirtyEl, subBtns: subBtns };
+    hud = { root: root, saveBtn: saveBtn, cancelBtn: cancelBtn, dirtyEl: dirtyEl, subBtns: subBtns };
     refreshHUD();
   }
   function refreshHUD() {
@@ -1033,6 +1069,8 @@
     Object.keys(hud.subBtns).forEach(function (k) { hud.subBtns[k].classList.toggle('active', k === emState.sub); });
     hud.dirtyEl.style.display = emState.dirty ? '' : 'none';
     hud.saveBtn.disabled = !emState.dirty || emState.mode === 'saving';
+    hud.cancelBtn.disabled = emState.mode === 'saving';
+    hud.saveBtn.textContent = emState.mode === 'saving' ? 'שומר…' : '💾 שמור';
   }
   function closeHUD() { if (hud) { try { hud.root.remove(); } catch (e) {} hud = null; } }
 
@@ -1040,7 +1078,10 @@
   // Built via explicit createElement + closures (never innerHTML+querySelector
   // for THIS file's own new dialogs) so Edit Mode stays testable against a
   // minimal document stub; visually identical to the existing openDialog().
+  var dialogOpen = false;   // one Edit-Mode dialog at a time (Escape/Cancel re-entrancy guard)
   function openChoiceDialog(title, bodyHTML, choices) {
+    if (dialogOpen) return Promise.resolve(null);
+    dialogOpen = true;
     return new Promise(function (resolve) {
       var bg = document.createElement('div'); bg.className = 'gis-anly-bg';
       var dlg = document.createElement('div'); dlg.className = 'gis-anly-dlg';
@@ -1049,7 +1090,7 @@
       head.appendChild(xBtn);
       var body = document.createElement('div'); body.className = 'gad-body'; body.innerHTML = bodyHTML;
       var foot = document.createElement('div'); foot.className = 'gad-foot';
-      function done(v) { try { bg.remove(); } catch (e) {} resolve(v); }
+      function done(v) { dialogOpen = false; try { bg.remove(); } catch (e) {} resolve(v); }
       xBtn.onclick = function () { done(null); };
       bg.onclick = function (e) { if (e && e.target === bg) done(null); };
       (choices || []).forEach(function (c) {
@@ -1097,7 +1138,7 @@
       try { window.gMap.removeLayer(emState.editLayer); } catch (e) {}
       emState.editLayer = null;
     }
-    if (window.gMap) { try { window.gMap.off('click', pickHandler); } catch (e) {} }
+    disarmPick();
     closeHUD();
     removeBeforeUnload();
     clearSnapGuide();
@@ -1119,17 +1160,27 @@
       var vr = Geo.validate(geometry);
       if (!vr.ok) { toast(vr.reason || 'גאומטריה לא תקינה', 'error'); return; }
     }
+    // Snapshot everything the post-await code needs: a ribbon "clear" (hard
+    // disarm) can land while the RPC is in flight, and then emState no longer
+    // describes THIS save. seq lets the late continuation notice and stand down.
+    var seq = ++emState.saveSeq;
+    var fid = emState.featureId, lid = emState.layerId, before = emState.before, token = emState.editToken;
     emState.mode = 'saving';
     refreshHUD();
+    var err = null;
     try {
-      await GIS.features.updateGeometry(emState.featureId, geometry, { expectedEditedAt: emState.editToken });
-      GISEditHistory.push({ type: 'geometry', layerId: emState.layerId, id: emState.featureId, before: emState.before, after: geometry });
+      await GIS.features.updateGeometry(fid, geometry, { expectedEditedAt: token });
+    } catch (e) { err = e; }
+    var stale = (emState.saveSeq !== seq) || (emState.mode !== 'saving');
+    if (!err) {
+      GISEditHistory.push({ type: 'geometry', layerId: lid, id: fid, before: before, after: geometry });
       toast('הגאומטריה נשמרה ✓');
-      refreshLayer(emState.layerId, false);
-      finishEditingBackToArmed();
-    } catch (e) {
-      await handleSaveError(e, geometry);
+      refreshLayer(lid, false);
+      if (!stale) finishEditingBackToArmed();
+      return;
     }
+    if (stale) { toast(cleanErr(err), 'error'); return; }
+    await handleSaveError(err, geometry);
   }
 
   async function handleSaveError(e, geometry) {
@@ -1174,7 +1225,8 @@
   }
 
   async function cancelEM() {
-    if (emState.mode !== 'editing' && emState.mode !== 'saving') return;
+    if (emState.mode === 'saving') { toast('שומר… המתן לסיום השמירה'); return; }
+    if (emState.mode !== 'editing' || dialogOpen) return;
     if (emState.dirty) {
       var ok = await confirmDialog('ביטול עריכה', 'יש שינויים שלא נשמרו — לבטל אותם?', 'בטל שינויים');
       if (!ok) return;
@@ -1185,8 +1237,9 @@
   // Routed from the shared Escape keydown listener (bottom of file). Returns
   // true if it handled the key (so the legacy listener doesn't also fire).
   function escapeEditMode() {
-    if (emState.mode === 'editing' || emState.mode === 'saving') { cancelEM(); return true; }
-    if (emState.mode === 'armed') { toggleEditMode(false); return true; }
+    if (emState.mode === 'saving') return true;          // swallow: a save is in flight
+    if (emState.mode === 'editing') { cancelEM().catch(function () {}); return true; }
+    if (emState.mode === 'armed') { disarmEditMode(); return true; }   // nothing to lose → immediate
     return false;
   }
 
@@ -1372,7 +1425,12 @@
     // hard reset of EVERYTHING this module owns — tear down the sticky Edit
     // Mode too when it's on (armEditModeCore() also calls disarm() on entry,
     // but emState.mode is still 'off' at that point so this never recurses).
-    if (emState.mode !== 'off') disarmEditMode();
+    // Data safety: unsaved edits are never dropped silently — a dirty session
+    // asks first (async) and a save in flight is left alone.
+    if (emState.mode === 'off') return;
+    if (emState.mode === 'saving') { toast('שומר… המתן לסיום השמירה'); return; }
+    if (emState.mode === 'armed' || !emState.dirty) { disarmEditMode(); return; }   // nothing to lose → sync
+    confirmLeaveEditing().then(function (ok) { if (ok) disarmEditMode(); }).catch(function () {});
   }
 
   // Esc cancels the sticky Edit Mode (editing→confirm-if-dirty, armed→off)

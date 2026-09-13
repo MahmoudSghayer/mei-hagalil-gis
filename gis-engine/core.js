@@ -69,12 +69,15 @@
   // Classifies a thrown/rejected error into a stable category so UI code can
   // branch on it without regex-matching Hebrew text itself. Recognises the
   // stable English suffixes the Edit Mode RPCs raise — (permission denied),
-  // (conflict), (invalid geometry), (not found) — plus the client-side
-  // "not allowed to ..." wording from GIS._requireRole, and falls back to
-  // sniffing common network-failure phrasing before giving up as 'unknown'.
+  // (conflict), (invalid geometry), (not found) — plus BOTH client-side
+  // GIS._requireRole wordings ("not allowed to ..." for a signed-in user with
+  // the wrong role, "must be signed in to ..." for no session at all — both
+  // are authz rejections from the caller's point of view and should reach
+  // the same 'forbidden' UI branch), and falls back to sniffing common
+  // network-failure phrasing before giving up as 'unknown'.
   GIS.classifyError = function (e) {
     var m = (e && e.message) || String(e || '');
-    if (/\(permission denied\)/.test(m) || /not allowed to/i.test(m)) return 'forbidden';
+    if (/\(permission denied\)/.test(m) || /not allowed to/i.test(m) || /must be signed in/i.test(m)) return 'forbidden';
     if (/\(conflict\)/.test(m)) return 'conflict';
     if (/\(invalid geometry\)/.test(m)) return 'invalid';
     if (/\(not found\)/.test(m)) return 'not_found';

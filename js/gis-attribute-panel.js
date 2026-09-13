@@ -370,8 +370,13 @@ function renderFooter() {
     document.getElementById('gp-editgeom').onclick = function () {
       var layerId = (state.tableCtx && state.tableCtx.layerId) ||
         (state.feature.properties && state.feature.properties.__layer_id);
-      GISEdit.beginEditFeature(state.feature, layerId);
+      var r = GISEdit.beginEditFeature(state.feature, layerId);
       close();
+      // async entry — surface a rejection as a toast instead of an unhandled promise
+      if (r && typeof r.catch === 'function') r.catch(function (e) {
+        var t = document.getElementById('toast');
+        if (t) { t.textContent = (e && e.message) ? e.message.replace('[GIS] ', '') : 'שגיאה'; t.className = 'error show'; setTimeout(function () { t.className = ''; }, 2800); }
+      });
     };
   }
 }
