@@ -247,10 +247,10 @@
 <script defer src="js/pages/index.js?v=15"></script>
 <script defer src="js/search-feature.js?v=2"></script>
 <!-- GIS Engine layer (UI → GIS.* → Supabase) + attribute panel + map control -->
-<script defer src="gis-engine/core.js?v=2"></script>
+<script defer src="gis-engine/core.js?v=3"></script>
 <script defer src="gis-engine/spatial.js?v=2"></script>
 <script defer src="gis-engine/layers.js?v=4"></script>
-<script defer src="gis-engine/features.js?v=4"></script>
+<script defer src="gis-engine/features.js?v=5"></script>
 <script defer src="gis-engine/fields.js?v=1"></script>
 <script defer src="gis-engine/calculator.js?v=1"></script>
 <script defer src="gis-engine/queries.js?v=2"></script>
@@ -263,7 +263,7 @@
 <script defer src="js/gis-realtime.js?v=1"></script>
 <!-- Coded-value domains (Phase 4): integer codes → Hebrew labels + edit dropdowns -->
 <script defer src="js/gis-domains.js?v=2"></script>
-<script defer src="js/gis-attribute-panel.js?v=4"></script>
+<script defer src="js/gis-attribute-panel.js?v=5"></script>
 <script defer src="js/gis-feature-table.js?v=6"></script>
 <!-- Symbology (Phase 3): attribute-driven rendering + legend + diameter labels -->
 <script defer src="js/gis-symbology.js?v=4"></script>
@@ -276,12 +276,14 @@
 <script defer src="js/gis-mvt-layer.js?v=6"></script>
 <!-- Identify highlight: click a feature → white casing + cyan line (no endpoint dots) -->
 <script defer src="js/gis-identify.js?v=2"></script>
-<script defer src="js/gis-engine-sidebar.js?v=28"></script>
+<script defer src="js/gis-engine-sidebar.js?v=29"></script>
 <!-- ribbon-only tools (trace/analysis/bookmarks/find/print/meter-connect) → idle-loaded below (perf) -->
-<!-- On-map editing (Edit tab): Geoman-driven add / move-geometry / delete / snap -->
-<script defer src="js/gis-edit.js?v=7"></script>
+<!-- Edit Mode geometry engine: pure GeoJSON caps/validate/nearest-point/extend-shorten (no Leaflet) — must load before gis-edit.js -->
+<script defer src="js/gis-edit-geom.js?v=1"></script>
+<!-- On-map editing (Edit tab): sticky Edit Mode (move/vertices/extend/shorten) + Geoman-driven add / delete / snap -->
+<script defer src="js/gis-edit.js?v=8"></script>
 <!-- ArcGIS Pro UI shell (Phase 1): ribbon + Contents pane + scale status bar -->
-<script defer src="js/arcgis-ribbon.js?v=24"></script>
+<script defer src="js/arcgis-ribbon.js?v=25"></script>
 <!-- Field mode (F3/F4): viewer-only minimal shell — create/submit entities + issues -->
 <script defer src="js/gis-field.js?v=8"></script>
 <!-- In-app notifications (F6): topbar bell + Realtime feed -->

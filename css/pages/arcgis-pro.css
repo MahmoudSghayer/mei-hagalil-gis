@@ -55,6 +55,11 @@
   transition: background 0.12s, color 0.12s;
 }
 .ags-tab:hover { background: rgba(26,127,193,0.10); color: var(--ags-cmd-text); }
+/* Edit Mode role gating (js/arcgis-ribbon.js applyRoleGating()): the "עריכה" tab
+   and its panel start hidden (fail-safe, before the role resolves) and stay
+   hidden for anyone but admin|engineer — !important beats .ags-panel.active
+   in case a gated tab was left "active" from before the role resolved. */
+.ags-tab.ags-gated, #ags-panels .ags-panel.ags-gated { display: none !important; }
 .ags-tab.active {
   background: var(--ags-tab-active);
   color: var(--ags-accent-dark);

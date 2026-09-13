@@ -111,16 +111,46 @@
     // Update a feature's GEOMETRY (attributes unchanged). geometry = GeoJSON
     // geometry object. Goes through the update_feature_geometry RPC (PostGIS
     // ST_GeomFromGeoJSON); the DB trigger then recomputes length_m. The
-    // features RLS enforces admin|engineer. Used by the on-map Edit tool.
-    updateGeometry: async function (id, geometry) {
+    // features RLS enforces admin|engineer (the RPC itself also raises a
+    // classifiable "(permission denied)" if a forged/stale client role slips
+    // past the _requireRole check below — see the 2026-09-13 migration).
+    // Used by the on-map Edit tool.
+    //
+    // Concurrency contract: `opts.expectedEditedAt` is the feature's
+    // features.edited_at as last read by the client (via getEditToken()
+    // below, or properties.__edited_at from a prior read) — the value the
+    // editor started from. It is passed through as p_expected_edited_at; the
+    // server rejects the write with a "(conflict)" error if the row's
+    // edited_at no longer matches (someone else saved in the meantime).
+    // Omitting `opts`/`expectedEditedAt` (or passing it as null/undefined)
+    // sends p_expected_edited_at: null, which skips the check server-side —
+    // used deliberately by undo/redo (an explicit override) and by the
+    // caller's own "overwrite anyway" flow after a conflict is shown.
+    updateGeometry: async function (id, geometry, opts) {
       GIS._assert(id && geometry, 'updateGeometry requires (id, geometry)');
       await GIS._requireRole(['admin', 'engineer'],'edit geometry');
       var sb = GIS.sb();
       var updated = GIS._unwrap(await sb.rpc('update_feature_geometry', {
-        p_id: id, p_geometry: geometry
+        p_id: id, p_geometry: geometry,
+        p_expected_edited_at: (opts && opts.expectedEditedAt) || null
       }), 'update geometry');
       suppressEcho(updated && updated.layer_id);
       return updated;
+    },
+
+    // Fetches the current concurrency token for a feature — its id, layer_id
+    // and edited_at — WITHOUT loading the (potentially large) geometry/
+    // properties. Called right before an on-map edit begins so the eventual
+    // updateGeometry({expectedEditedAt}) call detects if someone else saved
+    // in between. Read-only; no role check (viewers may look, same as any
+    // other feature read).
+    getEditToken: async function (id) {
+      GIS._assert(id, 'getEditToken requires an id');
+      var sb = GIS.sb();
+      var row = GIS._unwrap(
+        await sb.from('features').select('id, layer_id, edited_at').eq('id', id).single(),
+        'load edit token');
+      return row;
     },
 
     deleteFeature: async function (id) {
