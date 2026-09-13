@@ -43,8 +43,16 @@
   GIS._unwrap = function (res, context) {
     if (res && res.error) {
       var msg = res.error.message || String(res.error);
-      // Common RLS denial → human-friendly hint.
-      if (/row-level security|permission denied|violates row-level/i.test(msg)) {
+      // Common RLS denial → human-friendly hint. NOTE: "permission denied"
+      // (no "for") is intentionally NOT matched here — our own Edit Mode
+      // RPCs (update_feature_geometry / create_feature, see
+      // gis-engine/sql/migrations/2026-09-13-edit-mode-geometry.sql) raise
+      // Hebrew messages ending in the stable suffix "(permission denied)"
+      // that GIS.classifyError() below needs intact to classify the error;
+      // a bare Postgres RLS denial always reads "permission denied for
+      // <object>", so matching "permission denied for" still catches the
+      // generic case without swallowing the classifiable one.
+      if (/row-level security|permission denied for|violates row-level/i.test(msg)) {
         msg = 'Permission denied: your role is not allowed to ' + (context || 'do this') + '.';
       }
       var e = new Error('[GIS] ' + (context ? context + ': ' : '') + msg);
@@ -56,6 +64,22 @@
 
   GIS._assert = function (cond, msg) {
     if (!cond) throw new Error('[GIS] ' + msg);
+  };
+
+  // Classifies a thrown/rejected error into a stable category so UI code can
+  // branch on it without regex-matching Hebrew text itself. Recognises the
+  // stable English suffixes the Edit Mode RPCs raise — (permission denied),
+  // (conflict), (invalid geometry), (not found) — plus the client-side
+  // "not allowed to ..." wording from GIS._requireRole, and falls back to
+  // sniffing common network-failure phrasing before giving up as 'unknown'.
+  GIS.classifyError = function (e) {
+    var m = (e && e.message) || String(e || '');
+    if (/\(permission denied\)/.test(m) || /not allowed to/i.test(m)) return 'forbidden';
+    if (/\(conflict\)/.test(m)) return 'conflict';
+    if (/\(invalid geometry\)/.test(m)) return 'invalid';
+    if (/\(not found\)/.test(m)) return 'not_found';
+    if (/failed to fetch|networkerror|network/i.test(m)) return 'network';
+    return 'unknown';
   };
 
   // ── Role / permissions (cached for the session) ────────────────────────

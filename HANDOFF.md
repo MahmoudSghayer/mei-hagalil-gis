@@ -5,6 +5,27 @@
 > a multi-worker wave is in progress directly on the working tree (no per-worker
 > commits by design; the orchestrator commits/PRs once the wave gate passes).
 
+## ✏️ Edit Mode (2026-09-13)
+
+**New migration to apply (after ALL existing migrations in `gis-engine/sql/migrations/`):**
+`gis-engine/sql/migrations/2026-09-13-edit-mode-geometry.sql`.
+
+What it changes:
+- Adds `validate_feature_geometry()` — rejects invalid/empty geometry, a type
+  mismatch with the layer, too few vertices, or coordinates outside Israel.
+- Re-creates `update_feature_geometry(p_id, p_geometry, p_expected_edited_at
+  DEFAULT NULL)` (old 2-arg form dropped first): now permission-checked,
+  validated, and optimistic-concurrency-checked against `edited_at`.
+- Re-creates `create_feature` with the same guard + validation.
+- `audit_features()` now also diffs geometry (old/new GeoJSON) into the
+  `feature_update` audit row — a pure move used to log nothing.
+- Client contract: `GIS.features.updateGeometry(id, geom, {expectedEditedAt})`,
+  `GIS.features.getEditToken(id)`, `GIS.classifyError(e)` (forbidden/conflict/
+  invalid/not_found/network/unknown) in `gis-engine/{core,features}.js`.
+
+See the migration file's own header + commented manual-verification block for
+SQL-editor test steps (engineer/viewer/conflict/invalid/audit checks).
+
 ## 🌊 Wave 2 — import/export overhaul + GIS-engine hardening (2026-07-14)
 
 **Status:** in progress, uncommitted, on `main`'s working tree. Several workers touched

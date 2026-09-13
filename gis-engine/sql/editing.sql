@@ -85,21 +85,51 @@ END; $$;
 
 -- ════════════════════════════════════════════════════════════════════════
 --  On-map editing — geometry write (ArcGIS "Edit" tab: move / reshape).
---  Mirrors create_feature (schema.sql) but UPDATEs only the geometry of an
---  existing feature from a GeoJSON geometry object. SECURITY INVOKER → the
---  features RLS (can_edit_gis: admin|engineer) enforces who may move assets.
+--  UPDATEs only the geometry of an existing feature from a GeoJSON geometry
+--  object. SECURITY INVOKER → the features RLS (can_edit_gis: admin|engineer)
+--  enforces who may move assets; an explicit guard, geometry validation and an
+--  optimistic-concurrency token (p_expected_edited_at) were added 2026-09-13.
 --  The features_autocalc trigger then recomputes length_m + stamps
 --  edited_by/edited_at; the gis_audit trigger logs the change.
 -- ════════════════════════════════════════════════════════════════════════
-CREATE OR REPLACE FUNCTION public.update_feature_geometry(p_id UUID, p_geometry JSONB)
-RETURNS public.features LANGUAGE plpgsql AS $$
-DECLARE row public.features;
+-- Old 2-argument overload dropped so PostgREST never sees an ambiguous pair
+-- (the 3-arg form below has a defaulted third parameter). Body mirrors
+-- gis-engine/sql/migrations/2026-09-13-edit-mode-geometry.sql, which also
+-- defines validate_feature_geometry() (referenced here; plpgsql resolves it at
+-- call time, so this file still applies cleanly before that migration).
+DROP FUNCTION IF EXISTS public.update_feature_geometry(UUID, JSONB);
+CREATE OR REPLACE FUNCTION public.update_feature_geometry(
+  p_id UUID, p_geometry JSONB, p_expected_edited_at TIMESTAMPTZ DEFAULT NULL
+) RETURNS public.features LANGUAGE plpgsql SET search_path = public AS $$
+DECLARE
+  row  public.features;
+  geom GEOMETRY;
 BEGIN
+  IF NOT public.can_edit_gis() THEN
+    RAISE EXCEPTION 'אין הרשאה לערוך גאומטריה (permission denied)';
+  END IF;
+
+  SELECT * INTO row FROM public.features WHERE id = p_id FOR UPDATE;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'הישות % לא נמצאה (not found)', p_id;
+  END IF;
+
+  IF p_expected_edited_at IS NOT NULL AND row.edited_at IS DISTINCT FROM p_expected_edited_at THEN
+    RAISE EXCEPTION 'הישות עודכנה על ידי משתמש אחר בינתיים (conflict)';
+  END IF;
+
+  BEGIN
+    geom := ST_SetSRID(ST_GeomFromGeoJSON(p_geometry::text), 4326);
+  EXCEPTION WHEN OTHERS THEN
+    RAISE EXCEPTION 'GeoJSON לא תקין: % (invalid geometry)', SQLERRM;
+  END;
+  PERFORM public.validate_feature_geometry(row.layer_id, geom);
+
   UPDATE public.features
-     SET geometry   = ST_SetSRID(ST_GeomFromGeoJSON(p_geometry::text), 4326),
+     SET geometry   = geom,
          updated_at = NOW()
    WHERE id = p_id
   RETURNING * INTO row;
-  IF NOT FOUND THEN RAISE EXCEPTION 'Feature % not found', p_id; END IF;
+
   RETURN row;
 END; $$;
