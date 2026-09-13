@@ -98,13 +98,20 @@ function latLngsToCoordsDeep(ll) {
 }
 
 function makePm() {
-  return {
-    enable: vi.fn(),
+  // Mirrors the real Geoman contract that bit production: pm.enable(opts) and
+  // pm.setOptions(opts) both merge into pm.options, and enableLayerDrag() is a
+  // silent no-op while options.draggable === false (Geoman 2.18.3 Drag mixin).
+  const pm = {
+    options: { draggable: true },
+    _dragEnabled: false,
+    enable: vi.fn((opts) => { Object.assign(pm.options, opts || {}); }),
     disable: vi.fn(),
-    enableLayerDrag: vi.fn(),
-    disableLayerDrag: vi.fn(),
-    layerDragEnabled: vi.fn(() => false),
+    setOptions: vi.fn((opts) => { Object.assign(pm.options, opts || {}); }),
+    enableLayerDrag: vi.fn(() => { if (pm.options.draggable === false) return; pm._dragEnabled = true; }),
+    disableLayerDrag: vi.fn(() => { pm._dragEnabled = false; }),
+    layerDragEnabled: vi.fn(() => pm._dragEnabled),
   };
+  return pm;
 }
 
 function makePointLayer(latlng) {
@@ -913,6 +920,20 @@ describe('GISEdit Edit Mode — adversarial coverage', () => {
       await tick2();
       expect(GISEdit.isEditMode()).toBe(false);
       expect(GIS.features.getEditToken).not.toHaveBeenCalled();
+    });
+
+    it('REGRESSION: switching vertices → move actually enables Geoman layer drag (draggable was left false by vertex mode)', async () => {
+      const { GISEdit } = load({ role: 'engineer' });
+      await GISEdit.beginEditFeature(LINE_FEATURE, 'L1');          // starts in 'vertices' → draggable:false stored on pm
+      const layer = GISEdit._test.state().editLayer;
+      expect(layer.pm.options.draggable).toBe(false);
+      expect(layer.pm.layerDragEnabled()).toBe(false);
+      clickSub(GISEdit, 'move');
+      expect(layer.pm.layerDragEnabled()).toBe(true);               // would be false without setOptions({draggable:true})
+      expect(layer.pm.setOptions).toHaveBeenCalledWith({ draggable: true });
+      clickSub(GISEdit, 'vertices');
+      expect(layer.pm.layerDragEnabled()).toBe(false);              // drag torn down, body drag impossible again
+      expect(layer.pm.options.draggable).toBe(false);
     });
 
     it('the map-click pick is armed at most once (miss → re-arm keeps a single listener)', async () => {
