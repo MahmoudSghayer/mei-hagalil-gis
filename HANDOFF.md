@@ -24,7 +24,19 @@ What it changes:
   invalid/not_found/network/unknown) in `gis-engine/{core,features}.js`.
 
 See the migration file's own header + commented manual-verification block for
-SQL-editor test steps (engineer/viewer/conflict/invalid/audit checks).
+SQL-editor test steps (engineer/viewer/conflict/invalid/audit checks) and the
+one-time **legacy geometry sweep** (step 7) — run it before relying on
+undo-of-delete for rows imported before this migration.
+
+Frontend (already wired in `index.html`, versions bumped): `js/gis-edit-geom.js`
+(`window.GISEditGeom`, pure GeoJSON capability registry — Point/MultiPoint/
+LineString/MultiLineString/Polygon/MultiPolygon), sticky Edit Mode in
+`js/gis-edit.js` (`GISEdit.toggleEditMode/isEditMode/beginEditFeature`; HUD
+sub-modes קודקודים/הזז/הארך/קצר; Save only when dirty; Cancel/Esc/ribbon-clear
+confirm when dirty; conflict dialog), ribbon "עריכה" tab hidden for viewers
+(`js/arcgis-ribbon.js applyRoleGating`, `window.GISRibbon.refreshRoleGating()`),
+"✏️ ערוך גאומטריה" in the attribute panel. Tests: `test/gis/edit-*.test.js`,
+`test/security/edit-authz*.test.js`, `test/gis/attribute-panel-editgeom.test.js`.
 
 ## 🌊 Wave 2 — import/export overhaul + GIS-engine hardening (2026-07-14)
 

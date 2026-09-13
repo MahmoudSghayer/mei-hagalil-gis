@@ -797,4 +797,133 @@ describe('GISEdit Edit Mode — adversarial coverage', () => {
       expect(gMap.getContainer().classList.contains('gis-edit-mode')).toBe(true);
     });
   });
+
+  // ── 9) Orchestrator review fixes — regression guards ─────────────────────
+  describe('review fixes: Geoman options, save atomicity, dialog re-entrancy, tool gating', () => {
+    it('vertices sub-mode enables Geoman with draggable:false and WITHOUT limitMarkersToCount (a display cap, not a min-vertex guard)', async () => {
+      const { GISEdit } = load({ role: 'engineer' });
+      await GISEdit.beginEditFeature(LINE_FEATURE, 'L1');
+      const layer = GISEdit._test.state().editLayer;
+      expect(layer.pm.enable).toHaveBeenCalled();
+      const opts = layer.pm.enable.mock.calls[layer.pm.enable.mock.calls.length - 1][0];
+      expect(opts.draggable).toBe(false);
+      expect(opts).not.toHaveProperty('limitMarkersToCount');
+      expect(typeof opts.removeVertexValidation).toBe('function');
+      expect(opts.removeVertexOn).toBe('contextmenu');
+      // the validation guard refuses a removal that would drop a line below 2 points
+      expect(opts.removeVertexValidation({ layer: { getLatLngs: () => [{}, {}] } })).toBe(false);
+      expect(opts.removeVertexValidation({ layer: { getLatLngs: () => [{}, {}, {}] } })).toBe(true);
+    });
+
+    it('extend rebuilds the layer with the SAME vertex options (draggable:false, no limitMarkersToCount)', async () => {
+      const { GISEdit, gMap } = load({ role: 'engineer' });
+      await GISEdit.beginEditFeature(LINE_FEATURE, 'L1');
+      const layer = GISEdit._test.state().editLayer;
+      clickSub(GISEdit, 'extend');
+      layer.pm.enable.mockClear();
+      gMap.fire('click', { latlng: { lng: 35.02, lat: 32 } });
+      const opts = layer.pm.enable.mock.calls[layer.pm.enable.mock.calls.length - 1][0];
+      expect(opts.draggable).toBe(false);
+      expect(opts).not.toHaveProperty('limitMarkersToCount');
+    });
+
+    it('Cancel / Escape / feature-switch are refused while a save is in flight; the save then completes with the right ids', async () => {
+      const { GISEdit, GIS, GISEditHistory, document, GISEngineSidebar } = load({ role: 'engineer' });
+      let resolveSave;
+      GIS.features.updateGeometry.mockImplementation(() => new Promise((r) => { resolveSave = r; }));
+      await GISEdit.beginEditFeature(LINE_FEATURE, 'L1');
+      GISEdit._test.setDirty(true);
+      const savePromise = GISEdit._test.save();
+      await tick();
+      expect(GISEdit._test.state().mode).toBe('saving');
+      expect(GISEdit._test.hud().cancelBtn.disabled).toBe(true);
+      expect(GISEdit._test.hud().saveBtn.textContent).toBe('שומר…');
+
+      await GISEdit._test.cancel();                       // refused
+      expect(GISEdit._test.onEscape()).toBe(true);        // swallowed
+      const switched = await GISEdit.beginEditFeature(POINT_FEATURE, 'L3');
+      expect(switched).toBe(false);                       // refused
+      expect(GISEdit._test.state().mode).toBe('saving');
+      expect(document.body.children.filter((c) => c.className === 'gis-anly-bg').length).toBe(0);
+
+      resolveSave({ id: 'f1', layer_id: 'L1' });
+      await savePromise;
+      expect(GISEdit._test.state().mode).toBe('armed');
+      const entry = GISEditHistory.peekUndo()[0];
+      expect(entry.id).toBe('f1');
+      expect(entry.layerId).toBe('L1');
+      expect(entry.before).toEqual(LINE_FEATURE.geometry);
+      expect(GISEngineSidebar.reload).toHaveBeenCalledWith('L1');
+    });
+
+    it('a hard disarm while a save is in flight is refused; the late continuation never pushes a null-id history entry', async () => {
+      const { GISEdit, GIS, GISEditHistory } = load({ role: 'engineer' });
+      let resolveSave;
+      GIS.features.updateGeometry.mockImplementation(() => new Promise((r) => { resolveSave = r; }));
+      await GISEdit.beginEditFeature(LINE_FEATURE, 'L1');
+      GISEdit._test.setDirty(true);
+      const savePromise = GISEdit._test.save();
+      await tick();
+      GISEdit.disarm();                                    // ribbon "clear" mid-flight → refused
+      expect(GISEdit._test.state().mode).toBe('saving');
+      resolveSave({ id: 'f1', layer_id: 'L1' });
+      await savePromise;
+      expect(GISEditHistory.peekUndo().every((e) => e.id === 'f1' && e.layerId === 'L1')).toBe(true);
+      expect(GISEdit._test.state().mode).toBe('armed');
+    });
+
+    it('pressing Escape twice while dirty opens exactly ONE confirm dialog', async () => {
+      const { GISEdit, document } = load({ role: 'engineer' });
+      await GISEdit.beginEditFeature(LINE_FEATURE, 'L1');
+      GISEdit._test.setDirty(true);
+      GISEdit._test.onEscape();
+      GISEdit._test.onEscape();
+      await tick2();
+      expect(document.body.children.filter((c) => c.className === 'gis-anly-bg').length).toBe(1);
+      expect(GISEdit._test.state().mode).toBe('editing');
+    });
+
+    it('starting the legacy "add" tool while dirty asks first and leaves the edit intact when declined', async () => {
+      const { GISEdit, document, GIS } = load({ role: 'engineer' });
+      await GISEdit.beginEditFeature(LINE_FEATURE, 'L1');
+      GISEdit._test.setDirty(true);
+      const layerCallsBefore = GIS.layers.getLayers.mock.calls.length;   // (snap guide already listed layers)
+      const p = GISEdit.startAdd();
+      await tick();
+      const overlay = document.body.children[document.body.children.length - 1];
+      expect(overlay.className).toBe('gis-anly-bg');
+      const dlg = overlay.children[0];
+      const head = dlg.children[0];
+      head.children[head.children.length - 1].click();     // X → decline
+      await p;
+      expect(GISEdit.isEditMode()).toBe(true);
+      expect(GISEdit._test.state().dirty).toBe(true);
+      expect(GIS.layers.getLayers.mock.calls.length).toBe(layerCallsBefore); // category picker never opened
+    });
+
+    it('a pick whose fetch resolves after Edit Mode was turned off does not re-enter editing', async () => {
+      const { GISEdit, GIS, gMap } = load({ role: 'engineer' });
+      let resolveFetch;
+      GIS.features.getInBBox.mockImplementation(() => new Promise((r) => { resolveFetch = r; }));
+      await GISEdit.toggleEditMode(true);
+      gMap.fire('click', { latlng: { lng: 35, lat: 32 } });
+      await tick();
+      await GISEdit.toggleEditMode(false);
+      resolveFetch({ type: 'FeatureCollection', features: [LINE_FEATURE] });
+      await tick2();
+      expect(GISEdit.isEditMode()).toBe(false);
+      expect(GIS.features.getEditToken).not.toHaveBeenCalled();
+    });
+
+    it('the map-click pick is armed at most once (miss → re-arm keeps a single listener)', async () => {
+      const { GISEdit, gMap } = load({ role: 'engineer' });
+      await GISEdit.toggleEditMode(true);
+      expect(gMap._listenerCount('click')).toBe(1);
+      GISEdit._test.armPickActive();                       // second arm request → ignored
+      expect(gMap._listenerCount('click')).toBe(1);
+      gMap.fire('click', { latlng: { lng: 35, lat: 32 } }); // miss (no features) → re-arm
+      await tick2();
+      expect(gMap._listenerCount('click')).toBe(1);
+    });
+  });
 });
