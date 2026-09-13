@@ -83,6 +83,28 @@ describe('2026-09-13-edit-mode-geometry.sql', () => {
     expect(sql.trim().endsWith("NOTIFY pgrst, 'reload schema';")).toBe(true);
   });
 
+  it('validate_feature_geometry takes an optional expected family and never enforces the layer type', () => {
+    const chunk = chunkFor('public.validate_feature_geometry');
+    expect(chunk).toBeTruthy();
+    expect(chunk).toMatch(/p_expected_family TEXT DEFAULT NULL/);
+    expect(chunk).toMatch(/p_expected_family IS NOT NULL AND fam <> p_expected_family/);
+    // the layer's declared geometry_type must NOT be compared against the
+    // geometry (30% of production rows live in a layer of a different type)
+    expect(chunk).not.toMatch(/geometry_type/);
+    expect(sql).toMatch(/DROP FUNCTION IF EXISTS public\.validate_feature_geometry\(UUID, GEOMETRY\);/);
+  });
+
+  it('update_feature_geometry pins the family to the feature\'s CURRENT geometry; create_feature passes NULL', () => {
+    const upd = chunkFor('public.update_feature_geometry');
+    expect(upd).toMatch(/validate_feature_geometry\(row\.layer_id, geom, public\.geometry_family\(GeometryType\(row\.geometry\)\)\)/);
+    const cre = chunkFor('public.create_feature');
+    expect(cre).toMatch(/validate_feature_geometry\(p_layer_id, geom, NULL\)/);
+    // editing.sql must carry the very same call (base-file re-run safety)
+    const editing = readFileSync(resolve(REPO_ROOT, 'gis-engine/sql/editing.sql'), 'utf8');
+    expect(editing).toMatch(/validate_feature_geometry\(row\.layer_id, geom, public\.geometry_family\(GeometryType\(row\.geometry\)\)\)/);
+    expect(editing).toMatch(/DROP FUNCTION IF EXISTS public\.update_feature_geometry\(UUID, JSONB\);/);
+  });
+
   it('grants EXECUTE on all three RPC functions to authenticated', () => {
     // The three: validate_feature_geometry (shared helper), update_feature_geometry
     // and create_feature. audit_features() is trigger-only and never called

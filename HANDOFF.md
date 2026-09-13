@@ -11,8 +11,11 @@
 `gis-engine/sql/migrations/2026-09-13-edit-mode-geometry.sql`.
 
 What it changes:
-- Adds `validate_feature_geometry()` — rejects invalid/empty geometry, a type
-  mismatch with the layer, too few vertices, or coordinates outside Israel.
+- Adds `validate_feature_geometry()` — rejects invalid/empty geometry, too few
+  vertices, coordinates outside Israel, and (on edit only) a change of the
+  feature's own geometry family (line ↔ point ↔ polygon). The layer's declared
+  `geometry_type` is deliberately not enforced: ~30% of production features sit
+  in a layer of a different declared type (heterogeneous imports).
 - Re-creates `update_feature_geometry(p_id, p_geometry, p_expected_edited_at
   DEFAULT NULL)` (old 2-arg form dropped first): now permission-checked,
   validated, and optimistic-concurrency-checked against `edited_at`.

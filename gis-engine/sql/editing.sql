@@ -95,7 +95,7 @@ END; $$;
 -- Old 2-argument overload dropped so PostgREST never sees an ambiguous pair
 -- (the 3-arg form below has a defaulted third parameter). Body mirrors
 -- gis-engine/sql/migrations/2026-09-13-edit-mode-geometry.sql, which also
--- defines validate_feature_geometry() (referenced here; plpgsql resolves it at
+-- defines validate_feature_geometry()/geometry_family() (referenced here; plpgsql resolves them at
 -- call time, so this file still applies cleanly before that migration).
 DROP FUNCTION IF EXISTS public.update_feature_geometry(UUID, JSONB);
 CREATE OR REPLACE FUNCTION public.update_feature_geometry(
@@ -123,7 +123,8 @@ BEGIN
   EXCEPTION WHEN OTHERS THEN
     RAISE EXCEPTION 'GeoJSON לא תקין: % (invalid geometry)', SQLERRM;
   END;
-  PERFORM public.validate_feature_geometry(row.layer_id, geom);
+  -- an edit may reshape/move a feature but never change its kind (line ↔ point ↔ polygon)
+  PERFORM public.validate_feature_geometry(row.layer_id, geom, public.geometry_family(GeometryType(row.geometry)));
 
   UPDATE public.features
      SET geometry   = geom,

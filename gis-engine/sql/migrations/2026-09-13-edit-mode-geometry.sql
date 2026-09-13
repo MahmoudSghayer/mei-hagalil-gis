@@ -19,14 +19,19 @@
 --      all, so geometry edits were invisible in the back-office log.
 --
 --  Fix, this migration:
---    • public.validate_feature_geometry(p_layer_id, p_geometry) — shared
---      STABLE helper: rejects NULL/empty geometry, invalid geometry
---      (ST_IsValid/ST_IsValidReason), a geometry type family that doesn't
---      match the layer's geometry_type (Point/LineString/Polygon vs. their
---      Multi* forms — features.geometry is untyped GEOMETRY(GEOMETRY,4326)
---      so Multi* rows are legal even though layers.geometry_type only
---      records the singular family), too few vertices for the family, and
---      coordinates outside the app's Israel bounding box.
+--    • public.validate_feature_geometry(p_layer_id, p_geometry,
+--      p_expected_family DEFAULT NULL) — shared STABLE helper: rejects
+--      NULL/empty geometry, invalid geometry (ST_IsValid/ST_IsValidReason),
+--      too few vertices for the geometry's own type, coordinates outside the
+--      app's Israel bounding box, and — ONLY when p_expected_family is given
+--      — a geometry whose family (Point/LineString/Polygon, Multi* included)
+--      differs from it. update_feature_geometry passes the family of the
+--      feature's CURRENT geometry (an edit may never turn a line into a point
+--      or vice versa); create_feature passes NULL. The layer's declared
+--      geometry_type is deliberately NOT enforced: in production 30% of the
+--      features live in a layer whose geometry_type differs from their own
+--      geometry (heterogeneous imports), and enforcing it would refuse every
+--      edit on those rows.
 --    • update_feature_geometry(p_id, p_geometry, p_expected_edited_at
 --      DEFAULT NULL) is DROPped and re-created with a 3rd optional param:
 --      explicit can_edit_gis() guard first (Hebrew message, stable English
@@ -71,11 +76,25 @@
 -- ── shared geometry validation ───────────────────────────────────────────
 -- Israel bounding box: lng 33.5–36.5, lat 29–34 (same box used elsewhere in
 -- the app for sanity-checking imported coordinates).
-CREATE OR REPLACE FUNCTION public.validate_feature_geometry(p_layer_id UUID, p_geometry GEOMETRY)
-RETURNS VOID LANGUAGE plpgsql STABLE SET search_path = public AS $$
+-- Family of a PostGIS GeometryType() string: POINT/MULTIPOINT → Point,
+-- LINESTRING/MULTILINESTRING → LineString, POLYGON/MULTIPOLYGON → Polygon,
+-- anything else (collections…) → NULL.
+CREATE OR REPLACE FUNCTION public.geometry_family(p_gtype TEXT)
+RETURNS TEXT LANGUAGE sql IMMUTABLE AS $$
+  SELECT CASE
+    WHEN p_gtype IN ('POINT','MULTIPOINT')           THEN 'Point'
+    WHEN p_gtype IN ('LINESTRING','MULTILINESTRING') THEN 'LineString'
+    WHEN p_gtype IN ('POLYGON','MULTIPOLYGON')       THEN 'Polygon'
+  END;
+$$;
+
+DROP FUNCTION IF EXISTS public.validate_feature_geometry(UUID, GEOMETRY);
+CREATE OR REPLACE FUNCTION public.validate_feature_geometry(
+  p_layer_id UUID, p_geometry GEOMETRY, p_expected_family TEXT DEFAULT NULL
+) RETURNS VOID LANGUAGE plpgsql STABLE SET search_path = public AS $$
 DECLARE
-  family TEXT;   -- layers.geometry_type: 'Point' | 'LineString' | 'Polygon'
   gtype  TEXT;   -- GeometryType(p_geometry): POINT/MULTIPOINT/LINESTRING/... etc.
+  fam    TEXT;   -- geometry_family(gtype)
   npts   INT;
 BEGIN
   IF p_geometry IS NULL OR ST_IsEmpty(p_geometry) THEN
@@ -86,20 +105,21 @@ BEGIN
     RAISE EXCEPTION 'גאומטריה לא תקינה: % (invalid geometry)', ST_IsValidReason(p_geometry);
   END IF;
 
-  SELECT geometry_type INTO family FROM public.layers WHERE id = p_layer_id;
-  IF family IS NULL THEN
+  IF NOT EXISTS (SELECT 1 FROM public.layers WHERE id = p_layer_id) THEN
     RAISE EXCEPTION 'שכבה % לא נמצאה (not found)', p_layer_id;
   END IF;
 
   gtype := GeometryType(p_geometry);
-  IF (family = 'Point'      AND gtype NOT IN ('POINT', 'MULTIPOINT'))
-  OR (family = 'LineString' AND gtype NOT IN ('LINESTRING', 'MULTILINESTRING'))
-  OR (family = 'Polygon'    AND gtype NOT IN ('POLYGON', 'MULTIPOLYGON')) THEN
-    RAISE EXCEPTION 'סוג הגאומטריה (%) אינו תואם לסוג השכבה (%) (invalid geometry)', gtype, family;
+  fam   := public.geometry_family(gtype);
+  IF fam IS NULL THEN
+    RAISE EXCEPTION 'סוג גאומטריה לא נתמך (%) (invalid geometry)', gtype;
+  END IF;
+  IF p_expected_family IS NOT NULL AND fam <> p_expected_family THEN
+    RAISE EXCEPTION 'לא ניתן לשנות את סוג הגאומטריה (% → %) (invalid geometry)', p_expected_family, fam;
   END IF;
 
   npts := ST_NPoints(p_geometry);
-  IF (family = 'LineString' AND npts < 2) OR (family = 'Polygon' AND npts < 4) THEN
+  IF (fam = 'LineString' AND npts < 2) OR (fam = 'Polygon' AND npts < 4) THEN
     RAISE EXCEPTION 'מספר נקודות לא מספיק בגאומטריה (%) (invalid geometry)', npts;
   END IF;
 
@@ -109,7 +129,8 @@ BEGIN
   END IF;
 END; $$;
 
-GRANT EXECUTE ON FUNCTION public.validate_feature_geometry(UUID, GEOMETRY) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.geometry_family(TEXT) TO authenticated;
+GRANT EXECUTE ON FUNCTION public.validate_feature_geometry(UUID, GEOMETRY, TEXT) TO authenticated;
 
 -- ── update_feature_geometry — authorized, validated, concurrency-checked ─
 -- Old 2-argument overload dropped first so PostgREST resolves to a single
@@ -157,7 +178,8 @@ BEGIN
   EXCEPTION WHEN OTHERS THEN
     RAISE EXCEPTION 'GeoJSON לא תקין: % (invalid geometry)', SQLERRM;
   END;
-  PERFORM public.validate_feature_geometry(row.layer_id, geom);
+  -- an edit may reshape/move a feature but never change its kind (line ↔ point ↔ polygon)
+  PERFORM public.validate_feature_geometry(row.layer_id, geom, public.geometry_family(GeometryType(row.geometry)));
 
   UPDATE public.features
      SET geometry   = geom,
@@ -190,7 +212,7 @@ BEGIN
   EXCEPTION WHEN OTHERS THEN
     RAISE EXCEPTION 'GeoJSON לא תקין: % (invalid geometry)', SQLERRM;
   END;
-  PERFORM public.validate_feature_geometry(p_layer_id, geom);
+  PERFORM public.validate_feature_geometry(p_layer_id, geom, NULL);   -- layers hold mixed families in production
 
   INSERT INTO public.features (layer_id, asset_code, geometry, properties)
   VALUES (p_layer_id, p_asset_code, geom, COALESCE(p_properties, '{}'::jsonb))
@@ -308,19 +330,17 @@ CREATE TRIGGER trg_audit_features
 --  7) LEGACY DATA SWEEP (run once, BEFORE relying on undo-of-delete) — rows
 --     written before this migration were never validated. create_feature
 --     now validates, so restoring (undo) a deleted legacy row whose stored
---     geometry is invalid / out of bounds / wrong family would be refused
---     with (invalid geometry). List such rows and repair them first
---     (ST_MakeValid, or fix the layer's geometry_type):
+--     geometry is invalid / empty / out of bounds would be refused with
+--     (invalid geometry). List such rows and repair them first
+--     (ST_MakeValid; 2026-09-13 production sweep: 26 rows, all in two
+--     "מגד אל-כרום" layers — self-intersecting polygons + zero-length lines):
 --     SELECT f.id, f.asset_code, l.name, GeometryType(f.geometry) AS gtype,
 --            ST_IsValidReason(f.geometry) AS reason
 --       FROM public.features f JOIN public.layers l ON l.id = f.layer_id
 --      WHERE NOT ST_IsValid(f.geometry)
 --         OR ST_IsEmpty(f.geometry)
 --         OR ST_XMin(f.geometry) < 33.5 OR ST_XMax(f.geometry) > 36.5
---         OR ST_YMin(f.geometry) < 29   OR ST_YMax(f.geometry) > 34
---         OR (l.geometry_type = 'Point'      AND GeometryType(f.geometry) NOT IN ('POINT','MULTIPOINT'))
---         OR (l.geometry_type = 'LineString' AND GeometryType(f.geometry) NOT IN ('LINESTRING','MULTILINESTRING'))
---         OR (l.geometry_type = 'Polygon'    AND GeometryType(f.geometry) NOT IN ('POLYGON','MULTIPOLYGON'));
+--         OR ST_YMin(f.geometry) < 29   OR ST_YMax(f.geometry) > 34;
 -- ════════════════════════════════════════════════════════════════════════
 
 NOTIFY pgrst, 'reload schema';
