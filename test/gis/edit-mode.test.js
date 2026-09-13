@@ -103,13 +103,20 @@ function latLngsToCoordsDeep(ll) {
 }
 
 function makePm(target) {
-  return {
-    enable: vi.fn(),
+  // Mirrors the real Geoman contract that bit production: pm.enable(opts) and
+  // pm.setOptions(opts) both merge into pm.options, and enableLayerDrag() is a
+  // silent no-op while options.draggable === false (Geoman 2.18.3 Drag mixin).
+  const pm = {
+    options: { draggable: true },
+    _dragEnabled: false,
+    enable: vi.fn((opts) => { Object.assign(pm.options, opts || {}); }),
     disable: vi.fn(),
-    enableLayerDrag: vi.fn(),
-    disableLayerDrag: vi.fn(),
-    layerDragEnabled: vi.fn(() => false),
+    setOptions: vi.fn((opts) => { Object.assign(pm.options, opts || {}); }),
+    enableLayerDrag: vi.fn(() => { if (pm.options.draggable === false) return; pm._dragEnabled = true; }),
+    disableLayerDrag: vi.fn(() => { pm._dragEnabled = false; }),
+    layerDragEnabled: vi.fn(() => pm._dragEnabled),
   };
+  return pm;
 }
 
 function makePointLayer(latlng) {

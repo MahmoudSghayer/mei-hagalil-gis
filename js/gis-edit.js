@@ -865,6 +865,7 @@
     eachEditLayer(function (lyr) {
       try { if (lyr.pm && lyr.pm.disable) lyr.pm.disable(); } catch (e) {}
       try { if (lyr.pm && lyr.pm.disableLayerDrag) lyr.pm.disableLayerDrag(); } catch (e) {}
+      try { if (lyr.setStyle && lyr.getLatLngs) lyr.setStyle({ weight: 4, opacity: 0.95 }); } catch (e) {}   // undo the move-mode stroke
     });
     disarmMultiPointMove();
     disarmExtendClick();
@@ -915,6 +916,13 @@
         armMultiPointMove();
       } else {
         eachEditLayer(function (lyr) {
+          // Geoman's enableLayerDrag() is a silent no-op while the layer's
+          // pm option `draggable` is false — and the "vertices" sub-mode
+          // deliberately stores draggable:false on this very layer (see
+          // vertexPmOptions()). Flip it back on for the move sub-mode first.
+          try { if (lyr.pm && lyr.pm.setOptions) lyr.pm.setOptions({ draggable: true }); } catch (e) {}
+          // a fatter stroke while moving — a 4px line is a hard drag target
+          try { if (lyr.setStyle) lyr.setStyle({ weight: 10, opacity: 0.8 }); } catch (e) {}
           try { lyr.pm.enableLayerDrag(); } catch (e) {}
           wireLayerEvent(lyr, 'pm:dragend', onEditMutated);
         });
