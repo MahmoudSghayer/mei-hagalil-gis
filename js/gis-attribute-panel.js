@@ -353,14 +353,27 @@ function renderFooter() {
     return;
   }
 
+  var canEditGeom = canEdit && window.GISEdit && GISEdit.beginEditFeature;
   var html = '';
   if (state.tableCtx && window.GISTable) html += '<button class="gp-btn primary" id="gp-table">📋 טבלת עריכה</button>';
   if (canEdit) html += '<button class="gp-btn ghost" id="gp-editbtn">✎ עריכה מהירה</button>';
+  if (canEditGeom) html += '<button class="gp-btn ghost" id="gp-editgeom">✏️ ערוך גאומטריה</button>';
   if (!html) html = '<div class="gp-note" style="text-align:center;width:100%">תצוגה בלבד (תפקיד: ' + esc(state.role || 'אורח') + ')</div>';
   foot.innerHTML = html;
 
   if (document.getElementById('gp-table')) document.getElementById('gp-table').onclick = openTable;
   if (document.getElementById('gp-editbtn')) document.getElementById('gp-editbtn').onclick = function () { state.editing = true; render(); };
+  // Hands the feature + its layer id straight to Edit Mode (js/gis-edit.js) —
+  // enters editing on this exact feature with no map click needed — then
+  // closes the panel so the map/HUD are unobstructed.
+  if (document.getElementById('gp-editgeom')) {
+    document.getElementById('gp-editgeom').onclick = function () {
+      var layerId = (state.tableCtx && state.tableCtx.layerId) ||
+        (state.feature.properties && state.feature.properties.__layer_id);
+      GISEdit.beginEditFeature(state.feature, layerId);
+      close();
+    };
+  }
 }
 
 // פותח את טבלת העריכה (SQL) עבור הפיצ'ר/השכבה שנבחרו.

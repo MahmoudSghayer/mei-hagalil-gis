@@ -325,6 +325,7 @@ function _toolArmed() {
   try {
     var c = window.gMap.getContainer();
     if (c.style.cursor === 'crosshair') return true;          // incident / trace / field / edit pick
+    if (c.classList.contains('gis-edit-mode')) return true;   // sticky Edit Mode (js/gis-edit.js)
     if (c.classList.contains('mt-cursor')) return true;       // measure tool
     if (window.GISTrace && GISTrace._state) return true;      // network trace
     var pm = window.gMap.pm;                                  // Leaflet-Geoman (on-map editing)

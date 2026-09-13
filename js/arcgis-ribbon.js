@@ -72,7 +72,7 @@
         { ic: 'alert', lb: 'תקלה חדשה', size: 'lg', act: function () { call('startIncPick'); } }
       ] },
       { label: 'עריכת ישויות', cmds: [
-        { ic: 'edit', lb: 'עריכה', size: 'lg', act: editGeom },
+        { ic: 'edit', lb: 'עריכה', size: 'lg', act: editModeToggle, edittoggle: true },
         { col: [
           { ic: 'plus',  lb: 'הוסף ישות', act: editAdd },
           { ic: 'snap',  lb: 'הצמדה',     act: editSnap },
@@ -170,7 +170,15 @@
   function meterEditConnect() { if (window.GISMeterConnect) { window.GISMeterConnect.editArm(); } else { toast('מנוע חיבור המונים עדיין נטען…'); } }
   function meterShowConnectors() { if (window.GISMeterConnect) { window.GISMeterConnect.toggleConnectors(); } else { toast('מנוע חיבור המונים עדיין נטען…'); } }
   function editAdd()        { if (window.GISEdit) { window.GISEdit.startAdd(); }       else { toast('מנוע העריכה עדיין נטען…'); } }
-  function editGeom()       { if (window.GISEdit) { window.GISEdit.startEditGeom(); }  else { toast('מנוע העריכה עדיין נטען…'); } }
+  // Sticky Edit Mode on/off. GISEdit.toggleEditMode() returns a Promise<boolean>
+  // (it awaits the role check) — reflect the result on the button itself; a
+  // toggle-off from elsewhere (Esc, conflict "forbidden" exit, ribbon "נקה
+  // תוצאה") de-activates it directly via document.querySelector('[data-edit-toggle]')
+  // (see js/gis-edit.js's activateRibbonButton()).
+  function editModeToggle(_, b) {
+    if (!window.GISEdit || !window.GISEdit.toggleEditMode) { toast('מנוע העריכה עדיין נטען…'); return; }
+    window.GISEdit.toggleEditMode().then(function (on) { b.classList.toggle('active', !!on); }).catch(function () {});
+  }
   function editDelete()     { if (window.GISEdit) { window.GISEdit.startDelete(); }    else { toast('מנוע העריכה עדיין נטען…'); } }
   function editSnap(_, b)   { if (window.GISEdit) { window.GISEdit.toggleSnap(b); }    else { toast('מנוע העריכה עדיין נטען…'); } }
   function toggleLegend() { if (window.GISSymbology) { window.GISSymbology.toggleLegend(); } else { toast('מנוע הסימבולוגיה עדיין נטען…'); } }
@@ -275,6 +283,31 @@
       'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + inner + '</svg>';
   }
 
+  // ── role gating: hide the whole "עריכה" tab for viewers ───────────────────
+  // Fail-safe hidden from build() onward (ags-gated on both the tab button
+  // and its panel, set at creation above); build() runs at DOMContentLoaded,
+  // well before GIS.currentRole() can resolve, so this polls (same bounded-
+  // retry shape as dockSearch()) until the engine is ready, then flips the
+  // class for admin|engineer. Kept as direct element refs (not re-queried by
+  // selector) so it works the same in a minimal test-document stub.
+  var gatedTab = null, gatedPanel = null;
+  function applyRoleGating(tries) {
+    if (!(window.GIS && window.GIS.currentRole)) {
+      if ((tries || 0) < 30) { setTimeout(function () { applyRoleGating((tries || 0) + 1); }, 200); }
+      return;
+    }
+    window.GIS.currentRole().then(function (role) {
+      var allowed = role === 'admin' || role === 'engineer';
+      if (gatedTab) { gatedTab.classList.toggle('ags-gated', !allowed); }
+      if (gatedPanel) { gatedPanel.classList.toggle('ags-gated', !allowed); }
+      // the gated tab can't stay the active one once hidden
+      if (!allowed && gatedTab && gatedTab.classList.contains('active')) { switchTab('map'); }
+    }).catch(function () {});
+  }
+  // Called after a role change (login/logout, role edited by an admin) so the
+  // Edit tab's visibility updates without a full page reload.
+  window.GISRibbon = { refreshRoleGating: function () { applyRoleGating(0); } };
+
   // ── render ────────────────────────────────────────────────────────────────
   function cmdButton(c) {
     var b = document.createElement('button');
@@ -284,6 +317,7 @@
     if (!b.getAttribute('aria-label')) b.setAttribute('aria-label', c.lb || c.title || '');
     if (c.disabled) { b.disabled = true; }
     if (c.group) { b.setAttribute('data-group', c.group); }
+    if (c.edittoggle) { b.setAttribute('data-edit-toggle', '1'); }   // Edit Mode's own big toggle button
     b.addEventListener('click', function () { c.act(c, b); });
     return b;
   }
@@ -311,7 +345,10 @@
 
     TABS.forEach(function (t, i) {
       var tab = document.createElement('button');
-      tab.className = 'ags-tab' + (i === 0 ? ' active' : '');
+      // The "עריכה" tab is EVERY editor-only group (incidents/tasks/domains
+      // already are, per the plan) — hide it fail-safe until the role
+      // resolves; applyRoleGating() below removes ags-gated for admin|engineer.
+      tab.className = 'ags-tab' + (i === 0 ? ' active' : '') + (t.id === 'edit' ? ' ags-gated' : '');
       tab.textContent = t.lb;
       tab.setAttribute('data-tab', t.id);
       tab.addEventListener('click', function () {
@@ -320,10 +357,12 @@
         switchTab(t.id);
       });
       tabsEl.appendChild(tab);
+      if (t.id === 'edit') { gatedTab = tab; }
 
       var panel = document.createElement('div');
-      panel.className = 'ags-panel' + (i === 0 ? ' active' : '');
+      panel.className = 'ags-panel' + (i === 0 ? ' active' : '') + (t.id === 'edit' ? ' ags-gated' : '');
       panel.setAttribute('data-panel', t.id);
+      if (t.id === 'edit') { gatedPanel = panel; }
       (RIBBON[t.id] || []).forEach(function (g) {
         var grp = document.createElement('div');
         grp.className = 'ags-group';
@@ -374,6 +413,7 @@
     initStatusScale();
     relocateTopbar();
     cleanStatusBar();
+    applyRoleGating(0);
   }
 
   // Strip status-bar clutter: drop the "|" separators + the "© 2025" span, and
