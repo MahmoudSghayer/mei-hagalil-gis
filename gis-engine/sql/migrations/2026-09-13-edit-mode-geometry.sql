@@ -304,6 +304,23 @@ CREATE TRIGGER trg_audit_features
 --     writes a gis_audit row (previously it wrote nothing at all):
 --     SELECT details->'geometry' FROM public.gis_audit
 --       WHERE action = 'feature_update' ORDER BY created_at DESC LIMIT 1;
+--
+--  7) LEGACY DATA SWEEP (run once, BEFORE relying on undo-of-delete) — rows
+--     written before this migration were never validated. create_feature
+--     now validates, so restoring (undo) a deleted legacy row whose stored
+--     geometry is invalid / out of bounds / wrong family would be refused
+--     with (invalid geometry). List such rows and repair them first
+--     (ST_MakeValid, or fix the layer's geometry_type):
+--     SELECT f.id, f.asset_code, l.name, GeometryType(f.geometry) AS gtype,
+--            ST_IsValidReason(f.geometry) AS reason
+--       FROM public.features f JOIN public.layers l ON l.id = f.layer_id
+--      WHERE NOT ST_IsValid(f.geometry)
+--         OR ST_IsEmpty(f.geometry)
+--         OR ST_XMin(f.geometry) < 33.5 OR ST_XMax(f.geometry) > 36.5
+--         OR ST_YMin(f.geometry) < 29   OR ST_YMax(f.geometry) > 34
+--         OR (l.geometry_type = 'Point'      AND GeometryType(f.geometry) NOT IN ('POINT','MULTIPOINT'))
+--         OR (l.geometry_type = 'LineString' AND GeometryType(f.geometry) NOT IN ('LINESTRING','MULTILINESTRING'))
+--         OR (l.geometry_type = 'Polygon'    AND GeometryType(f.geometry) NOT IN ('POLYGON','MULTIPOLYGON'));
 -- ════════════════════════════════════════════════════════════════════════
 
 NOTIFY pgrst, 'reload schema';
