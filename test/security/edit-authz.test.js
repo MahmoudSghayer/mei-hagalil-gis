@@ -190,6 +190,25 @@ describe('Edit Mode authorization (gis-engine/core.js + features.js)', () => {
     });
   });
 
+  describe('(g) getFeatureById — one row read, geometry included, no whole-layer RPC', () => {
+    it('selects the geometry column directly (GeoJSON, crs stripped) and never calls features_geojson', async () => {
+      const featureRow = { id: 'f1', layer_id: 'L1', asset_code: 'PIPE-1', properties: { LineDiamet: 110 },
+        geometry: { type: 'LineString', crs: { type: 'name', properties: { name: 'EPSG:4326' } }, coordinates: [[35, 32], [35.01, 32]] } };
+      const { ctx, sb } = load({ featureRow: featureRow });
+
+      const f = await ctx.GIS.features.getFeatureById('f1');
+
+      expect(sb.rpc).not.toHaveBeenCalled();                       // no features_geojson (whole layer, 5000-row cap)
+      const call = sb._fromCalls.find(function (c) { return c.table === 'features'; });
+      expect(call.select).toBe('id, layer_id, asset_code, properties, geometry');
+      expect(call.filters).toEqual({ id: 'f1' });
+      expect(f.type).toBe('Feature');
+      expect(f.geometry).toEqual({ type: 'LineString', coordinates: [[35, 32], [35.01, 32]] });
+      expect(f.properties).toEqual({ asset_code: 'PIPE-1', __id: 'f1', __layer_id: 'L1', LineDiamet: 110 });
+      expect(f.meters).toEqual([]);                                // meters module absent here → empty, never a throw
+    });
+  });
+
   describe('(f) getEditToken', () => {
     it('selects id, layer_id, edited_at AND geometry (GeoJSON, crs stripped) and returns the row', async () => {
       const featureRow = { id: 'f1', layer_id: 'L1', edited_at: '2026-09-13T10:00:00+00:00',

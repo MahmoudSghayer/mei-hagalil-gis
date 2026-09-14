@@ -133,7 +133,15 @@
       var fetchOptions = (_mode === 'rpc') ? { headers: rpcHeaders(token) } : {};
       vg = L.vectorGrid.protobuf(tileUrl(), {
         rendererFactory: L.canvas.tile,
-        interactive: true,
+        // NOT interactive, deliberately. With interactive:true the tile canvas
+        // runs its own per-feature hit-test on click and, on a hit, calls
+        // L.DomEvent.fakeStop(e) — Leaflet then SKIPS the map-level 'click',
+        // i.e. exactly when the user clicks ON a feature, neither the sidebar's
+        // identify (onMapClickPick) nor Edit Mode's click-to-select ever ran
+        // (only near-misses reached them). All hover/click detection is done
+        // at map level via hitTest() below, which is faster and covers every
+        // active layer, so the canvas must stay out of the event path.
+        interactive: false,
         maxNativeZoom: 19,   // deepest tiles we fetch; VectorGrid OVERZOOMS (scales) these beyond it
         maxZoom: 22,         // keep the layer attached past z18 (it was vanishing) — vectors scale cleanly
         fetchOptions: fetchOptions,
@@ -142,7 +150,7 @@
           features: function (props, zoom) { return opts.style ? opts.style(props, zoom) : { weight: 3, color: '#1a7fc1' }; }
         }
       });
-      if (opts.onClick) vg.on('click', function (e) { if (e.layer && e.layer.properties) opts.onClick(e.layer.properties); });
+      // (opts.onClick is intentionally NOT wired: the canvas is non-interactive — see above.)
       if (opts.onStatus) {
         vg.on('loading', function () { opts.onStatus({ loading: true }); });
         vg.on('load',    function () { opts.onStatus({ loading: false }); });
