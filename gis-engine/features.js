@@ -60,22 +60,26 @@
       return fc || GIS.emptyFC();
     },
 
-    // Single feature as a GeoJSON Feature, plus its meters (linked).
+    // Single feature as a GeoJSON Feature, plus its meters (linked). One
+    // row read: the geometry column comes back as GeoJSON directly (PostGIS 3
+    // casts geometry → json, PostgREST serialises it; the `crs` member is
+    // stripped). Previously this pulled the WHOLE layer through
+    // features_geojson (capped at 5000 rows) just to find one geometry —
+    // seconds per click on big layers, and no geometry at all past the cap.
     getFeatureById: async function (id) {
       GIS._assert(id, 'getFeatureById requires an id');
       var sb = GIS.sb();
       var row = GIS._unwrap(
-        await sb.from('features').select('id, layer_id, asset_code, properties').eq('id', id).single(),
+        await sb.from('features').select('id, layer_id, asset_code, properties, geometry').eq('id', id).single(),
         'load feature');
-      // Geometry as GeoJSON (separate RPC keeps the table read simple).
-      var geo = GIS._unwrap(await sb.rpc('features_geojson', { p_layer_id: row.layer_id }), 'load geometry');
-      var match = (geo.features || []).find(function (f) { return f.id === id || f.properties.__id === id; });
+      var geometry = (row && row.geometry && typeof row.geometry === 'object') ? row.geometry : null;
+      if (geometry && geometry.crs) delete geometry.crs;
       var feature = {
         type: 'Feature', id: id,
-        geometry: match ? match.geometry : null,
+        geometry: geometry,
         properties: Object.assign({ asset_code: row.asset_code, __id: id, __layer_id: row.layer_id }, row.properties)
       };
-      feature.meters = await GIS.meters.getForAsset(row.asset_code);
+      feature.meters = (GIS.meters && GIS.meters.getForAsset) ? await GIS.meters.getForAsset(row.asset_code) : [];
       return feature;
     },
 

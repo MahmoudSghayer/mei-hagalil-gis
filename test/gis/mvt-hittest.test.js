@@ -42,7 +42,7 @@ function load(mapZoom, tiles) {
     point: (x, y) => P(x, y),
     Polygon: FakePolygon,
     layerGroup: () => ({ addTo() { return this; }, addLayer: vi.fn(), removeLayer: vi.fn() }),
-    vectorGrid: { protobuf: () => vg },
+    vectorGrid: { protobuf: vi.fn(() => vg) },
     canvas: { tile: vi.fn() },
   };
   const gSb = { auth: { getSession: async () => ({ data: { session: { access_token: 't' } } }) } };
@@ -70,6 +70,16 @@ describe('GISMvtLayer._featureDistPx (pure, tile-pixel space)', () => {
   it('symbolizer without parts is unreachable', async () => {
     const { ctx } = load(16, {});
     expect(ctx.GISMvtLayer._featureDistPx({ properties: {} }, P(0, 0))).toBe(Infinity);
+  });
+});
+
+describe('GISMvtLayer.create() — the tile canvas must NOT be interactive', () => {
+  it('passes interactive:false to VectorGrid so the canvas never fakeStop()s the map click that identify / Edit Mode rely on', async () => {
+    const { ctx, map, L } = load(16, {});
+    ctx.GISMvtLayer.create({ map, layerId: 'L1', onClick: vi.fn() }); await settle();
+    expect(L.vectorGrid.protobuf).toHaveBeenCalledTimes(1);
+    const opts = L.vectorGrid.protobuf.mock.calls[0][1];
+    expect(opts.interactive).toBe(false);
   });
 });
 
