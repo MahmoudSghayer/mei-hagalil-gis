@@ -957,6 +957,39 @@ describe('GISEdit Edit Mode — adversarial coverage', () => {
       expect(panesOrder).toBeLessThan(layer.pm.enable.mock.invocationCallOrder[0]);
     });
 
+    it('click-to-select uses the sidebar\'s LOCAL hit-test first: no bbox query, geometry comes fresh from getEditToken', async () => {
+      const { GISEdit, GIS, GISEngineSidebar, gMap } = load({ role: 'engineer' });
+      GISEngineSidebar.hitTest = vi.fn(() => ({
+        d: 3, slim: true, layer: { id: 'L1' },
+        f: { type: 'Feature', id: 'f1', geometry: null, properties: { __id: 'f1', __layer_id: 'L1', asset_code: 'PIPE-1' } },
+      }));
+      GIS.features.getEditToken.mockImplementation(async (id) => ({
+        id, layer_id: 'L1', edited_at: '2026-09-14T06:00:00+00:00',
+        geometry: { type: 'LineString', coordinates: [[35.1, 32.1], [35.11, 32.1]] },
+      }));
+      await GISEdit.toggleEditMode(true);
+      gMap.fire('click', { latlng: { lng: 35.1, lat: 32.1 } });
+      await tick2(); await tick2();
+      expect(GISEngineSidebar.hitTest).toHaveBeenCalled();
+      expect(GIS.features.getInBBox).not.toHaveBeenCalled();          // no per-click DB search
+      expect(GISEdit._test.state().mode).toBe('editing');
+      expect(GISEdit._test.state().featureId).toBe('f1');
+      expect(GISEdit._test.state().editToken).toBe('2026-09-14T06:00:00+00:00');
+      // the fresh server geometry is the editing baseline, not the (absent) tile geometry
+      expect(GISEdit._test.state().before).toEqual({ type: 'LineString', coordinates: [[35.1, 32.1], [35.11, 32.1]] });
+    });
+
+    it('click-to-select falls back to the bbox query when the local hit-test finds nothing', async () => {
+      const { GISEdit, GIS, GISEngineSidebar, gMap } = load({ role: 'engineer' });
+      GISEngineSidebar.hitTest = vi.fn(() => null);
+      GIS.features.getInBBox.mockImplementation(async () => ({ type: 'FeatureCollection', features: [LINE_FEATURE] }));
+      await GISEdit.toggleEditMode(true);
+      gMap.fire('click', { latlng: { lng: 35, lat: 32 } });
+      await tick2(); await tick2();
+      expect(GIS.features.getInBBox).toHaveBeenCalled();
+      expect(GISEdit._test.state().mode).toBe('editing');
+    });
+
     it('the map-click pick is armed at most once (miss → re-arm keeps a single listener)', async () => {
       const { GISEdit, gMap } = load({ role: 'engineer' });
       await GISEdit.toggleEditMode(true);

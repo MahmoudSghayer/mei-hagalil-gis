@@ -361,8 +361,31 @@ function buildVpCache() {
   })).then(function () { if (_vpAbort === ac) { _vpFeats = acc; _vpAbort = null; } });
 }
 
-// Nearest cached feature to a latlng within the pixel tolerance (local, instant).
+// Nearest feature to a latlng within the pixel tolerance — LOCAL and instant.
+// 1) Vector tiles already in memory: every active MVT controller exposes
+//    hitTest() (js/gis-mvt-layer.js) over the tiles VectorGrid downloaded, so
+//    hover / click / edit-pick never wait for the DB. The result is a SLIM
+//    feature (tile props: __id, asset_code, symbology inputs; no geometry) —
+//    callers that need attributes/geometry fetch by id. 2) The optional
+//    viewport cache (HOVER_CACHE) as before.
+function nearestMvtFeature(ll) {
+  var best = null;
+  Object.keys(active).forEach(function (id) {
+    var ctl = loaded[id], layer = active[id];
+    if (!ctl || !ctl.isMvt || !ctl.hitTest) return;
+    var hit = null;
+    try { hit = ctl.hitTest(ll, TOL_PX); } catch (e) { hit = null; }
+    if (!hit) return;
+    if (!best || hit.distPx < best.d) {
+      var props = Object.assign({}, hit.props, { __id: hit.id, __layer_id: layer.id });
+      best = { d: hit.distPx, f: { type: 'Feature', id: hit.id, properties: props, geometry: null }, layer: layer, slim: true };
+    }
+  });
+  return best;
+}
 function nearestVpFeature(ll) {
+  var local = nearestMvtFeature(ll);
+  if (local) return local;
   if (!_vpFeats.length) return null;
   var pt = [ll.lng, ll.lat], sc = _scaleAt(ll.lat), tolM = _tolMeters(ll), best = null;
   for (var i = 0; i < _vpFeats.length; i++) {
@@ -429,17 +452,42 @@ async function onMapClickPick(e) {
     if (window.GISPanel && GISPanel.openMeter) GISPanel.openMeter(m.f);
     return;
   }
-  // 2) Engine features — cached if available, else an on-demand per-click query.
-  var best = nearestVpFeature(e.latlng) || await nearestFeatureAt(e.latlng);
+  // 2) Engine features — local tile hit-test (instant) or the viewport cache,
+  //    else an on-demand per-click query. Show a progress cursor while any
+  //    network step runs so a click never looks ignored.
+  var c = window.gMap.getContainer();
+  var best = nearestVpFeature(e.latlng);
+  if (!best) {
+    _setBusyCursor(c, true);
+    try { best = await nearestFeatureAt(e.latlng); } finally { _setBusyCursor(c, false); }
+  }
   if (!best) return;
   if (best.f.properties && !best.f.properties.__layer_id) best.f.properties.__layer_id = best.layer.id;
+  if (best.slim) {
+    // Slim tile feature → fetch the full row (attributes + geometry + meters).
+    var id = best.f.properties.__id, layer = best.layer;
+    _setBusyCursor(c, true);
+    var full = null;
+    try { full = (GIS.features && GIS.features.getFeatureById) ? await GIS.features.getFeatureById(id) : null; }
+    catch (err) { full = null; }
+    finally { _setBusyCursor(c, false); }
+    if (full && full.properties) { if (!full.properties.__layer_id) full.properties.__layer_id = layer.id; openPanelFor(full, layer); }
+    else openPanelFor(best.f, layer);
+    return;
+  }
   openPanelFor(best.f, best.layer);
+}
+function _setBusyCursor(c, on) {
+  try {
+    if (on) { if (c.style.cursor === '' || c.style.cursor === 'pointer') c.style.cursor = 'progress'; }
+    else if (c.style.cursor === 'progress') c.style.cursor = '';
+  } catch (e) {}
 }
 
 // Hover → pointer cursor over a clickable feature (so the user sees it's clickable).
 var _hoverRaf = null;
 function onMapHover(e) {
-  if (!_mvtMode) return;
+  if (!_mvtMode) return;                                    // GeoJSON mode: Leaflet's own interactive paths handle hover
   if (e.originalEvent && e.originalEvent.buttons) return;   // mid-drag (pan) → leave the grab cursor
   if (_hoverRaf) return;
   var ll = e.latlng;
@@ -997,6 +1045,12 @@ window.GISEngineSidebar = {
   reload: function (layerId) { if (loaded[layerId]) loaded[layerId].invalidate(); },        // after an edit → refetch that layer
   reloadAll: function () { Object.keys(loaded).forEach(function (id) { loaded[id].invalidate(); }); }, // re-style all active (labels toggle)
   activeLayers: function () { return Object.keys(active).map(function (id) { return active[id]; }); },
+  // Local, synchronous nearest-feature lookup at a latlng across the active
+  // layers (vector tiles in memory / viewport cache). Returns { f (slim in MVT
+  // mode: properties.__id/__layer_id, geometry null), layer, d } or null. Used
+  // by Edit Mode's click-to-select so picking is instant; callers fetch the
+  // full geometry by id. Never touches the network.
+  hitTest: function (latlng) { try { return nearestVpFeature(latlng); } catch (e) { return null; } },
   refresh: function () { try { render(); } catch (e) {} },
   villageAt: function (lng, lat) { return nearestVillage(lng, lat); },
   // Exposed so the layer-name parsing (LayerNaming-backed, with an inline

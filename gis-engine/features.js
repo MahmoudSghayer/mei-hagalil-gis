@@ -144,12 +144,18 @@
     // updateGeometry({expectedEditedAt}) call detects if someone else saved
     // in between. Read-only; no role check (viewers may look, same as any
     // other feature read).
+    // Also returns the row's CURRENT geometry as GeoJSON (PostGIS 3 casts
+    // geometry → json, so PostgREST serialises the column as a GeoJSON
+    // object; the `crs` member it adds is stripped). Edit Mode uses it as the
+    // authoritative starting shape — vector tiles only carry ids, and the
+    // full-layer GeoJSON read (features_geojson) is capped at 5000 rows.
     getEditToken: async function (id) {
       GIS._assert(id, 'getEditToken requires an id');
       var sb = GIS.sb();
       var row = GIS._unwrap(
-        await sb.from('features').select('id, layer_id, edited_at').eq('id', id).single(),
+        await sb.from('features').select('id, layer_id, edited_at, geometry').eq('id', id).single(),
         'load edit token');
+      if (row && row.geometry && typeof row.geometry === 'object' && row.geometry.crs) delete row.geometry.crs;
       return row;
     },
 
