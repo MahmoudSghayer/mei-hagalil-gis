@@ -250,7 +250,7 @@
 <script defer src="gis-engine/core.js?v=3"></script>
 <script defer src="gis-engine/spatial.js?v=2"></script>
 <script defer src="gis-engine/layers.js?v=4"></script>
-<script defer src="gis-engine/features.js?v=5"></script>
+<script defer src="gis-engine/features.js?v=6"></script>
 <script defer src="gis-engine/fields.js?v=1"></script>
 <script defer src="gis-engine/calculator.js?v=1"></script>
 <script defer src="gis-engine/queries.js?v=2"></script>
@@ -273,15 +273,15 @@
 <!-- VectorGrid: MUST be eager — it powers the MVT fast path; idle-loading it risks
      the MVT probe caching "off" on an early layer toggle (→ heavy per-feature render). -->
 <script defer src="https://unpkg.com/leaflet.vectorgrid@1.3.0/dist/Leaflet.VectorGrid.bundled.js" integrity="sha384-FON5fTjCTtPuBgUS1r2H/PGXstH0Rk23YKjZmB6qITkbFqBcqtey/rPo9eXwOWpx" crossorigin="anonymous"></script>
-<script defer src="js/gis-mvt-layer.js?v=6"></script>
+<script defer src="js/gis-mvt-layer.js?v=7"></script>
 <!-- Identify highlight: click a feature → white casing + cyan line (no endpoint dots) -->
 <script defer src="js/gis-identify.js?v=2"></script>
-<script defer src="js/gis-engine-sidebar.js?v=29"></script>
+<script defer src="js/gis-engine-sidebar.js?v=30"></script>
 <!-- ribbon-only tools (trace/analysis/bookmarks/find/print/meter-connect) → idle-loaded below (perf) -->
 <!-- Edit Mode geometry engine: pure GeoJSON caps/validate/nearest-point/extend-shorten (no Leaflet) — must load before gis-edit.js -->
 <script defer src="js/gis-edit-geom.js?v=1"></script>
 <!-- On-map editing (Edit tab): sticky Edit Mode (move/vertices/extend/shorten) + Geoman-driven add / delete / snap -->
-<script defer src="js/gis-edit.js?v=10"></script>
+<script defer src="js/gis-edit.js?v=11"></script>
 <!-- ArcGIS Pro UI shell (Phase 1): ribbon + Contents pane + scale status bar -->
 <script defer src="js/arcgis-ribbon.js?v=25"></script>
 <!-- Field mode (F3/F4): viewer-only minimal shell — create/submit entities + issues -->

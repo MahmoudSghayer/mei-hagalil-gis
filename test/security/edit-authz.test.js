@@ -191,16 +191,19 @@ describe('Edit Mode authorization (gis-engine/core.js + features.js)', () => {
   });
 
   describe('(f) getEditToken', () => {
-    it('selects id, layer_id, edited_at and returns the row', async () => {
-      const featureRow = { id: 'f1', layer_id: 'L1', edited_at: '2026-09-13T10:00:00+00:00' };
+    it('selects id, layer_id, edited_at AND geometry (GeoJSON, crs stripped) and returns the row', async () => {
+      const featureRow = { id: 'f1', layer_id: 'L1', edited_at: '2026-09-13T10:00:00+00:00',
+        geometry: { type: 'LineString', crs: { type: 'name', properties: { name: 'EPSG:4326' } }, coordinates: [[35, 32], [35.01, 32]] } };
       const { ctx, sb } = load({ featureRow: featureRow });
 
       const row = await ctx.GIS.features.getEditToken('f1');
 
-      expect(row).toEqual(featureRow);
+      expect(row.id).toBe('f1');
+      expect(row.edited_at).toBe(featureRow.edited_at);
+      expect(row.geometry).toEqual({ type: 'LineString', coordinates: [[35, 32], [35.01, 32]] });   // PostGIS crs member removed
       const call = sb._fromCalls.find(function (c) { return c.table === 'features'; });
       expect(call).toBeTruthy();
-      expect(call.select).toBe('id, layer_id, edited_at');
+      expect(call.select).toBe('id, layer_id, edited_at, geometry');
       expect(call.filters).toEqual({ id: 'f1' });
     });
   });

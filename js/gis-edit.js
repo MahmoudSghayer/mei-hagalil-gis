@@ -758,6 +758,27 @@
     if (emState.mode !== 'armed') return;
     var latlng = e.latlng;
     var click = [latlng.lng, latlng.lat];
+    // Fast path: the sidebar's LOCAL hit-test over the vector tiles already in
+    // memory (js/gis-engine-sidebar.js hitTest) — instant, no DB round trip.
+    // It yields a slim feature (id only), so the fresh geometry + concurrency
+    // token come from one getEditToken() read. Falls through to the bbox
+    // query below only when nothing is hit locally or that read fails.
+    var local = null;
+    try { local = (window.GISEngineSidebar && GISEngineSidebar.hitTest) ? GISEngineSidebar.hitTest(latlng) : null; } catch (err) { local = null; }
+    if (local && local.f && local.layer) {
+      var lid = local.f.properties && local.f.properties.__id != null ? local.f.properties.__id : local.f.id;
+      var feat = local.f;
+      if (!feat.geometry && window.GIS && GIS.features && GIS.features.getEditToken && lid != null) {
+        cursor(false); try { window.gMap.getContainer().style.cursor = 'progress'; } catch (err) {}
+        try {
+          var tok = await GIS.features.getEditToken(lid);
+          if (tok && tok.geometry) feat = { type: 'Feature', id: lid, geometry: tok.geometry, properties: Object.assign({}, feat.properties, { __edited_at: tok.edited_at }) };
+        } catch (err) { /* fall through to the bbox path */ }
+        cursor(true);
+      }
+      if (emState.mode !== 'armed') return;
+      if (feat.geometry) { beginEditFeature(feat, local.layer.id).catch(function (err) { toast(cleanErr(err), 'error'); }); return; }
+    }
     var bbox = bboxAround(latlng, CLICK_FIND_M + 15);
     var actives = (window.GISEngineSidebar && GISEngineSidebar.activeLayers && GISEngineSidebar.activeLayers()) || [];
     if (!actives.length) { toast('אין שכבות פעילות לעריכה — הפעל שכבה מהתוכן או בחר קטגוריה'); armPickActive(); return; }
@@ -860,6 +881,13 @@
       if (window.GIS && GIS.features && GIS.features.getEditToken) {
         var tok = await GIS.features.getEditToken(id);
         emState.editToken = (tok && tok.edited_at != null) ? tok.edited_at : null;
+        // Fresh server geometry wins over whatever the caller had cached
+        // (tile props carry none; features_geojson is capped at 5000 rows).
+        if (tok && tok.geometry && tok.geometry.type && tok.geometry.coordinates) {
+          feature = Object.assign({}, feature, { geometry: tok.geometry });
+          emState.originalType = feature.geometry.type;
+          emState.before = Geo ? Geo.deepClone(feature.geometry) : JSON.parse(JSON.stringify(feature.geometry));
+        }
       } else {
         emState.editToken = (feature.properties && feature.properties.__edited_at) || null;
       }

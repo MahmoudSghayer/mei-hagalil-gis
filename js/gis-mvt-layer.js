@@ -82,6 +82,38 @@
   function mode() { return _mode; }
 
   // create(opts) → controller
+  // ── pixel-space geometry helpers (pure; unit-tested) ─────────────────────
+  function segDist(p, a, b) {
+    var dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
+    var t = l2 ? ((p.x - a.x) * dx + (p.y - a.y) * dy) / l2 : 0; t = Math.max(0, Math.min(1, t));
+    return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
+  }
+  function ringContains(ring, p) {   // even-odd ray cast
+    var inside = false;
+    for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      var a = ring[i], b = ring[j];
+      if ((a.y > p.y) !== (b.y > p.y) && p.x < (b.x - a.x) * (p.y - a.y) / (b.y - a.y) + a.x) inside = !inside;
+    }
+    return inside;
+  }
+  // Distance (tile px) from p to a VectorGrid symbolizer: 0 inside a filled
+  // polygon; else nearest edge / vertex. Points: distance to the centre.
+  function featureDistPx(feat, p) {
+    if (feat._point) return Math.hypot(feat._point.x - p.x, feat._point.y - p.y);
+    var parts = feat._parts;
+    if (!parts || !parts.length) return Infinity;
+    var isFill = !!(typeof L !== 'undefined' && L.Polygon && feat instanceof L.Polygon) || feat._isFill === true;
+    var d = Infinity;
+    for (var i = 0; i < parts.length; i++) {
+      var ring = parts[i];
+      if (isFill && ring.length > 2 && ringContains(ring, p)) return 0;
+      for (var k = 1; k < ring.length; k++) { var s = segDist(p, ring[k - 1], ring[k]); if (s < d) d = s; }
+      if (isFill && ring.length > 2) { var c = segDist(p, ring[ring.length - 1], ring[0]); if (c < d) d = c; }
+      if (ring.length === 1) { var o = Math.hypot(ring[0].x - p.x, ring[0].y - p.y); if (o < d) d = o; }
+    }
+    return d;
+  }
+
   //   opts: map, layerId, style(props,zoom)→Leaflet style, onClick(props),
   //         onStatus({loading}), getFeatureId(props)→id
   function create(opts) {
@@ -128,9 +160,44 @@
       start();
     }
 
+    // ── Local hit-test against the vector tiles ALREADY in memory ───────────
+    // VectorGrid keeps, per tile, `renderer._features[id] = { feature }` where
+    // `feature` is a symbolizer with `_parts` (poly/line rings, L.Point in TILE
+    // pixel space) or `_point` (points). Converting the mouse latlng into that
+    // tile's pixel space (one projection per tile) lets us find the nearest
+    // feature with plain 2D math — no network, any zoom, all active layers —
+    // which is what makes hover/click/edit-pick instant. Returns
+    // { id, props, distPx } (distPx in SCREEN pixels) or null.
+    function hitTest(latlng, tolPx) {
+      if (!vg || !vg._vectorTiles || !map || !latlng) return null;
+      var best = null;
+      var tiles = vg._vectorTiles;
+      var mapZoom = map.getZoom();
+      Object.keys(tiles).forEach(function (key) {
+        var r = tiles[key];
+        if (!r || !r._features || !r._tileCoord) return;
+        var tc = r._tileCoord;
+        var size = r._size || (vg.getTileSize && vg.getTileSize()) || L.point(256, 256);
+        var scale = Math.pow(2, mapZoom - tc.z);          // screen px per tile px (overzoom-safe)
+        var tol = (tolPx == null ? 12 : tolPx) / scale;   // tolerance in tile px
+        var p = map.project(latlng, tc.z).subtract(tc.scaleBy(size));   // mouse in this tile's px space
+        if (p.x < -tol || p.y < -tol || p.x > size.x + tol || p.y > size.y + tol) return;
+        Object.keys(r._features).forEach(function (id) {
+          var feat = r._features[id] && r._features[id].feature;
+          if (!feat) return;
+          var d = featureDistPx(feat, p);
+          if (d <= tol && (!best || d * scale < best.distPx)) {
+            best = { id: id, props: feat.properties || {}, distPx: d * scale };
+          }
+        });
+      });
+      return best;
+    }
+
     return {
       update: function () {},
       invalidate: rebuild,
+      hitTest: hitTest,
       // Bbox-scoped invalidate (W2.3 — realtime): kept for API symmetry with
       // gis-tile-loader.js's controller, but Leaflet.VectorGrid's canvas
       // tiles (rendererFactory: L.canvas.tile) aren't individually
@@ -153,5 +220,8 @@
     };
   }
 
-  window.GISMvtLayer = { supported: supported, probe: probe, mode: mode, create: create };
+  window.GISMvtLayer = {
+    supported: supported, probe: probe, mode: mode, create: create,
+    _featureDistPx: featureDistPx   // test-only (pure pixel-space distance)
+  };
 })();
