@@ -170,6 +170,27 @@
     }
     return name;
   }
+  // Panes for on-map editing. The editable copy lives in `gisEditTop` (z 700,
+  // above every app overlay: snap guide 640, meter 648/655, trace 650,
+  // identify 660). Geoman draws its vertex / midpoint / hint markers in the
+  // pane named by its global option panes.vertexPane — DEFAULT `markerPane`
+  // (z 600), i.e. UNDER the copy, so a mousedown on a corner hit the copy's
+  // path and never reached the handle ("קודקודים does nothing"). Give the
+  // handles their own pane ABOVE the copy. Idempotent; called from every
+  // edit/draw entry point. setGlobalOptions() replaces the whole `panes`
+  // object, so all three keys are passed.
+  var EDIT_PANE = 'gisEditTop', EDIT_PANE_Z = 700;
+  var VERTEX_PANE = 'gisEditVertex', VERTEX_PANE_Z = 710;
+  function ensureEditPanes() {
+    var pane = ensurePane(EDIT_PANE, EDIT_PANE_Z);
+    ensurePane(VERTEX_PANE, VERTEX_PANE_Z);
+    try {
+      window.gMap.pm.setGlobalOptions({
+        panes: { vertexPane: VERTEX_PANE, layerPane: 'overlayPane', markerPane: 'markerPane' }
+      });
+    } catch (e) {}
+    return pane;
+  }
 
   // ── snap guide: hidden copy of nearby features so Geoman can snap to them ────
   async function buildSnapGuide(village) {
@@ -331,6 +352,7 @@
     if (!shape) { toast('סוג גאומטריה לא נתמך'); return; }
 
     state.mode = 'add';
+    ensureEditPanes();                         // draw-mode hint/vertex markers above the overlays too
     var centers = await groupCenters(group);   // route the new feature to its village
     await buildSnapGuide(null);                 // snap to whatever's in view (any village)
 
@@ -494,7 +516,7 @@
   function beginVertexEdit(pick) {
     cursor(false); banner(false);
     var feature = pick.f;
-    var pane = ensurePane('gisEditTop', 700);
+    var pane = ensureEditPanes();
     state.targetLayerId = pick.layerId;
     state.editId = feature.id || (feature.properties && feature.properties.__id);
     if (!state.editId) { toast('לא נמצא מזהה לישות'); disarm(); return; }
@@ -820,7 +842,7 @@
 
   async function enterEditing(feature, layerId) {
     cursor(false);
-    var pane = ensurePane('gisEditTop', 700);
+    var pane = ensureEditPanes();
     var id = feature.id != null ? feature.id : (feature.properties && feature.properties.__id);
     if (id == null) { toast('לא נמצא מזהה לישות', 'error'); emState.mode = 'armed'; armPickActive(); return; }
     emState.layerId = layerId;

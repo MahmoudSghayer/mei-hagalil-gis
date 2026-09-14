@@ -936,6 +936,27 @@ describe('GISEdit Edit Mode — adversarial coverage', () => {
       expect(layer.pm.options.draggable).toBe(false);
     });
 
+    it('REGRESSION: vertex handles get their own pane ABOVE the edit copy, configured before Geoman edit is enabled', async () => {
+      const { GISEdit, gMap } = load({ role: 'engineer' });
+      await GISEdit.beginEditFeature(LINE_FEATURE, 'L1');
+      const top = gMap.getPane('gisEditTop');
+      const vertex = gMap.getPane('gisEditVertex');
+      expect(top).toBeTruthy();
+      expect(vertex).toBeTruthy();
+      expect(Number(vertex.style.zIndex)).toBeGreaterThan(Number(top.style.zIndex));
+      // Geoman is told to draw its vertex/midpoint markers in that pane…
+      const panesCall = gMap.pm.setGlobalOptions.mock.calls.find((c) => c[0] && c[0].panes);
+      expect(panesCall).toBeTruthy();
+      expect(panesCall[0].panes.vertexPane).toBe('gisEditVertex');
+      expect(panesCall[0].panes.layerPane).toBe('overlayPane');
+      expect(panesCall[0].panes.markerPane).toBe('markerPane');
+      // …BEFORE the layer's edit mode is enabled (the markers are created on enable)
+      const layer = GISEdit._test.state().editLayer;
+      const panesOrder = gMap.pm.setGlobalOptions.mock.invocationCallOrder[
+        gMap.pm.setGlobalOptions.mock.calls.indexOf(panesCall)];
+      expect(panesOrder).toBeLessThan(layer.pm.enable.mock.invocationCallOrder[0]);
+    });
+
     it('the map-click pick is armed at most once (miss → re-arm keeps a single listener)', async () => {
       const { GISEdit, gMap } = load({ role: 'engineer' });
       await GISEdit.toggleEditMode(true);
